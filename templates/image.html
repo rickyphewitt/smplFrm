@@ -3,13 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <style>
+<!--        body {-->
+<!--          margin: 0;-->
+<!--          padding: 0;-->
+<!--            }-->
+<!--        img {-->
+<!--         max-width: 99%;-->
+<!--         max-height: 99%;-->
+<!--         background-size: contain;-->
+<!--         width: 99vw;-->
+<!--         height: 99vh;-->
+<!--         background-position: center center;-->
+<!--         background-repeat: no-repeat;-->
+<!--         background-size: contain;-->
+<!--         }-->
+    </style>
 </head>
 <script>
+
+    var headers = new Headers();
+    headers.set('window-w', window.innerWidth);
+    headers.set('window-h', window.innerHeight);
+    // call the backend with info about the clients resolution
+    fetch('http://localhost:8000{{image}}', {
+        method: 'GET',
+        headers: headers
+    })
+  .then(response => response.blob())
+  .then(blob => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(blob);
+    document.body.appendChild(img);
+  });
+
+
     setInterval(function() {
   window.location.reload();
-}, 30000); // 30 seconds (in milliseconds)
+}, {{IMAGE_REFRESH_INTERVAL}});
 </script>
 <body>
-    <img src="{{image}}" />
+<!--    <img src="{{image}}" />-->
 </body>
 </html>
