@@ -1,6 +1,9 @@
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http import HTTPStatus
+from tempfile import template
+
 from services.image_service import ImageService
+from services.template_service import TemplateService
 import settings
 import os
 
@@ -13,25 +16,36 @@ class ImageServer(SimpleHTTPRequestHandler):
         self.image_service = ImageService()
 
     def do_GET(self):
+        self.image_service = ImageService()
+        self.template_service = TemplateService()
+        self.image_service.load_images()
+        image = self.image_service.get_one()
 
         # handle the image being returned
         if len(self.path) > 10:
             self.send_response(HTTPStatus.OK)
+            width = self.headers.get("window-h", 0)
+            height = self.headers.get("window-h", 0)
+
+            if int(width) > 0 and int(height) > 0:
+                # manipulate image to screensize
+                scaled_image = self.image_service.scale(image[1], window_height=height, window_width=width)
+
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
-            with open(self.path, "rb") as f:
-                self.wfile.write(f.read())
+            self.wfile.write(scaled_image)
+            # with open(self.path, "rb") as f:
+            #     self.wfile.write(f.read())
 
         # default loading of template
-        self.image_service = ImageService()
         self.image_service.load_images()
         image = self.image_service.get_one()
-        template_raw = ""
-        with open(settings.IMAGE_TEMPLATE, 'r') as f:
-            template_raw = f.read()
-
-        template = template_raw.replace("{{image}}", image[1])
-
+        # template_raw = ""
+        # with open(settings.IMAGE_TEMPLATE, 'r') as f:
+        #     template_raw = f.read()
+        #
+        # template = template_raw.replace("{{image}}", image[1])
+        template = self.template_service.render("image.html", image=image[1])
         self.send_response(HTTPStatus.OK)
         self.send_header('Content-type', 'text/html')
         self.end_headers()

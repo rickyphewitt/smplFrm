@@ -13,7 +13,14 @@ class Settings(object):
 
 settings = Settings()
 root_path = os.path.dirname(os.path.realpath(__file__))
+
 # Start config
 
-IMAGE_TEMPLATE = settings.get("IMAGE_TEMPLATE", f"{root_path}/templates/image.html")
+
+TEMPLATE_DIRECTORIES = settings.get("TEMPLATE_DIRECTIES", [f"{root_path}/templates"])
 ASSET_DIRECTORIES = settings.get("ASSET_DIRECTORIES", [f"{root_path}/assets"])
+IMAGE_REFRESH_INTERVAL = settings.get("IMAGE_REFRESH_INTERVAL", 30000)
+
+
+# list of vars to render in templates
+TEMPLATE_VARS = {"IMAGE_REFRESH_INTERVAL": IMAGE_REFRESH_INTERVAL}
