@@ -50,5 +50,5 @@ class ImageServer(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(template, "utf8"))
 
-httpd = HTTPServer(('localhost', PORT), ImageServer)
+httpd = HTTPServer(('0.0.0.0', PORT), ImageServer)
 httpd.serve_forever()
