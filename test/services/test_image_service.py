@@ -33,7 +33,7 @@ class TestImageService(unittest.TestCase):
         window_w = 100
         padding = 5
 
-        source_image = service.get_one(index=0)[1]
+        source_image = "../../assets/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
         image = service.scale(source_image, window_height=window_h, window_width=window_w)
@@ -44,7 +44,8 @@ class TestImageService(unittest.TestCase):
         image_h = size[0]
         image_w = size[1]
 
-        self.assertEqual(window_w-padding, image_w)
+        self.assertEqual(window_w-5, image_w)
+        self.assertEqual(window_h-6, image_h) # for rounding
 
 
     def test_scale_vertical_image(self):
@@ -59,7 +60,7 @@ class TestImageService(unittest.TestCase):
         window_w = 100
         padding = 5
 
-        source_image = service.get_one(index=3)[1]
+        source_image = "../../assets/sub_dir_assets/kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
         image = service.scale(source_image, window_height=window_h, window_width=window_w)
@@ -71,3 +72,35 @@ class TestImageService(unittest.TestCase):
         image_w = size[1]
 
         self.assertEqual(window_h-padding, image_h)
+        # assert that the width has been filled as well
+        self.assertEqual(window_w - padding, image_w)
+        self.assertEqual(window_h - padding, image_h)
+
+
+    def test_scale_horizontal_image_height_larger_than_viewport(self):
+        """
+        This test ensures that the image height matches when the scalee
+        image height exceeds the height of the viewport
+        :return:
+        """
+        service = ImageService()
+        service.load_images()
+
+        window_h = 100
+        window_w = 1000
+        padding = 5
+
+        source_image = "../../assets/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
+        source_image_ext = source_image.rsplit(".", 1)[1]
+
+        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(image, -1)  # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w - 5, image_w)
+        self.assertEqual(window_h - 5, image_h)
+

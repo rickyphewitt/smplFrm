@@ -21,10 +21,14 @@ class ImageServer(SimpleHTTPRequestHandler):
         self.image_service.load_images()
         image = self.image_service.get_one()
 
+        if "favicon" in self.path:
+            self.send_response(HTTPStatus.NOT_FOUND)
+            return
+
         # handle the image being returned
-        if len(self.path) > 10:
+        if len(self.path) > 10 and "favicon" not in self.path:
             self.send_response(HTTPStatus.OK)
-            width = self.headers.get("window-h", 0)
+            width = self.headers.get("window-w", 0)
             height = self.headers.get("window-h", 0)
 
             if int(width) > 0 and int(height) > 0:
@@ -40,11 +44,6 @@ class ImageServer(SimpleHTTPRequestHandler):
         # default loading of template
         self.image_service.load_images()
         image = self.image_service.get_one()
-        # template_raw = ""
-        # with open(settings.IMAGE_TEMPLATE, 'r') as f:
-        #     template_raw = f.read()
-        #
-        # template = template_raw.replace("{{image}}", image[1])
         template = self.template_service.render("image.html", image=image[1])
         self.send_response(HTTPStatus.OK)
         self.send_header('Content-type', 'text/html')
