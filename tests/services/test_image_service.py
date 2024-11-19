@@ -1,4 +1,5 @@
 import unittest
+from settings import ASSET_DIRECTORIES
 from services.image_service import ImageService
 from pathlib import Path
 import cv2
@@ -33,7 +34,7 @@ class TestImageService(unittest.TestCase):
         window_w = 100
         padding = 5
 
-        source_image = "../../assets/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
+        source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
         image = service.scale(source_image, window_height=window_h, window_width=window_w)
@@ -60,7 +61,7 @@ class TestImageService(unittest.TestCase):
         window_w = 100
         padding = 5
 
-        source_image = "../../assets/sub_dir_assets/kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
+        source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
         image = service.scale(source_image, window_height=window_h, window_width=window_w)
@@ -90,7 +91,7 @@ class TestImageService(unittest.TestCase):
         window_w = 1000
         padding = 5
 
-        source_image = "../../assets/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
+        source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
         image = service.scale(source_image, window_height=window_h, window_width=window_w)
