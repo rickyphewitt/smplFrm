@@ -19,8 +19,12 @@ class TestTemplateService(unittest.TestCase):
         image_tpl = self.service.get_templates()["image.html"]
         image = "what/a/greate/image.jpg"
         refresh_int = 30
+        external_port = 8000
+        host = "localhost"
         rendered_template = self.service.render("image.html", image=image)
         self.assertTrue(image in rendered_template, f"Failed to find image {image} in rendered template")
-        self.assertTrue(image in rendered_template, f"Failed to find refresh interval {refresh_int} in rendered template")
+        self.assertTrue(str(refresh_int) in rendered_template, f"Failed to find refresh interval {refresh_int} in rendered template")
+        self.assertTrue(str(external_port) in rendered_template, f"Failed to find external port {external_port} in rendered template")
+        self.assertTrue(host in rendered_template, f"Failed to find host {host} in rendered template")
         self.assertTrue("{{" not in rendered_template)
         self.assertTrue("}}" not in rendered_template)
