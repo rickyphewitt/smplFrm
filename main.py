@@ -38,8 +38,6 @@ class ImageServer(SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
             self.wfile.write(scaled_image)
-            # with open(self.path, "rb") as f:
-            #     self.wfile.write(f.read())
 
         # default loading of template
         self.image_service.load_images()

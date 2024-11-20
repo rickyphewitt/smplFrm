@@ -20,7 +20,7 @@
     headers.set('window-w', window.innerWidth);
     headers.set('window-h', window.innerHeight);
     // call the backend with info about the clients resolution
-    fetch('http://localhost:8000{{image}}', {
+    fetch('http://{{HOST}}:{{EXTERNAL_PORT}}{{image}}', {
         method: 'GET',
         headers: headers
     })
