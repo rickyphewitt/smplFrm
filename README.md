@@ -24,4 +24,21 @@ Digital Photoframe for displaying photos on any device that has a web browser
 * To add your own as assets mount a local volume to the `/app/assets` folder in the image
   * `docker run -p 8000:8000 -v <local/Folder/Path>:/app/assets smpl_frm`
 ### Docker Compose
-* @TODO
+* An example compose file exists at [compose.yaml](./docker/compose.yaml)
+* Essentially you just need to update the `SMPL_FRM_ASSET_DIRECTORIES` and mount a local volume like below
+```
+services:
+    smpl_frm:
+        build:
+            context: ../
+            dockerfile: docker/images/Dockerfile
+        ports:
+         - "8000:8000"
+        environment:
+            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /example/local/library/here:/app/library
+
+```
+* Then `cd` into `./docker` and run `docker-compose up -d` and browse to `http://localhost:8000`

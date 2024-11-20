@@ -20,6 +20,7 @@ class ImageService(object):
             return self.image_cache
         # load images
         images = []
+        print(settings.ASSET_DIRECTORIES)
         for asset_dir in settings.ASSET_DIRECTORIES:
             for dirpath, subdirs, filenames in os.walk(asset_dir):
                 for filename in filenames:
@@ -28,6 +29,8 @@ class ImageService(object):
 
         self.image_cache = images
         self.image_count = len(self.image_cache)
+        print(f"Loaded {self.image_count} image(s)")
+        logger.info(f"Loaded {self.image_count} image(s)")
         return images
 
     def get_one(self, index=None):

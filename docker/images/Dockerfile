@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 
-COPY . /app
+COPY ../.. /app
 
 RUN ls -la
 
