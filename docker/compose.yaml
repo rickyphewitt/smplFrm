@@ -1,0 +1,12 @@
+services:
+    smpl_frm:
+        build:
+            context: ../
+            dockerfile: docker/images/Dockerfile
+        ports:
+         - "8000:8000"
+        environment:
+            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /example/local/library/here:/app/library
