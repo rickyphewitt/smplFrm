@@ -10,7 +10,7 @@ class TestImageService(unittest.TestCase):
         service = ImageService()
         images = service.load_images()
 
-        self.assertEqual(len(images), 4, "Unexpected Image Count")
+        self.assertEqual(len(images), 5, "Unexpected Image Count")
 
     def test_load_image(self):
         service = ImageService()
@@ -80,7 +80,7 @@ class TestImageService(unittest.TestCase):
 
     def test_scale_horizontal_image_height_larger_than_viewport(self):
         """
-        This test ensures that the image height matches when the scalee
+        This test ensures that the image height matches when the scale
         image height exceeds the height of the viewport
         :return:
         """
@@ -105,3 +105,26 @@ class TestImageService(unittest.TestCase):
         self.assertEqual(window_w - 5, image_w)
         self.assertEqual(window_h - 5, image_h)
 
+
+    def test_scale_panoramic_image(self):
+
+        service = ImageService()
+        service.load_images()
+
+        window_h = 433
+        window_w = 952
+        padding = 5
+
+        source_image = f"{ASSET_DIRECTORIES[0]}/2024/11/bernd-dittrich-73scJ3UOdHM-unsplash.jpg"
+        source_image_ext = source_image.rsplit(".", 1)[1]
+
+        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(image, -1)  # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w - 5, image_w)
+        self.assertEqual(window_h - 6, image_h)
