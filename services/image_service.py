@@ -38,6 +38,9 @@ class ImageService(object):
             return self.image_cache[index]
         return self.rand.choice(seq=self.image_cache)
 
+
+
+
     def scale(self, image: str, window_height, window_width):
         padding = 5
         # load image and get its w/h
@@ -50,34 +53,16 @@ class ImageService(object):
         target_width = int(window_width) - padding
         target_height = int(window_height) - padding
 
-        scale_width = int(window_width) - padding
-        scale_height = int(window_height) - padding
         print(f"window_height: {window_height}, window_width: {window_width}")
         logger.info(f"window height: {window_height}")
         logger.info(f"window width: {window_width}")
         image_ext = image.rsplit(".", 1)[1]
 
-        scale_width_size = scale_width
-        scale_height_size = scale_height
-        if target_height > target_width:
-            # scale based on target width to get correct height
-            scale_height_size = int(scale_width * image_h / image_w)
-        elif target_width > target_height:
-            # scale based on target height to get correct width
-            scale_width_size = int(scale_height * image_w / image_h)
-        else:
-            # target height/width is the same, scale based on the largest image dimension
-            if image_h > image_w:
-                # scale based on height to get correct width
-                scale_width_size = int(scale_height * image_w / image_h)
-            else:
-                # if they are the same or width is greater scale to get correct height
-                scale_height_size = int(scale_width * image_h / image_w)
 
-
+        scale_height_size, scale_width_size = self.__determine_scaled_dimensions(target_width, target_height, image_w, image_h)
         vert_border, horz_border = self.__determine_boarder(scale_width_size, scale_height_size, target_width, target_height)
 
-        print(f"scale_height: {scale_height}, scale_width: {scale_width}")
+        print(f"target_height: {target_height}, target_width: {target_width}")
         resized_img = cv2.resize(img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA)
         resized_img = cv2.copyMakeBorder(resized_img, horz_border, horz_border, vert_border, vert_border, cv2.BORDER_REPLICATE, value=(0, 0, 0, 100)) #is opacity doing anything?
 
@@ -85,6 +70,44 @@ class ImageService(object):
 
         _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
         return enc_image
+
+    def __determine_scaled_dimensions(self, target_width, target_height, image_w, image_h):
+        """
+        Determine scaled values of image
+        :param target_width:
+        :param target_height:
+        :param image_w:
+        :param image_h:
+        :return: scaled height, scaled width
+        """
+
+        # determine viewport orientation
+        portrait_viewport = target_height > target_width
+
+        # determine image orientation
+        portrait_image = image_h > image_w
+
+        scale_height_size = target_height
+        scale_width_size = target_width
+
+        if (portrait_viewport and portrait_image) or (not portrait_viewport and portrait_image):
+            # scale by height
+            scale_width_size = self.__scale_by(target_height, image_w, image_h)
+        elif (portrait_viewport and not portrait_image) or (not portrait_viewport and not portrait_image):
+            # scale by width
+            scale_height_size = self.__scale_by(target_width, image_h, image_w)
+
+        # check to see if either of the scaled sizes are larger than target
+        if scale_height_size > target_height:
+            scale_width_size = self.__scale_by(target_height, image_w, image_h)
+            scale_height_size = target_height
+
+        elif scale_width_size > target_width:
+            scale_height_size = self.__scale_by(target_width, image_h, image_w)
+            scale_width_size = target_width
+
+
+        return scale_height_size, scale_width_size
 
 
     def __determine_boarder(self, scale_width, scale_height, target_width, target_height):
@@ -107,3 +130,14 @@ class ImageService(object):
             horizontal_border = int(horizontal_border/2)
 
         return vertical_border, horizontal_border
+
+
+    def __scale_by(self, scale_to, size_1, size_2):
+        """
+        Scale an image
+        :param scale_to: size to scale image to
+        :param size_1: w or h
+        :param size_2: w or h
+        :return:
+        """
+        return int(scale_to * size_1 / size_2)
