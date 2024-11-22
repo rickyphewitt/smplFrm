@@ -25,6 +25,6 @@ ASSET_DIRECTORIES = settings.get_list("ASSET_DIRECTORIES", f"{root_path}/assets"
 IMAGE_REFRESH_INTERVAL = settings.get("IMAGE_REFRESH_INTERVAL", 30000)
 EXTERNAL_PORT = settings.get("EXTERNAL_PORT", 8000)
 HOST = settings.get("HOST", "localhost")
-
+CACHE_DIRECTORY = settings.get("CACHE_DIRECTORY", f"{root_path}/tmp")
 # list of vars to render in templates
 TEMPLATE_VARS = {"IMAGE_REFRESH_INTERVAL": IMAGE_REFRESH_INTERVAL, "EXTERNAL_PORT": EXTERNAL_PORT, "HOST": HOST}
