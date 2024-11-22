@@ -1,8 +1,10 @@
 import unittest
-from settings import ASSET_DIRECTORIES
+from settings import ASSET_DIRECTORIES, Settings
 from services.image_service import ImageService
+from services.history_service import HistoryService
 from pathlib import Path
 import cv2
+from unittest.mock import patch, Mock
 class TestImageService(unittest.TestCase):
 
 
@@ -13,6 +15,7 @@ class TestImageService(unittest.TestCase):
         self.assertEqual(len(images), 5, "Unexpected Image Count")
 
     def test_load_image(self):
+        HistoryService().clean()
         service = ImageService()
         service.load_images()
         image = service.get_one()
@@ -27,6 +30,7 @@ class TestImageService(unittest.TestCase):
         Test scaling an image to keep aspect ratio
         :return:
         """
+        HistoryService().clean()
         service = ImageService()
         service.load_images()
 
@@ -54,6 +58,7 @@ class TestImageService(unittest.TestCase):
         Test scaling an image to keep aspect ratio
         :return:
         """
+        HistoryService().clean()
         service = ImageService()
         service.load_images()
 
@@ -105,9 +110,8 @@ class TestImageService(unittest.TestCase):
         self.assertEqual(window_w - 5, image_w)
         self.assertEqual(window_h - 5, image_h)
 
-
     def test_scale_panoramic_image(self):
-
+        HistoryService().clean()
         service = ImageService()
         service.load_images()
 
@@ -128,3 +132,25 @@ class TestImageService(unittest.TestCase):
 
         self.assertEqual(window_w - 5, image_w)
         self.assertEqual(window_h - 6, image_h)
+
+
+    @patch("services.image_service.HistoryService")
+    def test_do_not_repeat_last_image(self, mock_history):
+
+        def side_effect(*args, **kwargs):
+            if mock_history.add.call_count == 1:
+                raise Exception()
+
+        mock_history.add = Mock(side_effect=side_effect)
+
+        service = ImageService()
+        service.load_images()
+        setattr(service, "history", mock_history)
+        service.get_one()
+
+        self.assertEqual(mock_history.add.call_count, 2)
+
+    def test_image_not_found(self):
+        service = ImageService()
+        service.load_images()
+        self.assertRaises(Exception, service.scale, "/no/image/here/foo.png", 5, 5)

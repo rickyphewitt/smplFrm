@@ -4,6 +4,8 @@ from random import Random
 import cv2
 import logging
 
+from services.history_service import HistoryService
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,8 +14,10 @@ class ImageService(object):
 
     def __init__(self):
         self.image_cache = []
+        self.image_cache_by_name = {}
         self.image_count = 0
         self.rand = Random()
+        self.history = HistoryService()
 
     def load_images(self, reload=False):
         if not reload and len(self.image_cache) > 0:
@@ -26,6 +30,7 @@ class ImageService(object):
                 for filename in filenames:
                     file_path = os.path.join(dirpath, filename)
                     images.append((filename, file_path))
+                    self.image_cache_by_name.update({filename: file_path})
 
         self.image_cache = images
         self.image_count = len(self.image_cache)
@@ -36,15 +41,36 @@ class ImageService(object):
     def get_one(self, index=None):
         if index:
             return self.image_cache[index]
-        return self.rand.choice(seq=self.image_cache)
+
+        image = self.rand.choice(seq=self.image_cache)
+
+        try:
+            self.history.add(image[0])
+        except Exception:
+            # continue to find an image that isn't in the history
+            print(f"Image {image[0]} found in history, trying again.")
+            image = self.get_one()
+
+        print(f"Retuning image {image[0]}.")
+        return image
+
 
 
 
 
     def scale(self, image: str, window_height, window_width):
+
+        # sanitize the incoming image path and make sure its one we have
+        image_name = image.rsplit("/", 1)[1]
+        image_path = self.image_cache_by_name.get(image_name)
+        if not image_name:
+            #ToDo: more accurate exception here
+            raise Exception()
+        image_ext = image_path.rsplit(".", 1)[1]
+
         padding = 5
         # load image and get its w/h
-        img = cv2.imread(image)
+        img = cv2.imread(image_path)
         # tuple of width / height
         size = img.shape[:2]
         image_h = size[0]
@@ -56,7 +82,7 @@ class ImageService(object):
         print(f"window_height: {window_height}, window_width: {window_width}")
         logger.info(f"window height: {window_height}")
         logger.info(f"window width: {window_width}")
-        image_ext = image.rsplit(".", 1)[1]
+
 
 
         scale_height_size, scale_width_size = self.__determine_scaled_dimensions(target_width, target_height, image_w, image_h)
