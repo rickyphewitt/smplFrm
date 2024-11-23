@@ -48,6 +48,7 @@ class ImageServer(SimpleHTTPRequestHandler):
                     return
             # else all is good and return image
             self.send_response(HTTPStatus.OK)
+
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
             self.wfile.write(scaled_image)

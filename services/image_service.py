@@ -3,6 +3,9 @@ import os
 from random import Random
 import cv2
 import logging
+from PIL import Image
+
+from settings import IMAGE_REFRESH_INTERVAL
 
 from services.history_service import HistoryService
 
@@ -56,7 +59,21 @@ class ImageService(object):
 
 
 
+    def display_image(self, image_path, window_height, window_width):
 
+        # get metadata about image
+        img_pil = Image.open(image_path)
+
+        # Extract EXIF metadata using Pillow
+        exif_data = img_pil.info.get("exif", {})
+
+
+        # Convert EXIF data to a dictionary
+        for tag in exif_data:
+            print(f"{TAGS[tag]}: {exif_data[tag]}")
+
+
+        return self.scale(image_path, window_height, window_width)
 
     def scale(self, image: str, window_height, window_width):
 

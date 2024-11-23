@@ -99,7 +99,7 @@ class TestImageService(unittest.TestCase):
         source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
-        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+        image = service.display_image(source_image, window_height=window_h, window_width=window_w)
 
         # read raw image data and assert new values
         img = cv2.imdecode(image, -1)  # -1 means do not change image
