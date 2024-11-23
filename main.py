@@ -1,6 +1,7 @@
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from http import HTTPStatus
 from tempfile import template
+import urllib.parse
 
 from services.image_service import ImageService
 from services.template_service import TemplateService
@@ -23,19 +24,23 @@ class ImageServer(SimpleHTTPRequestHandler):
 
     def do_GET(self):
 
-        if "favicon" in self.path:
+        # decode path
+        path = urllib.parse.unquote(self.path)
+
+        if "favicon" in path:
             self.send_response(HTTPStatus.NOT_FOUND)
             return
 
         # handle the image being returned
-        if len(self.path) > 3: # greater than 3 means a file extension ".jpg, .png, ect"
-            width = self.headers.get("window-w", 0)
-            height = self.headers.get("window-h", 0)
+        if len(path) > 3: # greater than 3 means a file extension ".jpg, .png, ect"
+            self.send_response(HTTPStatus.OK)
+            width = self.headers.get("window-w", 100)
+            height = self.headers.get("window-h", 100)
 
             if int(width) > 0 and int(height) > 0:
                 # manipulate image to screensize
                 try:
-                    scaled_image = self.image_service.scale(self.path, window_height=height, window_width=width)
+                    scaled_image = self.image_service.scale(path, window_height=height, window_width=width)
                 except Exception:
                     self.send_response(HTTPStatus.NOT_FOUND)
                     self.send_header('Content-type', 'image/jpeg')
