@@ -1,8 +1,16 @@
+from importlib.metadata import metadata
+
 import settings
 import os
 from random import Random
 import cv2
 import logging
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS, IFD
+from datetime import datetime
+import dateutil.parser
+
+from settings import IMAGE_REFRESH_INTERVAL, DISPLAY_DATE
 
 from services.history_service import HistoryService
 
@@ -56,11 +64,17 @@ class ImageService(object):
 
 
 
+    def display_image(self, image_path, window_height, window_width):
 
+        image_metadata = self.extract_metadata(image_path)
 
-    def scale(self, image: str, window_height, window_width):
+        return self.scale(image_path, window_height, window_width, image_meta=image_metadata)
+
+    def scale(self, image: str, window_height, window_width, image_meta={}):
 
         # sanitize the incoming image path and make sure its one we have
+        if image_meta is None:
+            image_meta = {}
         image_name = image.rsplit("/", 1)[1]
         image_path = self.image_cache_by_name.get(image_name)
         if not image_name:
@@ -83,8 +97,6 @@ class ImageService(object):
         logger.info(f"window height: {window_height}")
         logger.info(f"window width: {window_width}")
 
-
-
         scale_height_size, scale_width_size = self.__determine_scaled_dimensions(target_width, target_height, image_w, image_h)
         vert_border, horz_border = self.__determine_boarder(scale_width_size, scale_height_size, target_width, target_height)
 
@@ -92,10 +104,37 @@ class ImageService(object):
         resized_img = cv2.resize(img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA)
         resized_img = cv2.copyMakeBorder(resized_img, horz_border, horz_border, vert_border, vert_border, cv2.BORDER_REPLICATE, value=(0, 0, 0, 100)) #is opacity doing anything?
 
+        resized_img = self.__display_date(resized_img, padding, target_height, image_meta)
 
 
         _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
         return enc_image
+
+
+    def __display_date(self, image, horiz_text_pos, target_height, image_meta):
+        if not DISPLAY_DATE:
+            return image
+
+        if "DateTime" not in image_meta:
+            print(f"Unable to Find DateTime in image meta: {image_meta}")
+            return image
+
+        datetime_str = ""
+        try:
+            datetime = dateutil.parser.parse(image_meta["DateTime"])
+            datetime_str = datetime.strftime('%B, %Y')
+        except Exception as e:
+            print(f"Failed to extract atetime from image: {str(e)}")
+
+
+        # write the name of the image file to the bottom left
+        vertical_text_pos = target_height - horiz_text_pos
+        grey = (220, 220, 220)
+
+        return cv2.putText(image, datetime_str, (horiz_text_pos, vertical_text_pos),
+                                  cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 0.75, grey, 2, cv2.LINE_4)
+
+
 
     def __determine_scaled_dimensions(self, target_width, target_height, image_w, image_h):
         """
@@ -167,3 +206,24 @@ class ImageService(object):
         :return:
         """
         return int(scale_to * size_1 / size_2)
+
+
+    def extract_metadata(self, image_path):
+        tag_dict = {}
+        with Image.open(image_path) as img_pil:
+
+
+            # Extract EXIF metadata using Pillow
+            exif_data = img_pil.getexif()
+
+            for k, v in exif_data.items():
+                tag_dict[TAGS.get(k, k)] = v
+
+
+            # if a tag doesn't exist that is used
+            # try to fill it another way
+            if "Datetime" not in tag_dict:
+                pass
+
+
+        return tag_dict

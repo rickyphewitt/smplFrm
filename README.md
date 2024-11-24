@@ -42,3 +42,16 @@ services:
 
 ```
 * Then `cd` into `./docker` and run `docker-compose up -d` and browse to `http://localhost:8000`
+
+
+### Environment Variables
+
+| Name                            | Default    | Description                                                         |
+|---------------------------------|------------|---------------------------------------------------------------------|
+| `SMPL_FRM_TEMPLATE_DIRECTORIES`   | "library"  | Comma Separated String of directory paths                           |
+| `SMPL_FRM_ASSET_DIRECTORIES`      | "templates | Comma Separated String of directory paths                           |
+| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000      | How long to display an image (millis)                               |
+| `SMPL_FRM_EXTERNAL_PORT`          | 8000       | Used in Docker when the external port differs from the server port  |
+| `SMPL_FRM_HOST`                   | localhost  | Used when running the application on a server                       |
+| `SMPL_FRM_CACHE_DIRECTORY`        | "/tmp"     | Local cache                                                         |
+| `SMPL_FRM_DISPLAY_DATE`           | False      | Display date (Month, Year) of photo. This reads the exif image data |
