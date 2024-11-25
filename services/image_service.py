@@ -30,8 +30,8 @@ class ImageService(object):
             return self.image_cache
         # load images
         images = []
-        print(settings.ASSET_DIRECTORIES)
-        for asset_dir in settings.ASSET_DIRECTORIES:
+        print(settings.LIBRARY_DIRECTORIES)
+        for asset_dir in settings.LIBRARY_DIRECTORIES:
             for dirpath, subdirs, filenames in os.walk(asset_dir):
                 for filename in filenames:
                     file_path = os.path.join(dirpath, filename)
