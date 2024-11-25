@@ -21,7 +21,7 @@ root_path = os.path.dirname(os.path.realpath(__file__))
 
 
 TEMPLATE_DIRECTORIES = settings.get_list("TEMPLATE_DIRECTORIES", f"{root_path}/templates")
-ASSET_DIRECTORIES = settings.get_list("ASSET_DIRECTORIES", f"{root_path}/library")
+LIBRARY_DIRECTORIES = settings.get_list("LIBRARY_DIRECTORIES", f"{root_path}/library")
 IMAGE_REFRESH_INTERVAL = settings.get("IMAGE_REFRESH_INTERVAL", 30000)
 EXTERNAL_PORT = settings.get("EXTERNAL_PORT", 8000)
 HOST = settings.get("HOST", "localhost")

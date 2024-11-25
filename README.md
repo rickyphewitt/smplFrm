@@ -46,10 +46,10 @@ services:
 
 ### Environment Variables
 
-| Name                            | Default    | Description                                                         |
-|---------------------------------|------------|---------------------------------------------------------------------|
-| `SMPL_FRM_TEMPLATE_DIRECTORIES`   | "library"  | Comma Separated String of directory paths                           |
-| `SMPL_FRM_ASSET_DIRECTORIES`      | "templates | Comma Separated String of directory paths                           |
+| Name                              | Default    | Description                                                         |
+|-----------------------------------|------------|---------------------------------------------------------------------|
+| `SMPL_FRM_LIBRARY_DIRECTORIES`    | "library"  | Comma Separated String of directory paths                           |
+| `SMPL_FRM_TEMPLATE_DIRECTORIES`   | "templates" | Comma Separated String of directory paths                           |
 | `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000      | How long to display an image (millis)                               |
 | `SMPL_FRM_EXTERNAL_PORT`          | 8000       | Used in Docker when the external port differs from the server port  |
 | `SMPL_FRM_HOST`                   | localhost  | Used when running the application on a server                       |
