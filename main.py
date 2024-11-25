@@ -40,7 +40,7 @@ class ImageServer(SimpleHTTPRequestHandler):
             if int(width) > 0 and int(height) > 0:
                 # manipulate image to screensize
                 try:
-                    scaled_image = self.image_service.scale(path, window_height=height, window_width=width)
+                    scaled_image = self.image_service.display_image(path, window_height=height, window_width=width)
                 except Exception:
                     self.send_response(HTTPStatus.NOT_FOUND)
                     self.send_header('Content-type', 'image/jpeg')
@@ -48,6 +48,7 @@ class ImageServer(SimpleHTTPRequestHandler):
                     return
             # else all is good and return image
             self.send_response(HTTPStatus.OK)
+
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
             self.wfile.write(scaled_image)

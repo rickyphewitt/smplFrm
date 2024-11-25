@@ -1,4 +1,6 @@
 import unittest
+from unittest import SkipTest
+
 from settings import ASSET_DIRECTORIES, Settings
 from services.image_service import ImageService
 from services.history_service import HistoryService
@@ -41,7 +43,7 @@ class TestImageService(unittest.TestCase):
         source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
-        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+        image = service.display_image(source_image, window_height=window_h, window_width=window_w)
 
         # read raw image data and assert new values
         img = cv2.imdecode(image, -1) # -1 means do not change image
@@ -69,7 +71,7 @@ class TestImageService(unittest.TestCase):
         source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
-        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+        image = service.display_image(source_image, window_height=window_h, window_width=window_w)
 
         # read raw image data and assert new values
         img = cv2.imdecode(image, -1) # -1 means do not change image
@@ -99,7 +101,7 @@ class TestImageService(unittest.TestCase):
         source_image = f"{ASSET_DIRECTORIES[0]}/sub_dir_assets/david-becker-F7SBonu15d8-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
-        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+        image = service.display_image(source_image, window_height=window_h, window_width=window_w)
 
         # read raw image data and assert new values
         img = cv2.imdecode(image, -1)  # -1 means do not change image
@@ -122,7 +124,7 @@ class TestImageService(unittest.TestCase):
         source_image = f"{ASSET_DIRECTORIES[0]}/2024/11/bernd-dittrich-73scJ3UOdHM-unsplash.jpg"
         source_image_ext = source_image.rsplit(".", 1)[1]
 
-        image = service.scale(source_image, window_height=window_h, window_width=window_w)
+        image = service.display_image(source_image, window_height=window_h, window_width=window_w)
 
         # read raw image data and assert new values
         img = cv2.imdecode(image, -1)  # -1 means do not change image
@@ -153,4 +155,11 @@ class TestImageService(unittest.TestCase):
     def test_image_not_found(self):
         service = ImageService()
         service.load_images()
-        self.assertRaises(Exception, service.scale, "/no/image/here/foo.png", 5, 5)
+        self.assertRaises(Exception, service.display_image, "/no/image/here/foo.png", 5, 5)
+
+
+    def test_datetime_parsing(self):
+        service = ImageService()
+        metadata = {'DateTime': '2014:10:18 13:49:12'}
+        datetime = service.parse_date(metadata)
+        self.assertEqual("October, 2014", datetime)
