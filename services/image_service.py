@@ -114,8 +114,8 @@ class ImageService(object):
             return image
 
         if "DateTime" not in image_meta:
-            print(f"Unable to Find DateTime in image meta: {image_meta}")
-            return image
+            print(f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name.")
+            image_meta.update({"DateTime": "Unknown"})
 
         datetime_str = self.parse_date(image_meta)
 
@@ -126,7 +126,7 @@ class ImageService(object):
         grey = (220, 220, 220)
 
         return cv2.putText(image, datetime_str, (horiz_text_pos, vertical_text_pos),
-                                  cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 0.75, grey, 2, cv2.LINE_4)
+                                  cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 1, grey, 1, cv2.LINE_AA)
 
 
 
@@ -222,24 +222,23 @@ class ImageService(object):
         :return:
         """
 
-        manual_dt_parsing = ["%Y:%m:%d %H:%M:%S"]
-        # parsable dates
-        #'2014:10:18 13:49:12'
+        manual_dt_parsing = [
+            "%Y:%m:%d %H:%M:%S",    # '2014:10:18 13:49:12'
+            "%Y:%m:%d %H:%M:%S.%f", # '2014:07:25 19:39:59.283'
+            "%Y:%m:%d %H:%M:%S%z"   # '2014:03:19 18:15:53+00:00'
+        ]
 
-        unparsed_datetime = datetime.now()
+
         string_date = image_meta["DateTime"]
         parsed_date = None
 
+        for dt_format in manual_dt_parsing:
+            try:
+                parsed_date = datetime.strptime(string_date, dt_format)
+                return parsed_date.strftime('%B, %Y')
+            except Exception as e:
+                print(f"Failed to extract DateTime from meta {string_date}, error: {str(e)}")
+                pass
 
-        parsed_date = dateutil.parser.parse(image_meta["DateTime"])
-        # if parsed_date is today id couldn't parse correectly
-        # @ToDo fix this weird situation
-        if parsed_date.year == unparsed_datetime.year and parsed_date.month == unparsed_datetime.month and parsed_date.day == unparsed_datetime.day:
-            for dt_format in manual_dt_parsing:
-                try:
-                    parsed_date = datetime.strptime(string_date, dt_format)
-                except Exception as e:
-                    print(f"Failed to extract DateTime from meta {string_date}, error: {str(e)}")
-                    return string_date
-
-        return parsed_date.strftime('%B, %Y')
+        if parsed_date is None:
+            return string_date

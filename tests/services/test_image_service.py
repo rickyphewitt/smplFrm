@@ -160,6 +160,15 @@ class TestImageService(unittest.TestCase):
 
     def test_datetime_parsing(self):
         service = ImageService()
-        metadata = {'DateTime': '2014:10:18 13:49:12'}
-        datetime = service.parse_date(metadata)
-        self.assertEqual("October, 2014", datetime)
+
+        parsable_dates = [
+            ("2014:10:18 13:49:12","October, 2014"),
+            ("2014:07:25 19:39:59.283", "July, 2014"),
+            ("2014:03:19 18:15:53+00:00", "March, 2014"),
+            ("UnparsableDate", "UnparsableDate")
+        ]
+
+        for date, expected_date in parsable_dates:
+            metadata = {'DateTime': date}
+            datetime = service.parse_date(metadata)
+            self.assertEqual(expected_date, datetime)
