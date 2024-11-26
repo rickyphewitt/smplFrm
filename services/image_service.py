@@ -10,7 +10,7 @@ from PIL.ExifTags import TAGS
 
 import settings
 from services.history_service import HistoryService
-from settings import DISPLAY_DATE
+from settings import DISPLAY_DATE, FORCE_DATE_FROM_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -102,22 +102,25 @@ class ImageService(object):
         resized_img = cv2.resize(img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA)
         resized_img = cv2.copyMakeBorder(resized_img, horz_border, horz_border, vert_border, vert_border, cv2.BORDER_REPLICATE, value=(0, 0, 0, 100)) #is opacity doing anything?
 
-        resized_img = self.__display_date(resized_img, padding, target_height, image_meta)
+        resized_img = self.__display_date(image_path, resized_img, padding, target_height, image_meta)
 
 
         _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
         return enc_image
 
 
-    def __display_date(self, image, horiz_text_pos, target_height, image_meta):
+    def __display_date(self, image_path, image, horiz_text_pos, target_height, image_meta):
         if not DISPLAY_DATE:
             return image
 
-        if "DateTime" not in image_meta:
+        if FORCE_DATE_FROM_PATH:
+            date_str = self.parse_date_from_path(image_path)
+
+        elif "DateTime" not in image_meta:
             print(f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name.")
             image_meta.update({"DateTime": "Unknown"})
 
-        datetime_str = self.parse_date(image_meta)
+            date_str = self.parse_date(image_meta)
 
 
 
@@ -125,7 +128,7 @@ class ImageService(object):
         vertical_text_pos = target_height - horiz_text_pos
         grey = (220, 220, 220)
 
-        return cv2.putText(image, datetime_str, (horiz_text_pos, vertical_text_pos),
+        return cv2.putText(image, date_str, (horiz_text_pos, vertical_text_pos),
                                   cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 1, grey, 1, cv2.LINE_AA)
 
 
@@ -212,7 +215,6 @@ class ImageService(object):
             for k, v in exif_data.items():
                 tag_dict[TAGS.get(k, k)] = v
 
-
         return tag_dict
 
     def parse_date(self, image_meta):
@@ -228,7 +230,6 @@ class ImageService(object):
             "%Y:%m:%d %H:%M:%S%z"   # '2014:03:19 18:15:53+00:00'
         ]
 
-
         string_date = image_meta["DateTime"]
         parsed_date = None
 
@@ -242,3 +243,15 @@ class ImageService(object):
 
         if parsed_date is None:
             return string_date
+
+
+    def parse_date_from_path(self, path):
+        import re
+
+        match = re.search("([12]\d{3}/(0[1-9]|1[0-2]))", path)
+        if match:
+            # split on remainng /
+            parts = match.group(0)
+            parsed_date = datetime.strptime(match.group(0), "%Y/%m")
+
+            return parsed_date.strftime('%B, %Y')
