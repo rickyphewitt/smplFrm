@@ -172,3 +172,14 @@ class TestImageService(unittest.TestCase):
             metadata = {'DateTime': date}
             datetime = service.parse_date(metadata)
             self.assertEqual(expected_date, datetime)
+
+
+    def test_datetime_folder_structure(self):
+        service = ImageService()
+        image_path_to_parse = f"{LIBRARY_DIRECTORIES[0]}/2024/11/bernd-dittrich-73scJ3UOdHM-unsplash.jpg"
+        datetime = service.parse_date_from_path(image_path_to_parse)
+        expected_date = "November, 2024"
+        self.assertEqual(expected_date, datetime)
+
+
+

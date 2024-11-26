@@ -46,12 +46,13 @@ services:
 
 ### Environment Variables
 
-| Name                              | Default    | Description                                                         |
-|-----------------------------------|------------|---------------------------------------------------------------------|
-| `SMPL_FRM_LIBRARY_DIRECTORIES`    | "library"  | Comma Separated String of directory paths                           |
+| Name                              | Default     | Description                                                         |
+|-----------------------------------|-------------|---------------------------------------------------------------------|
+| `SMPL_FRM_LIBRARY_DIRECTORIES`    | "library"   | Comma Separated String of directory paths                           |
 | `SMPL_FRM_TEMPLATE_DIRECTORIES`   | "templates" | Comma Separated String of directory paths                           |
-| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000      | How long to display an image (millis)                               |
-| `SMPL_FRM_EXTERNAL_PORT`          | 8000       | Used in Docker when the external port differs from the server port  |
-| `SMPL_FRM_HOST`                   | localhost  | Used when running the application on a server                       |
-| `SMPL_FRM_CACHE_DIRECTORY`        | "/tmp"     | Local cache                                                         |
-| `SMPL_FRM_DISPLAY_DATE`           | False      | Display date (Month, Year) of photo. This reads the exif image data |
+| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000       | How long to display an image (millis)                               |
+| `SMPL_FRM_EXTERNAL_PORT`          | 8000        | Used in Docker when the external port differs from the server port  |
+| `SMPL_FRM_HOST`                   | localhost   | Used when running the application on a server                       |
+| `SMPL_FRM_CACHE_DIRECTORY`        | "/tmp"      | Local cache                                                         |
+| `SMPL_FRM_DISPLAY_DATE`           | False       | Display date (Month, Year) of photo. This reads the exif image data |
+| `SMPL_FRM_FORCE_DATE_FROM_PATH`   | True        | Use the filepath to determine date supports `YYYY/MM` 2024/12       |
