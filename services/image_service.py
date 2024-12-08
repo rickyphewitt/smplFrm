@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from linecache import cache
 from random import Random
 
 import cv2
@@ -9,8 +10,9 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 
 import settings
+from services.cache_service import CacheService
 from services.history_service import HistoryService
-from settings import DISPLAY_DATE, FORCE_DATE_FROM_PATH
+from settings import DISPLAY_DATE, FORCE_DATE_FROM_PATH, ALWAYS_RANDOM
 
 logger = logging.getLogger(__name__)
 
@@ -19,47 +21,75 @@ logger = logging.getLogger(__name__)
 class ImageService(object):
 
     def __init__(self):
-        self.image_cache = []
-        self.image_cache_by_name = {}
+        self.image_cache = {}
+        self.image_cache_by_name_key = "imagesByName.json"
+        self.image_cache_by_index_key = "imagesByIndex.json"
+        self.image_cache_by_name = None
+        self.image_cache_cache_by_index = None;
         self.image_count = 0
         self.rand = Random()
         self.history = HistoryService()
+        self.cache = CacheService()
 
-    def load_images(self, reload=False):
-        if not reload and len(self.image_cache) > 0:
-            return self.image_cache
-        # load images
-        images = []
-        print(settings.LIBRARY_DIRECTORIES)
+
+    def load_images(self):
+        """
+        Reads images from disc and caches their locations
+        to a file
+        :return:
+        """
+        images_by_name = {}
+        images_by_index = {}
+        index =0
         for asset_dir in settings.LIBRARY_DIRECTORIES:
             for dirpath, subdirs, filenames in os.walk(asset_dir):
                 for filename in filenames:
                     file_path = os.path.join(dirpath, filename)
-                    images.append((filename, file_path))
-                    self.image_cache_by_name.update({filename: file_path})
 
-        self.image_cache = images
-        self.image_count = len(self.image_cache)
-        print(f"Loaded {self.image_count} image(s)")
-        logger.info(f"Loaded {self.image_count} image(s)")
-        return images
+                    image_data = {filename: {"path": file_path}}
+                    images_by_name.update(image_data)
+                    images_by_index.update({index: image_data})
 
-    def get_one(self, index=None):
-        if index:
-            return self.image_cache[index]
+                    index = index + 1
 
-        image = self.rand.choice(seq=self.image_cache)
+        # write to cache
+        self.cache.write(self.image_cache_by_name_key, images_by_name)
+        self.cache.write(self.image_cache_by_index_key, images_by_index)
+        # for now load the images into memory -> @TODO use an actual framework (DJANGO)!
+        self.image_cache_by_name = images_by_name
+        self.image_cache_cache_by_index = images_by_index
+
+        print(f"Loaded {index} image(s)")
+
+    def get_one(self):
+        images_by_index = self.cache.read(self.image_cache_by_index_key)
+        rand_index = str(self.rand.randrange(0, len(images_by_index)))
+
+        image_dict = images_by_index.get(rand_index)
+        image_name = next(iter(image_dict))
+
+        # cached_image = self.rand.choice(self.image_cache.keys())
+        #
+        #
+        # # self.rand.choice(seq=self.image_cache.keys())
+        # image = self.rand.choice(seq=self.image_cache)
+
+
 
         try:
-            self.history.add(image[0])
+            self.history.add(rand_index)
         except Exception:
             # continue to find an image that isn't in the history
-            print(f"Image {image[0]} found in history, trying again.")
+            print(f"Image {image_name} found in history, trying again.")
             image = self.get_one()
+        print(f"Retuning image {image_name}")
+        return {"name":  image_name, "path": image_dict[image_name]["path"]}
 
-        print(f"Retuning image {image[0]}.")
-        return image
-
+    def get_next(self):
+        self.image_cache = self.cache.read(self.image_cache_by_index_key)
+        if ALWAYS_RANDOM:
+            # pick a random image
+            return self.get_one()
 
 
     def display_image(self, image_path, window_height, window_width):
@@ -74,7 +104,8 @@ class ImageService(object):
         if image_meta is None:
             image_meta = {}
         image_name = image.rsplit("/", 1)[1]
-        image_path = self.image_cache_by_name.get(image_name)
+        image = self.image_cache_by_name.get(image_name)
+        image_path = image['path']
         if not image_name:
             #ToDo: more accurate exception here
             raise Exception()
