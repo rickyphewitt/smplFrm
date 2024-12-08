@@ -1,6 +1,7 @@
 import unittest
 from unittest import SkipTest
 
+from services.cache_service import CacheService
 from settings import LIBRARY_DIRECTORIES, Settings
 from services.image_service import ImageService
 from services.history_service import HistoryService
@@ -12,19 +13,34 @@ class TestImageService(unittest.TestCase):
 
     def test_load_images(self):
         service = ImageService()
-        images = service.load_images()
+        service.load_images()
+        cache = CacheService()
+        # use cache service to ensure the correct image data was written
+        images_by_name = cache.read("imagesByName.json")
+        images_by_index = cache.read("imagesByIndex.json")
 
-        self.assertEqual(len(images), 5, "Unexpected Image Count")
+        self.assertEqual(len(images_by_name), 5, "Unexpected Image Count")
+        self.assertEqual(len(images_by_index), 5, "Unexpected Image Count")
 
-    def test_load_image(self):
+    def test_load_image_random(self):
+        HistoryService().clean()
+        service = ImageService()
+        service.load_images()
+        image = service.get_next()
+        self.assertIsNotNone(image, "Image dict is None")
+        self.assertIsNotNone(image["name"], "Name of image not found")
+        self.assertIsNotNone(image["path"], "File Path of image not found")
+        self.assertTrue(Path(image["path"]).exists(), "File not found")
+
+    def test_load_image_next(self):
         HistoryService().clean()
         service = ImageService()
         service.load_images()
         image = service.get_one()
-        self.assertIsNotNone(image, "Image tuple is None")
-        self.assertIsNotNone(image[0], "Name of image not found")
-        self.assertIsNotNone(image[1], "File Path of image not found")
-        self.assertTrue(Path(image[1]).exists(), "File not found")
+        self.assertIsNotNone(image, "Image dict is None")
+        self.assertIsNotNone(image, "Name of image not found")
+        self.assertIsNotNone(image['path'], "File Path of image not found")
+        self.assertTrue(Path(image['path']).exists(), "File not found")
 
 
     def test_scale_horizontal_image(self):

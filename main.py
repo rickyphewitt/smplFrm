@@ -18,7 +18,6 @@ class ImageServer(SimpleHTTPRequestHandler):
         # should load them once
         self.image_service = ImageService()
         self.template_service = TemplateService()
-        self.image_service.load_images()
         super().__init__(*args, directory=directory, **kwargs)
 
 
@@ -26,40 +25,43 @@ class ImageServer(SimpleHTTPRequestHandler):
 
         # decode path
         path = urllib.parse.unquote(self.path)
-
+        self.send_response(HTTPStatus.OK)
         if "favicon" in path:
+            # ToDo add a favicon.ico package
             self.send_response(HTTPStatus.NOT_FOUND)
-            return
-
-        # handle the image being returned
-        if len(path) > 3: # greater than 3 means a file extension ".jpg, .png, ect"
-            self.send_response(HTTPStatus.OK)
+        elif "/next" in path:
+            #@TODO not needed after a real framework (DJANGO)
+            self.image_service.load_images()
+            # run get next image logic
             width = self.headers.get("window-w", 100)
             height = self.headers.get("window-h", 100)
+            # manipulate image to screensize
+            scaled_image = None
+            next_image = self.image_service.get_next()
+            try:
+                scaled_image = self.image_service.display_image(next_image["path"], window_height=height, window_width=width)
+            except Exception:
+                self.send_response(HTTPStatus.NOT_FOUND)
+                self.send_header('Content-type', 'image/jpeg')
+                self.end_headers()
 
-            if int(width) > 0 and int(height) > 0:
-                # manipulate image to screensize
-                try:
-                    scaled_image = self.image_service.display_image(path, window_height=height, window_width=width)
-                except Exception:
-                    self.send_response(HTTPStatus.NOT_FOUND)
-                    self.send_header('Content-type', 'image/jpeg')
-                    self.end_headers()
-                    return
             # else all is good and return image
             self.send_response(HTTPStatus.OK)
 
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
             self.wfile.write(scaled_image)
+        else:
+            # run normal server startup logic
+            self.image_service.load_images()
+            image = self.image_service.get_one()
+            template = self.template_service.render("image.html", image=image["name"])
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(bytes(template, "utf8"))
 
-        # default loading of template
-        image = self.image_service.get_one()
-        template = self.template_service.render("image.html", image=image[1])
-        self.send_response(HTTPStatus.OK)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(bytes(template, "utf8"))
+
 
 httpd = HTTPServer(('0.0.0.0', PORT), ImageServer)
 httpd.serve_forever()
