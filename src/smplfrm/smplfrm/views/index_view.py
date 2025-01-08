@@ -1,6 +1,6 @@
 from django.views.generic import TemplateView
 
-from smplfrm.settings import SMPL_FRM_EXTERNAL_PORT, SMPL_FRM_HOST, SMPL_FRM_IMAGE_REFRESH_INTERVAL
+from smplfrm.settings import SMPL_FRM_EXTERNAL_PORT, SMPL_FRM_HOST, SMPL_FRM_IMAGE_REFRESH_INTERVAL, SMPL_FRM_PROTOCOL
 class IndexView(TemplateView):
     template_name = "index.html"
 
@@ -14,7 +14,7 @@ class IndexView(TemplateView):
         """
 
         context = {
-            "host": SMPL_FRM_HOST,
+            "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
             "port": SMPL_FRM_EXTERNAL_PORT,
             "refresh_interval": SMPL_FRM_IMAGE_REFRESH_INTERVAL
         }
