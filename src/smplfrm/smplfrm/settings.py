@@ -25,21 +25,13 @@ SMPL_FRM_IMAGE_FORMATS = os.getenv("SMPL_FRM_IMAGE_FORMATS",["jpg", "png"])
 SMPL_FRM_EXTERNAL_PORT = int(os.getenv("SMPL_FRM_EXTERNAL_PORT", "8000"))
 SMPL_FRM_HOST = os.getenv("SMPL_FRM_HOST", "localhost")
 SMPL_FRM_PROTOCOL = os.getenv("SMPL_FRM_PROTOCOL", "http://")
-SMPL_FRM_IMAGE_REFRESH_INTERVAL = 30000
+SMPL_FRM_IMAGE_REFRESH_INTERVAL = int(os.getenv("SMPL_FRM_IMAGE_REFRESH_INTERVAL", "30000"))
 SMPL_FRM_DB_FOLDER="db"
-# TEMPLATE_DIRECTORIES = settings.get_list("TEMPLATE_DIRECTORIES", f"{root_path}/templates")
-# LIBRARY_DIRECTORIES = settings.get_list("LIBRARY_DIRECTORIES", f"{root_path}/library")
 # IMAGE_REFRESH_INTERVAL = settings.get("IMAGE_REFRESH_INTERVAL", 30000)
-# EXTERNAL_PORT = settings.get("EXTERNAL_PORT", 8000)
-# HOST = settings.get("HOST", "localhost")
 # CACHE_DIRECTORY = settings.get("CACHE_DIRECTORY", f"{root_path}/tmp")
 # DISPLAY_DATE = settings.get("DISPLAY_DATE", False)
 # FORCE_DATE_FROM_PATH = settings.get("FORCE_DATE_FROM_PATH", True)
 # ALWAYS_RANDOM = settings.get("ALWAYS_RANDOM", True)
-# # list of vars to render in templates
-# TEMPLATE_VARS = {"IMAGE_REFRESH_INTERVAL": IMAGE_REFRESH_INTERVAL, "EXTERNAL_PORT": EXTERNAL_PORT, "HOST": HOST}
-
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
