@@ -4,6 +4,7 @@ FROM python:3.9
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-dev \
     libgl1-mesa-glx \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -11,8 +12,6 @@ WORKDIR /app
 
 COPY ../.. /app
 
-RUN ls -la
+RUN make packages
 
-RUN pip install -r requirements.txt
-
-CMD ["python", "main.py"]
+CMD ["make", "run"]

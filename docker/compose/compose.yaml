@@ -1,0 +1,49 @@
+services:
+    smpl_frm:
+        build:
+            context: ../../
+            dockerfile: ./docker/images/Dockerfile
+        ports:
+         - "8321:8321"
+        environment:
+            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - SMPL_FRM_EXTERNAL_PORT=8321
+            - SMPL_FRM_HOST=localhost
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /home/ricky/dev/smplFrm/rickyAssetsTest:/app/library
+            - db:/app/src/smplfrm/db
+    smpl_frm_celery:
+        command: [ "make", "start-celery"]
+        build:
+            context: ../../
+            dockerfile: ./docker/images/Dockerfile
+
+        environment:
+            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - SMPL_FRM_HOST=localhost
+            - CELERY_REDIS_HOST=cache
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /home/ricky/dev/smplFrm/rickyAssetsTest:/app/library
+            - db:/app/src/smplfrm/db
+        networks:
+          - smpl_frm_net
+
+    cache:
+      extends:
+        file: services.yaml
+        service: cache
+
+networks:
+  smpl_frm_net:
+
+volumes:
+  cache:
+    driver: local
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ricky/dev/smplFrm/docker/data
+      o: bind
