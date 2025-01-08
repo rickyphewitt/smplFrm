@@ -23,7 +23,8 @@ default_library = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../
 SMPL_FRM_LIBRARY_DIRS = os.getenv("SMPL_FRM_LIBRARY_DIRS", default_library).split(",")
 SMPL_FRM_IMAGE_FORMATS = os.getenv("SMPL_FRM_IMAGE_FORMATS",["jpg", "png"])
 SMPL_FRM_EXTERNAL_PORT = int(os.getenv("SMPL_FRM_EXTERNAL_PORT", "8000"))
-SMPL_FRM_HOST = os.getenv("SMPL_FRM_HOST", "http://localhost")
+SMPL_FRM_HOST = os.getenv("SMPL_FRM_HOST", "localhost")
+SMPL_FRM_PROTOCOL = os.getenv("SMPL_FRM_PROTOCOL", "http://")
 SMPL_FRM_IMAGE_REFRESH_INTERVAL = 30000
 SMPL_FRM_DB_FOLDER="db"
 # TEMPLATE_DIRECTORIES = settings.get_list("TEMPLATE_DIRECTORIES", f"{root_path}/templates")
@@ -49,7 +50,7 @@ SECRET_KEY = 'django-insecure-1s5!+gf*u0x34#3+@1w%=np!^1o_ee$@$!_j2c!uh!aidkr3ja
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ['localhost',  SMPL_FRM_HOST]
 
 
 # Application definition
