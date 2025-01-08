@@ -1,0 +1,16 @@
+services:
+    cache:
+      image: redis:7.4.1-alpine
+      restart: always
+      ports:
+        - "6379:6379"
+      volumes:
+        - cache:/data
+      networks:
+        - smpl_frm_net
+volumes:
+  cache:
+    driver: local
+
+networks:
+  smpl_frm_net:
