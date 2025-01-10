@@ -11,7 +11,7 @@ services:
             - SMPL_FRM_HOST=localhost
             - PYTHONUNBUFFERED=1
         volumes:
-            - /home/ricky/dev/smplFrm/rickyAssetsTest:/app/library
+            - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
     smpl_frm_celery:
         command: [ "make", "start-celery"]
@@ -25,7 +25,7 @@ services:
             - CELERY_REDIS_HOST=cache
             - PYTHONUNBUFFERED=1
         volumes:
-            - /home/ricky/dev/smplFrm/rickyAssetsTest:/app/library
+            - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
         networks:
           - smpl_frm_net
