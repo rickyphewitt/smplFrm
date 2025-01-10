@@ -16,22 +16,18 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # app specific env vars
 default_library = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../../../', 'library'))
 
 SMPL_FRM_LIBRARY_DIRS = os.getenv("SMPL_FRM_LIBRARY_DIRS", default_library).split(",")
-SMPL_FRM_IMAGE_FORMATS = os.getenv("SMPL_FRM_IMAGE_FORMATS",["jpg", "png"])
-SMPL_FRM_EXTERNAL_PORT = int(os.getenv("SMPL_FRM_EXTERNAL_PORT", "8000"))
+SMPL_FRM_IMAGE_FORMATS = os.getenv("SMPL_FRM_IMAGE_FORMATS","jpg,png").split(',')
+SMPL_FRM_EXTERNAL_PORT = int(os.getenv("SMPL_FRM_EXTERNAL_PORT", "8321"))
 SMPL_FRM_HOST = os.getenv("SMPL_FRM_HOST", "localhost")
 SMPL_FRM_PROTOCOL = os.getenv("SMPL_FRM_PROTOCOL", "http://")
 SMPL_FRM_IMAGE_REFRESH_INTERVAL = int(os.getenv("SMPL_FRM_IMAGE_REFRESH_INTERVAL", "30000"))
+SMPL_FRM_DISPLAY_DATE = os.getenv("SMPL_FRM_DISPLAY_DATE", True)
+SMPL_FRM_FORCE_DATE_FROM_PATH = os.getenv("SMPL_FRM_FORCE_DATE_FROM_PATH", True)
 SMPL_FRM_DB_FOLDER="db"
-# IMAGE_REFRESH_INTERVAL = settings.get("IMAGE_REFRESH_INTERVAL", 30000)
-# CACHE_DIRECTORY = settings.get("CACHE_DIRECTORY", f"{root_path}/tmp")
-# DISPLAY_DATE = settings.get("DISPLAY_DATE", False)
-# FORCE_DATE_FROM_PATH = settings.get("FORCE_DATE_FROM_PATH", True)
-# ALWAYS_RANDOM = settings.get("ALWAYS_RANDOM", True)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

@@ -3,7 +3,8 @@ from django.test import TestCase
 
 from smplfrm.services import ImageService
 from smplfrm.services import LibraryService
-from django.db.models import ObjectDoesNotExist
+
+import cv2
 
 from smplfrm.services.image_manipulation_service import ImageManipulationService
 
@@ -23,6 +24,123 @@ class TestImageService(TestCase):
 
         displayed_image = self.image_manipulation_service.display(image, 100, 100)
         self.assertIsNotNone(displayed_image, "Displayed Image should not be None!")
+
+
+    def test_scale_horizontal_image(self):
+        """
+        Test scaling an image to keep aspect ratio
+        :return:
+        """
+
+        window_h = 100
+        window_w = 100
+        padding = 5
+
+        image = self.image_service.list(file_name="david-becker-F7SBonu15d8-unsplash.jpg")[0]
+
+        displayed_image = self.image_manipulation_service.display(image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(displayed_image, -1) # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w-5, image_w)
+        self.assertEqual(window_h-6, image_h) # for rounding
+
+
+    def test_scale_vertical_image(self):
+        """
+        Test scaling an image to keep aspect ratio
+        :return:
+        """
+
+        window_h = 100
+        window_w = 100
+        padding = 5
+
+        image = self.image_service.list(file_name="kelly-sikkema-PqqQDpS6H6A-unsplash.jpg")[0]
+
+        displayed_image = self.image_manipulation_service.display(image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(displayed_image, -1) # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_h-padding, image_h)
+        # assert that the width has been filled as well
+        self.assertEqual(window_w - padding, image_w)
+        self.assertEqual(window_h - padding, image_h)
+
+
+    def test_scale_horizontal_image_height_larger_than_viewport(self):
+        """
+        This test ensures that the image height matches when the scale
+        image height exceeds the height of the viewport
+        :return:
+        """
+        window_h = 100
+        window_w = 1000
+        padding = 5
+
+        image = self.image_service.list(file_name="kelly-sikkema-PqqQDpS6H6A-unsplash.jpg")[0]
+
+        displayed_image = self.image_manipulation_service.display(image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w - 5, image_w)
+        self.assertEqual(window_h - 5, image_h)
+
+    def test_scale_panoramic_image(self):
+
+        window_h = 433
+        window_w = 952
+        padding = 5
+
+
+        image = self.image_service.list(file_name="bernd-dittrich-73scJ3UOdHM-unsplash.jpg")[0]
+
+        displayed_image = self.image_manipulation_service.display(image, window_height=window_h, window_width=window_w)
+
+        # read raw image data and assert new values
+        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w - 5, image_w)
+        self.assertEqual(window_h - 6, image_h)
+
+    def test_datetime_parsing(self):
+        parsable_dates = [
+            ("2014:10:18 13:49:12","October, 2014"),
+            ("2014:07:25 19:39:59.283", "July, 2014"),
+            ("2014:03:19 18:15:53+00:00", "March, 2014"),
+            ("UnparsableDate", "UnparsableDate")
+        ]
+
+        for date, expected_date in parsable_dates:
+            metadata = {'DateTime': date}
+            datetime = self.image_manipulation_service.parse_date(metadata)
+            self.assertEqual(expected_date, datetime)
+
+
+    def test_datetime_folder_structure(self):
+
+        image = self.image_service.list(file_name="bernd-dittrich-73scJ3UOdHM-unsplash.jpg")[0]
+        datetime = self.image_manipulation_service.parse_date_from_path(image.file_path)
+        expected_date = "November, 2024"
+        self.assertEqual(expected_date, datetime)
+
+
 
     def _assert_image(self, image, name="name"):
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")

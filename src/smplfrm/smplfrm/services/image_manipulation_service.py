@@ -3,7 +3,7 @@ import logging
 import string
 from typing import List, Dict
 from datetime import datetime
-
+from smplfrm.settings import SMPL_FRM_DISPLAY_DATE, SMPL_FRM_FORCE_DATE_FROM_PATH
 import cv2
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
@@ -18,9 +18,6 @@ class ImageManipulationService(object):
         return self.__display_image(image, window_height, window_width)
 
 
-
-
-    ### Need to factor this out to a new service
     def __display_image(self, image, window_height, window_width):
 
         image_metadata = self.__extract_metadata(image.file_path)
@@ -63,31 +60,35 @@ class ImageManipulationService(object):
         resized_img = cv2.resize(img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA)
         resized_img = cv2.copyMakeBorder(resized_img, horz_border, horz_border, vert_border, vert_border, cv2.BORDER_REPLICATE, value=(0, 0, 0, 100)) #is opacity doing anything?
 
+        resized_img = self.__display_date(image.file_path, resized_img, padding, target_height, image_meta=image_meta)
+        logger.info(f"Resized And Dated Image. ")
         _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
         return enc_image
 
 
-    # def __display_date(self, image_path, image, horiz_text_pos, target_height, image_meta):
-    #     if not DISPLAY_DATE:
-    #         return image
-    #
-    #     if FORCE_DATE_FROM_PATH:
-    #         date_str = self.parse_date_from_path(image_path)
-    #
-    #     elif "DateTime" not in image_meta:
-    #         print(f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name.")
-    #         image_meta.update({"DateTime": "Unknown"})
-    #
-    #         date_str = self.parse_date(image_meta)
-    #
-    #
-    #
-    #     # write the name of the image file to the bottom left
-    #     vertical_text_pos = target_height - horiz_text_pos
-    #     grey = (220, 220, 220)
-    #
-    #     return cv2.putText(image, date_str, (horiz_text_pos, vertical_text_pos),
-    #                               cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 1, grey, 1, cv2.LINE_AA)
+    def __display_date(self, image_path, image, horiz_text_pos, target_height, image_meta):
+        logger.info(f"Display: {SMPL_FRM_DISPLAY_DATE}, force: {SMPL_FRM_FORCE_DATE_FROM_PATH}")
+        print(SMPL_FRM_DISPLAY_DATE)
+        print(SMPL_FRM_FORCE_DATE_FROM_PATH)
+        if not SMPL_FRM_DISPLAY_DATE:
+            return image
+
+        if SMPL_FRM_FORCE_DATE_FROM_PATH:
+            date_str = self.parse_date_from_path(image_path)
+            logger.info(f"Found Date String {date_str} from path.")
+        elif "DateTime" not in image_meta:
+            logger.error(f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name.")
+            image_meta.update({"DateTime": "Unknown"})
+            date_str = self.parse_date(image_meta)
+
+
+
+        # write the name of the image file to the bottom left
+        vertical_text_pos = target_height - horiz_text_pos
+        grey = (220, 220, 220)
+
+        return cv2.putText(image, date_str, (horiz_text_pos, vertical_text_pos),
+                                  cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 1, grey, 1, cv2.LINE_AA)
 
 
 
@@ -175,7 +176,7 @@ class ImageManipulationService(object):
 
         return tag_dict
 
-    def __parse_date(self, image_meta):
+    def parse_date(self, image_meta):
         """
         Parse date if possible
         :param image_meta:
@@ -203,7 +204,7 @@ class ImageManipulationService(object):
             return string_date
 
 
-    def __parse_date_from_path(self, path):
+    def parse_date_from_path(self, path):
         import re
 
         match = re.search("([12]\d{3}/(0[1-9]|1[0-2]))", path)
