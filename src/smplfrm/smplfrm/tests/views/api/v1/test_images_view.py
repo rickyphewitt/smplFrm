@@ -7,7 +7,7 @@ from smplfrm.views.api.v1.images import Images as imageView
 from django.db.models import ObjectDoesNotExist
 
 
-class TestImageService(TestCase):
+class TestImagesView(TestCase):
     def setUp(self):
         self.uri = "/api/v1/images"
         self.image_service = ImageService()
@@ -50,13 +50,26 @@ class TestImageService(TestCase):
     def test_display_image(self):
         # bootstrap the images so they can be read
         LibraryService().scan()
-        # get a random image
 
+        # get a random image
         image = self.image_service.list()[0]
 
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, 200)
 
+
+
+    def test_next_image(self):
+        """
+        Returns the next image
+        :return:
+        """
+
+        # bootstrap the images so they can be read
+        LibraryService().scan()
+
+        response = self.client.get(f"{self.uri}/next")
+        self.assertEqual(response.status_code, 200)
 
 
 

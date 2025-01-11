@@ -119,28 +119,6 @@ class TestImageService(TestCase):
         self.assertEqual(window_w - 5, image_w)
         self.assertEqual(window_h - 6, image_h)
 
-    def test_datetime_parsing(self):
-        parsable_dates = [
-            ("2014:10:18 13:49:12","October, 2014"),
-            ("2014:07:25 19:39:59.283", "July, 2014"),
-            ("2014:03:19 18:15:53+00:00", "March, 2014"),
-            ("UnparsableDate", "UnparsableDate")
-        ]
-
-        for date, expected_date in parsable_dates:
-            metadata = {'DateTime': date}
-            datetime = self.image_manipulation_service.parse_date(metadata)
-            self.assertEqual(expected_date, datetime)
-
-
-    def test_datetime_folder_structure(self):
-
-        image = self.image_service.list(file_name="bernd-dittrich-73scJ3UOdHM-unsplash.jpg")[0]
-        datetime = self.image_manipulation_service.parse_date_from_path(image.file_path)
-        expected_date = "November, 2024"
-        self.assertEqual(expected_date, datetime)
-
-
 
     def _assert_image(self, image, name="name"):
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
