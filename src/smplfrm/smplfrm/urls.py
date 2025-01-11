@@ -20,13 +20,14 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 
-from smplfrm.views.api.v1 import images
+from smplfrm.views.api.v1 import images, images_metadata
 from smplfrm.views.index_view import IndexView
 
 api_v1_router = routers.DefaultRouter(trailing_slash=False)
 api_v1_router.include_root_view = False
 
 api_v1_router.register(r'images', images.Images, basename='images')
+api_v1_router.register(r'images_metadata', images_metadata.ImagesMetadata, basename='images_metadata')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

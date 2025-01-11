@@ -7,10 +7,10 @@ import cv2
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
 
-
 from smplfrm.models import Image
 
 logger = logging.getLogger(__name__)
+
 
 class ImageService(object):
 
@@ -29,7 +29,6 @@ class ImageService(object):
         else:
             return Image.objects.all()
 
-        pass
     def update(self, image: Image):
         image.save()
         return image

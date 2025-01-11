@@ -44,6 +44,11 @@ class TestLibraryService(TestCase):
         deleted_image = self.image_service.read(ext_id=created_image.external_id, deleted=True)
         undeleted_image = self.image_service.read(ext_id=valid_image.external_id)
 
+        # verify metadata exif
+        image_meta = undeleted_image.meta
+        self.assertIsNotNone(image_meta)
+        self.assertIsNotNone(image_meta.exif)
+
 
 
 

@@ -1,8 +1,11 @@
 
 import logging
-from django.conf import settings
 import os
 
+from PIL import Image as PIL_Image
+from PIL import TiffImagePlugin
+from PIL.ExifTags import TAGS
+from django.conf import settings
 from smplfrm.settings import SMPL_FRM_IMAGE_FORMATS, BASE_DIR
 
 logger = logging.getLogger(__name__)
@@ -15,8 +18,11 @@ class LibraryService(object):
 
 
     def __init__(self):
+        from smplfrm.services import ImageMetadataService
         from smplfrm.services import ImageService
+
         self.image_service = ImageService()
+        self.image_metadata_service = ImageMetadataService()
 
 
     def scan(self):
@@ -51,11 +57,13 @@ class LibraryService(object):
                             if existing_image.deleted:
                                 existing_image.deleted = False
                                 existing_image.save()
+                            self.save_image_meta(existing_image)
                             valid_image_ids.append(existing_image.external_id)
                         else:
                             created_image = self.image_service.create(image_data)
                             images_created = images_created + 1
                             valid_image_ids.append(created_image.external_id)
+                            self.save_image_meta(created_image)
 
 
             logger.info(f"found {image_count} image(s) and created {images_created} images(s)")
@@ -66,32 +74,51 @@ class LibraryService(object):
             image.save()
 
 
+    def save_image_meta(self, image):
+        tag_dict = self.__extract_metadata(image.file_path)
+        image_meta = {
+            "image": image,
+            "exif": tag_dict,
+        }
 
-    def load_images(self):
-        """
-        Reads images from disc and caches their locations
-        to a file
-        :return:
-        """
-        images_by_name = {}
-        images_by_index = {}
-        index = 0
-        for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
-            for dirpath, subdirs, filenames in os.walk(asset_dir):
-                for filename in filenames:
-                    file_path = os.path.join(dirpath, filename)
 
-                    image_data = {filename: {"path": file_path}}
-                    images_by_name.update(image_data)
-                    images_by_index.update({index: image_data})
+        existing_meta = None
+        try:
+            existing_meta = image.meta
+            existing_meta.exif = image_meta["exif"]
+            self.image_metadata_service.update(existing_meta)
+        except Exception as e:
+            self.image_metadata_service.create(image_meta)
 
-                    index = index + 1
 
-        # write to cache
-        self.cache.write(self.image_cache_by_name_key, images_by_name)
-        self.cache.write(self.image_cache_by_index_key, images_by_index)
-        # for now load the images into memory -> @TODO use an actual framework (DJANGO)!
-        self.image_cache_by_name = images_by_name
-        self.image_cache_cache_by_index = images_by_index
 
-        print(f"Loaded {index} image(s)")
+
+
+
+
+
+    def __extract_metadata(self, image_path):
+        tag_dict = {}
+        with PIL_Image.open(image_path) as img_pil:
+
+            # Extract EXIF metadata using Pillow
+            exif_data = img_pil.getexif()
+
+            for k, v in exif_data.items():
+                tag_dict[TAGS.get(k, k)] = self.__cast_to_json_compatible(v)
+
+        return tag_dict
+
+    def __cast_to_json_compatible(self, value):
+        if isinstance(value, TiffImagePlugin.IFDRational):
+            return float(value)
+        elif isinstance(value, tuple):
+            return tuple(self.__cast_to_json_compatible(t) for t in value)
+        elif isinstance(value, bytes):
+            return value.decode(errors="replace")
+        elif isinstance(value, dict):
+            for k, v in value.items():
+                value[k] = self.__cast_to_json_compatible(v)
+            return value
+        else:
+            return value

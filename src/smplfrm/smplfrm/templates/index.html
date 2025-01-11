@@ -7,11 +7,33 @@
         body {
           margin: 0;
           padding: 0;
-            }
+        }
         img {
-  display: block;
-  margin: auto;
-}
+            display: block;
+            margin: auto;
+        }
+        #bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 10%; /* Adjust height as needed */
+            background-color: black;
+            opacity: 0.5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5%;
+            z-index: 2;
+        }
+        .text-box {
+            font-family: Cursive;
+            font-style: italic;
+            width: 30%;
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+        }
     </style>
 </head>
 <script>
@@ -19,27 +41,68 @@
     var headers = new Headers();
     headers.set('client', "foo");
 
-    var window_width = window.innerWidth
-    var window_height = window.innerHeight
-
+    var window_width = window.innerWidth;
+    var window_height = window.innerHeight;
+    var current_img = "";
 
     // call the backend with info about the clients resolution
     fetch(`{{host}}:{{port}}/api/v1/images/next?width=${window_width}&height=${window_height}`, {
         method: 'GET',
         headers: headers
     })
-  .then(response => response.blob())
-  .then(blob => {
+  .then(response => response.json())
+  .then((data) => {
     const img = document.createElement('img');
-    img.src = URL.createObjectURL(blob);
+    img.src = `{{host}}:{{port}}/api/v1/images/${data.id}/display?width=${window_width}&height=${window_height}`
     document.body.appendChild(img);
+    current_img = data
+  })
+  .then(() => {
+    console.log(current_img)
+    // handle the image date overlay
+    fetch(`{{host}}:{{port}}/api/v1/images_metadata?image__external_id=${current_img.id}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json(); // Parse JSON response
+    })
+    .then(data => {
+        if (!{{display_date}}) {
+            return;
+        } else {
+            // Set the value of the div with id="myDiv"
+            const taken_date = Date.parse(data[0].taken);
+            let options = {
+              year: "numeric",
+              month: "long",
+            };
+            var pretty_date = new Intl.DateTimeFormat("en-US", options).format(taken_date)
+            console.log(new Intl.DateTimeFormat("en-US", options).format(taken_date));
+
+            document.getElementById("bottom-left-box").innerHTML = pretty_date;
+        }
+
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+    });
+
+
   });
 
 
     setInterval(function() {
   window.location.reload();
 }, {{refresh_interval}});
+
 </script>
 <body>
+ <div id="bottom-bar">
+     <div class="text-box" id="bottom-left-box"></div>
+        <div class="text-box"></div>
+        <div class="text-box"></div>
+ </div>
+
 </body>
 </html>
