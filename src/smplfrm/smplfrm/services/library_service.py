@@ -105,8 +105,10 @@ class LibraryService(object):
             exif_data = img_pil.getexif()
 
             for k, v in exif_data.items():
-                tag_dict[TAGS.get(k, k)] = self.__cast_to_json_compatible(v)
-
+                try:
+                    tag_dict[TAGS.get(k, k)] = self.__cast_to_json_compatible(v)
+                except Exception as e:
+                    logger.warning(f"Failed to parse all metadata for image: {image_path}, error: {str(e)}")
         return tag_dict
 
     def __cast_to_json_compatible(self, value):
