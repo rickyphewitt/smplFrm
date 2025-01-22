@@ -2,7 +2,6 @@
 from django.test import TestCase
 
 from smplfrm.services import ImageService
-from smplfrm.services import LibraryService
 from django.db.models import ObjectDoesNotExist
 
 

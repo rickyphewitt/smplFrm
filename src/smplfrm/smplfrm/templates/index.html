@@ -58,7 +58,6 @@
     current_img = data
   })
   .then(() => {
-    console.log(current_img)
     // handle the image date overlay
     fetch(`{{host}}:{{port}}/api/v1/images_metadata?image__external_id=${current_img.id}`)
     .then(response => {
@@ -78,20 +77,13 @@
               month: "long",
             };
             var pretty_date = new Intl.DateTimeFormat("en-US", options).format(taken_date)
-            console.log(new Intl.DateTimeFormat("en-US", options).format(taken_date));
-
             document.getElementById("bottom-left-box").innerHTML = pretty_date;
         }
-
     })
     .catch(error => {
         console.error('Fetch error:', error);
     });
-
-
   });
-
-
     setInterval(function() {
   window.location.reload();
 }, {{refresh_interval}});
@@ -99,10 +91,9 @@
 </script>
 <body>
  <div id="bottom-bar">
-     <div class="text-box" id="bottom-left-box"></div>
-        <div class="text-box"></div>
-        <div class="text-box"></div>
+    <div class="text-box" id="bottom-left-box"></div>
+    <div class="text-box"></div>
+    <div class="text-box"></div>
  </div>
-
 </body>
 </html>
