@@ -1,11 +1,6 @@
 import logging
 import string
-from typing import List, Dict
-from datetime import datetime
-
-import cv2
-from PIL import Image as PIL_Image
-from PIL.ExifTags import TAGS
+from typing import Dict
 
 from smplfrm.models import Image
 

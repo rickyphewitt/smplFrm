@@ -3,10 +3,6 @@ import string
 from typing import List, Dict
 from datetime import datetime, timedelta
 
-import cv2
-from PIL import Image as PIL_Image
-from PIL.ExifTags import TAGS
-
 from smplfrm.settings import SMPL_FRM_DISPLAY_DATE, SMPL_FRM_FORCE_DATE_FROM_PATH
 from smplfrm.models import ImageMetadata
 

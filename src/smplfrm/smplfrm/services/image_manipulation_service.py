@@ -1,7 +1,5 @@
 
 import logging
-from datetime import datetime
-from smplfrm.settings import SMPL_FRM_DISPLAY_DATE, SMPL_FRM_FORCE_DATE_FROM_PATH
 import cv2
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
@@ -29,7 +27,7 @@ class ImageManipulationService(object):
             image_meta = {}
         image_ext = image.file_path.rsplit(".", 1)[1]
 
-        padding = 5
+        padding = 0
         # load image and get its w/h
         img = cv2.imread(image.file_path)
         # tuple of width / height
@@ -42,19 +40,18 @@ class ImageManipulationService(object):
             window_height = image_h
             window_width = image_w
 
-
-
         target_width = int(window_width) - padding
         target_height = int(window_height) - padding
 
-        print(f"window_height: {window_height}, window_width: {window_width}")
-        logger.info(f"window height: {window_height}")
-        logger.info(f"window width: {window_width}")
+        logger.debug(f"window height: {window_height}")
+        logger.debug(f"window width: {window_width}")
 
         scale_height_size, scale_width_size = self.__determine_scaled_dimensions(target_width, target_height, image_w, image_h)
         vert_border, horz_border = self.__determine_boarder(scale_width_size, scale_height_size, target_width, target_height)
 
-        print(f"target_height: {target_height}, target_width: {target_width}")
+        logger.debug(f"target_height: {target_height}")
+        logger.debug(f"target_width: {target_width}")
+
         resized_img = cv2.resize(img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA)
         resized_img = cv2.copyMakeBorder(resized_img, horz_border, horz_border, vert_border, vert_border, cv2.BORDER_REPLICATE, value=(0, 0, 0, 100)) #is opacity doing anything?
 

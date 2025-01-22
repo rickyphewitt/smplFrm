@@ -1,8 +1,4 @@
 import logging
-
-from rest_framework.views import APIView
-from rest_framework import mixins
-from rest_framework import generics
 from django.core.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from django.http import HttpResponse
@@ -16,7 +12,6 @@ from rest_framework import viewsets
 from smplfrm.services.image_service import ImageService
 from smplfrm.services.image_manipulation_service import ImageManipulationService
 
-from smplfrm.settings import BASE_DIR
 logger = logging.getLogger(__name__)
 
 class Images(viewsets.ModelViewSet):

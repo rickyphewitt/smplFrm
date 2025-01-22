@@ -4,9 +4,6 @@ from smplfrm.services import ImageService
 from smplfrm.services import LibraryService
 from smplfrm.services import ImageMetadataService
 import datetime
-import cv2
-
-
 
 
 class TestImageService(TestCase):
