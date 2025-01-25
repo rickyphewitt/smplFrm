@@ -27,6 +27,7 @@ SMPL_FRM_PROTOCOL = os.getenv("SMPL_FRM_PROTOCOL", "http://")
 SMPL_FRM_IMAGE_REFRESH_INTERVAL = int(os.getenv("SMPL_FRM_IMAGE_REFRESH_INTERVAL", "30000"))
 SMPL_FRM_DISPLAY_DATE = os.getenv("SMPL_FRM_DISPLAY_DATE", True)
 SMPL_FRM_FORCE_DATE_FROM_PATH = os.getenv("SMPL_FRM_FORCE_DATE_FROM_PATH", True)
+SMPL_FRM_DISPLAY_CLOCK = os.getenv("SMPL_FRM_DISPLAY_CLOCK", True)
 SMPL_FRM_DB_FOLDER="db"
 
 # Quick-start development settings - unsuitable for production

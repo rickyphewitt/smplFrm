@@ -46,13 +46,14 @@ services:
 
 ### Environment Variables
 
-| Name                              | Default                            | Description                                                         |
-|-----------------------------------|------------------------------------|---------------------------------------------------------------------|
-| `SMPL_FRM_LIBRARY_DIRS`    | "<settings.py-dir>./../../library" | Comma Separated String of directory paths                           |
-| `SMPL_FRM_IMAGE_FORMATS`   | "jpg,png"]                         | Comma Separated String of directory paths                           |
-| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000                              | How long to display an image (millis)                               |
-| `SMPL_FRM_EXTERNAL_PORT`          | 8321                               | Used in Docker when the external port differs from the server port  |
-| `SMPL_FRM_HOST`                   | localhost                          | Used when running the application on a server                       |
-| `SMPL_FRM_PROTOCOL`        | "http://"                          | Set to "https://" for ssl                                           |
+| Name                              | Default                            | Description                                                  |
+|-----------------------------------|------------------------------------|--------------------------------------------------------------|
+| `SMPL_FRM_LIBRARY_DIRS`    | "<settings.py-dir>./../../library" | Comma Separated String of directory paths                    |
+| `SMPL_FRM_IMAGE_FORMATS`   | "jpg,png"]                         | Comma Separated String of directory paths                    |
+| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000                              | How long to display an image (millis)                        |
+| `SMPL_FRM_EXTERNAL_PORT`          | 8321                               | Used in Docker when the external port differs from the server port |
+| `SMPL_FRM_HOST`                   | localhost                          | Used when running the application on a server                |
+| `SMPL_FRM_PROTOCOL`        | "http://"                          | Set to "https://" for ssl                                    |
 | `SMPL_FRM_DISPLAY_DATE`           | True                               | Display date (Month, Year) of photo. This reads the exif image data |
-| `SMPL_FRM_FORCE_DATE_FROM_PATH`   | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12       |
+| `SMPL_FRM_FORCE_DATE_FROM_PATH`   | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12 |
+| `SMPL_FRM_DISPLAY_CLOCK`   | True                               | Display the Clock                                            |

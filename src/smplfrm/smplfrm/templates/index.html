@@ -36,6 +36,15 @@
         }
     </style>
 </head>
+
+<body>
+ <div id="bottom-bar">
+    <div class="text-box" id="bottom-left-box"></div>
+    <div class="text-box" id="bottom-center-box"></div>
+    <div class="text-box"></div>
+ </div>
+</body>
+
 <script>
 
     var headers = new Headers();
@@ -88,12 +97,17 @@
   window.location.reload();
 }, {{refresh_interval}});
 
+<!--    Clock script-->
+if ({{display_clock}}) {
+
+        window.onload = displayClock();
+        function displayClock() {
+          document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
+          setTimeout(displayClock, 1000);
+        }
+
+}
+
+
 </script>
-<body>
- <div id="bottom-bar">
-    <div class="text-box" id="bottom-left-box"></div>
-    <div class="text-box"></div>
-    <div class="text-box"></div>
- </div>
-</body>
 </html>
