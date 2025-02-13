@@ -26,22 +26,83 @@
             padding: 0 5%;
             z-index: 2;
         }
+        .large-font {
+             font-size: 2em;
+        }
+        .small-font {
+            font-size: 1em;
+        }
         .text-box {
             font-family: Cursive;
             font-style: italic;
             width: 30%;
             text-align: center;
             color: white;
-            font-size: 1.5em;
         }
+
+
+
+
+        .weather-card-future {
+            display: inline-block;
+
+        }
+        .weather-card-current {
+            display: block;
+
+        }
+        .weather-card-current p {
+            padding: 0px;
+            margin: 0px;
+
+        }
+
+
+        .arrow {
+          border: solid white;
+          border-width: 0 3px 3px 0;
+          display: inline-block;
+          padding: 3px;
+        }
+        .right {
+          transform: rotate(-45deg);
+          -webkit-transform: rotate(-45deg);
+        }
+
+        .left {
+          transform: rotate(135deg);
+          -webkit-transform: rotate(135deg);
+        }
+
+        .up {
+          transform: rotate(-135deg);
+          -webkit-transform: rotate(-135deg);
+        }
+
+        .down {
+          transform: rotate(45deg);
+          -webkit-transform: rotate(45deg);
+        }
+
+
     </style>
 </head>
 
 <body>
  <div id="bottom-bar">
-    <div class="text-box" id="bottom-left-box"></div>
-    <div class="text-box" id="bottom-center-box"></div>
-    <div class="text-box"></div>
+    <div class="text-box large-font" id="bottom-left-box"></div>
+    <div class="text-box large-font" id="bottom-center-box"></div>
+    <div class="text-box" id="bottom-right-box">
+
+        <div class="weather-wrapper">
+            <div class="weather-card-current">
+                <div class="weather-icon sun"></div>
+                <p class="large-font">{{weather_current_temp}}</p>
+                <p class="small-font">{{current_low_temp}}  <i class="arrow down"></i> | {{current_high_temp}}  <i class="arrow up"></i></p>
+            </div>
+        </div>
+
+    </div>
  </div>
 </body>
 

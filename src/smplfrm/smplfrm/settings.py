@@ -28,7 +28,16 @@ SMPL_FRM_IMAGE_REFRESH_INTERVAL = int(os.getenv("SMPL_FRM_IMAGE_REFRESH_INTERVAL
 SMPL_FRM_DISPLAY_DATE = os.getenv("SMPL_FRM_DISPLAY_DATE", True)
 SMPL_FRM_FORCE_DATE_FROM_PATH = os.getenv("SMPL_FRM_FORCE_DATE_FROM_PATH", True)
 SMPL_FRM_DISPLAY_CLOCK = os.getenv("SMPL_FRM_DISPLAY_CLOCK", True)
+SMPL_FRM_DISPLAY_WEATHER = os.getenv("SMPL_FRM_DISPLAY_WEATHER", True)
+SMPL_FRM_WEATHER_COORDS = os.getenv("SMPL_FRM_WEATHER_COORDS", "45.993164, -123.922638")
+SMPL_FRM_WEATHER_TEMP_UNIT = os.getenv("SMPL_FRM_WEATHER_TEMP_UNIT", "F")
+SMPL_FRM_WEATHER_PRECIP_UNIT = os.getenv("SMPL_FRM_WEATHER_PRECIP_UNIT", "in")
+SMPL_FRM_WEATHER_WINDSPEED_UNIT = os.getenv("SMPL_FRM_WEATHER_WINDSPEED_UNIT", "mph")
+SMPL_FRM_TIMEZONE = os.getenv("SMPL_FRM_TIMEZONE", "America/Los_Angeles ")
 SMPL_FRM_DB_FOLDER="db"
+
+#SMPL_FRM_WEATHER_COORDS = os.getenv("SMPL_FRM_WEATHER_COORDS", "45.993164, -123.922638")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -51,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
     'rest_framework',
     'smplfrm',
 ]
@@ -138,8 +148,20 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+
 # celery config
-CELERY_REDIS_HOST = os.getenv("CELERY_REDIS_HOST", "localhost")
-CELERY_BROKER_URL = f"redis://{CELERY_REDIS_HOST}:6379/0"
-CELERY_RESULT_BACKEND = f"redis://{CELERY_REDIS_HOST}:6379/0"
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:6379/0"
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:6379/0"
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'

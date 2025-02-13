@@ -16,6 +16,8 @@ test:
 
 start-celery:
 	. ./local_venv/bin/activate; cd ./src/smplfrm; python -m celery -A smplfrm worker -E -l info
+start-celery-beat:
+	. ./local_venv/bin/activate; cd ./src/smplfrm; python -m celery -A smplfrm beat -l info
 
 docker-services:
 	cd ./docker/compose; docker compose -f services.yaml up -d
