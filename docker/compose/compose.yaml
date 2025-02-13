@@ -29,6 +29,22 @@ services:
             - db:/app/src/smplfrm/db
         networks:
           - smpl_frm_net
+    smpl_frm_celery_beat:
+        command: [ "make", "start-celery-beat"]
+        build:
+            context: ../../
+            dockerfile: ./docker/images/Dockerfile
+
+        environment:
+            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - SMPL_FRM_HOST=localhost
+            - CELERY_REDIS_HOST=cache
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - <local/dir/here>:/app/library
+            - db:/app/src/smplfrm/db
+        networks:
+          - smpl_frm_net
 
     cache:
       extends:
