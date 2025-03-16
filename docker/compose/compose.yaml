@@ -9,10 +9,13 @@ services:
             - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
             - SMPL_FRM_EXTERNAL_PORT=8321
             - SMPL_FRM_HOST=localhost
+            - REDIS_HOST=cache
             - PYTHONUNBUFFERED=1
         volumes:
             - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
+        networks:
+          - smpl_frm_net
     smpl_frm_celery:
         command: [ "make", "start-celery"]
         build:
@@ -22,7 +25,7 @@ services:
         environment:
             - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
             - SMPL_FRM_HOST=localhost
-            - CELERY_REDIS_HOST=cache
+            - REDIS_HOST=cache
             - PYTHONUNBUFFERED=1
         volumes:
             - <local/dir/here>:/app/library
@@ -38,7 +41,7 @@ services:
         environment:
             - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
             - SMPL_FRM_HOST=localhost
-            - CELERY_REDIS_HOST=cache
+            - REDIS_HOST=cache
             - PYTHONUNBUFFERED=1
         volumes:
             - <local/dir/here>:/app/library
