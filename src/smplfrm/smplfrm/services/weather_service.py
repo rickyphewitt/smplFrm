@@ -18,8 +18,10 @@ class WeatherService(object):
     def __init__(self):
         self.redis_key = "weather"
         coords = SMPL_FRM_WEATHER_COORDS.split(",")
-        self.lat = coords[0].strip()
-        self.long = coords[1].strip()
+        print(coords[0].strip())
+        print(coords[1].strip())
+        self.lat = float(coords[0].strip())
+        self.long = float(coords[1].strip())
         self.tz = SMPL_FRM_TIMEZONE
         self.__determine_temp_unit()
         self.precip_unit = self.__determine_precip_unit()
