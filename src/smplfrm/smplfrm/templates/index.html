@@ -42,7 +42,7 @@
 
 
 
-
+        # for temp
         .weather-card-future {
             display: inline-block;
 
@@ -83,17 +83,39 @@
           transform: rotate(45deg);
           -webkit-transform: rotate(45deg);
         }
+        # end for temp
+
+        # for the progress bar
+        .progress-container {
+            width: 60%;
+            background-color: #ddd;
+            overflow: hidden;
+            position: relative;
+            height: 10px;
+            clear: both;
+        }
+        .progress-bar {
+            height: 10px;
+            width: 100%;
+            background-color: black;
+            transition: width 1s linear;
+            z-index: 2;
+            position: fixed;
+            opacity: 0.5;
+
+        }
+        # end for the progress bar
 
 
     </style>
 </head>
 
 <body>
+<div class="progress-bar" id="progress-bar"></div>
  <div id="bottom-bar">
     <div class="text-box large-font" id="bottom-left-box"></div>
     <div class="text-box large-font" id="bottom-center-box"></div>
     <div class="text-box" id="bottom-right-box">
-
         <div class="weather-wrapper">
             <div class="weather-card-current">
                 <div class="weather-icon sun"></div>
@@ -101,8 +123,10 @@
                 <p class="small-font">{{current_low_temp}}  <i class="arrow down"></i> | {{current_high_temp}}  <i class="arrow up"></i></p>
             </div>
         </div>
-
     </div>
+
+
+
  </div>
 </body>
 
@@ -157,6 +181,18 @@
     setInterval(function() {
   window.location.reload();
 }, {{refresh_interval}});
+
+<!-- START progress bar script-->
+let width = 100;
+        let interval = setInterval(() => {
+            width -= 1;
+            if (width <= 0) {
+                clearInterval(interval);
+                width = 0;
+            }
+            document.getElementById("progress-bar").style.width = width + "%";
+        }, {{refresh_interval}} / 99);
+<!-- END progress bar script-->
 
 <!--    Clock script-->
 if ({{display_clock}}) {
