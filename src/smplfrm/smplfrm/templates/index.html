@@ -178,30 +178,35 @@
         console.error('Fetch error:', error);
     });
   });
-    setInterval(function() {
-  window.location.reload();
-}, {{refresh_interval}});
 
-<!-- START progress bar script-->
-let width = 100;
-        let interval = setInterval(() => {
-            width -= 1;
-            if (width <= 0) {
-                clearInterval(interval);
-                width = 0;
-            }
-            document.getElementById("progress-bar").style.width = width + "%";
-        }, {{refresh_interval}} / 99);
-<!-- END progress bar script-->
-
-<!--    Clock script-->
-if ({{display_clock}}) {
-
-        window.onload = displayClock();
-        function displayClock() {
-          document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
-          setTimeout(displayClock, 1000);
+  <!-- START progress bar script-->
+  let width = 100;
+  let interval = setInterval(() => {
+        width -= 1;
+        if (width <= 0) {
+            clearInterval(interval);
+            width = 0;
         }
+        document.getElementById("progress-bar").style.width = width + "%";
+    }, {{refresh_interval}} / 100);
+  <!-- END progress bar script-->
+
+  <!-- START Full Page Refresh -->
+  setInterval(function() {
+    window.location.reload();
+    },
+    {{refresh_interval}}
+  );
+  <!-- END Full Page Refresh -->
+
+<!-- START Clock script-->
+    if ({{display_clock}}) {
+            window.onload = displayClock();
+            function displayClock() {
+              document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
+              setTimeout(displayClock, 1000);
+            }
+<!-- END Clock script-->
 
 }
 
