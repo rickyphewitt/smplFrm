@@ -76,9 +76,6 @@ class TestImagesView(TestCase):
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, 200)
 
-    def test_next_n_images_cached(self):
-
-
     def test_image_not_found(self):
         # bootstrap the images so they can be read
         LibraryService().scan()
@@ -94,8 +91,6 @@ class TestImagesView(TestCase):
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, 404)
 
-
-
     def test_next_image(self):
         """
         Returns the next image
@@ -107,10 +102,6 @@ class TestImagesView(TestCase):
 
         response = self.client.get(f"{self.uri}/next")
         self.assertEqual(response.status_code, 200)
-
-
-
-
 
     def _assert_image(self, image, name="name"):
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
