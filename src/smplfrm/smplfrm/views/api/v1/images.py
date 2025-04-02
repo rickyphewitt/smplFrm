@@ -10,6 +10,8 @@ from smplfrm.views.serializers.v1.image_serializer import ImageSerializer
 from rest_framework import viewsets
 
 from smplfrm.services.image_service import ImageService
+from smplfrm.services.cache_service import CacheService
+
 from smplfrm.services.image_manipulation_service import ImageManipulationService
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ class Images(viewsets.ModelViewSet):
         super().__init__(**kwargs)
         self.service = ImageService()
         self.image_manipulation = ImageManipulationService()
+        self.cache_service = CacheService()
 
     # for now only allow list and read
     def create(self, request, *args, **kwargs):
@@ -39,13 +42,26 @@ class Images(viewsets.ModelViewSet):
     @action(methods=['get'], detail=True, url_path="display")
     def display_image(self, request, external_id=None):
         image = self.service.read(ext_id=external_id)
+        # from time import sleep
+        # sleep(10)
         if image:
             # get w/h of caller
             width = request.GET.get('width', '100')
             height = request.GET.get('height', '100')
-            displayed_image = self.image_manipulation.display(image, int(height), int(width))
+
+            cache_key = self._get_image_cache_key(image.external_id, height, width)
+            cached_image = self.cache_service.read(cache_key=cache_key)
+            if cached_image is None:
+                try:
+                    cached_image = self.image_manipulation.display(image, int(height), int(width))
+                except FileNotFoundError:
+                    return HttpResponse(status=404)
+
+                # cache image
+                self.cache_service.upsert(cache_key=cache_key, cache_data=cached_image)
+
             response = HttpResponse(status=200, headers={'Content-type': 'image/jpeg'})
-            response.write(displayed_image.tobytes())
+            response.write(cached_image.tobytes())
             return response
         else:
             return HttpResponse(status=404)
@@ -65,3 +81,6 @@ class Images(viewsets.ModelViewSet):
     # for create when needed
     def perform_create(self, serializer):
         self.service.create(serializer.validated_data)
+
+    def _get_image_cache_key(self, id, height, width):
+        return f"{id}:{height}:{width}"

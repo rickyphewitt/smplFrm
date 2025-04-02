@@ -4,10 +4,12 @@ from typing import Dict
 
 from smplfrm.models import Image
 
+from .base_service import BaseService
+
 logger = logging.getLogger(__name__)
 
 
-class ImageService(object):
+class ImageService(BaseService):
 
 
     def create(self, data: Dict):
