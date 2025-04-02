@@ -34,6 +34,9 @@ SMPL_FRM_WEATHER_TEMP_UNIT = os.getenv("SMPL_FRM_WEATHER_TEMP_UNIT", "F")
 SMPL_FRM_WEATHER_PRECIP_UNIT = os.getenv("SMPL_FRM_WEATHER_PRECIP_UNIT", "in")
 SMPL_FRM_WEATHER_WINDSPEED_UNIT = os.getenv("SMPL_FRM_WEATHER_WINDSPEED_UNIT", "mph")
 SMPL_FRM_TIMEZONE = os.getenv("SMPL_FRM_TIMEZONE", "America/Los_Angeles ")
+SMPL_FRM_IMAGE_CACHE_TIMEOUT = int(os.getenv("SMPL_FRM_IMAGE_CACHE_TIMEOUT", "86400"))
+SMPL_FRM_CLEAR_CACHE_ON_BOOT = bool(os.getenv("SMPL_FRM_CLEAR_CACHE_ON_BOOT", False))
+
 SMPL_FRM_DB_FOLDER="db"
 
 # Quick-start development settings - unsuitable for production
@@ -43,7 +46,7 @@ SMPL_FRM_DB_FOLDER="db"
 SECRET_KEY = 'django-insecure-1s5!+gf*u0x34#3+@1w%=np!^1o_ee$@$!_j2c!uh!aidkr3ja'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['localhost',  SMPL_FRM_HOST]
 

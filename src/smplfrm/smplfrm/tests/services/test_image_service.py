@@ -61,8 +61,6 @@ class TestImageService(TestCase):
 
         self.assertEqual(second_image.external_id, image.external_id)
 
-
-
     def _assert_image(self, image, name="name"):
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
