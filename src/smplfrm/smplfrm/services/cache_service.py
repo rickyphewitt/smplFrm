@@ -34,6 +34,7 @@ class CacheService(object):
     def delete(self, cache_key: string):
         self.cache.delete(cache_key)
 
-    def clear(self):
-        self.cache.clear()
-        print("Cache Cleared")
+    def clear(self, force=False):
+        if settings.SMPL_FRM_CLEAR_CACHE_ON_BOOT is True or force:
+            self.cache.clear()
+            print("Cache Cleared")

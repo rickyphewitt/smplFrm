@@ -46,7 +46,7 @@ SMPL_FRM_DB_FOLDER="db"
 SECRET_KEY = 'django-insecure-1s5!+gf*u0x34#3+@1w%=np!^1o_ee$@$!_j2c!uh!aidkr3ja'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['localhost',  SMPL_FRM_HOST]
 

@@ -42,8 +42,6 @@ class Images(viewsets.ModelViewSet):
     @action(methods=['get'], detail=True, url_path="display")
     def display_image(self, request, external_id=None):
         image = self.service.read(ext_id=external_id)
-        # from time import sleep
-        # sleep(10)
         if image:
             # get w/h of caller
             width = request.GET.get('width', '100')

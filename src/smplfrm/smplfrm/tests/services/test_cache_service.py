@@ -27,9 +27,25 @@ class TestImageService(TestCase):
         sleep(2)
         self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
 
-    def test_clear_cache(self):
+    def test_clear_cache_forced(self):
+        self.service.upsert(self.cache_key, self.cache_data)
+        self.service.clear(force=True)
+        self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
+
+    def test_clear_cache_protected(self):
+        """
+        Neither SMPL_FRM_CLEAR_CACHE_ON_BOOT or force
+        is set to true so cache is not cleared
+        :return:
+        """
         self.service.upsert(self.cache_key, self.cache_data)
         self.service.clear()
+        self.assertIsNotNone(self.service.read(self.cache_key), self.cache_data)
+
+    @override_settings(SMPL_FRM_CLEAR_CACHE_ON_BOOT=True)
+    def test_clear_cache_env_var(self):
+        self.service.upsert(self.cache_key, self.cache_data)
+        self.service.clear(force=True)
         self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
 
 
