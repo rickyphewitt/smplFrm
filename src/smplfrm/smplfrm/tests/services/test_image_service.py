@@ -45,10 +45,14 @@ class TestImageService(TestCase):
         getted_image = self.image_service.read(ext_id=created_image.external_id)
 
         view_count_before_next = getted_image.view_count
-        image = self.image_service.get_next()
+        image = self.image_service.get_next()[0]
 
         getted_image = self.image_service.read(ext_id=created_image.external_id)
-        self.assertEqual(view_count_before_next + 1, getted_image.view_count)
+        # assert the view count remains the same, this is updated on display image
+        self.assertEqual(view_count_before_next, image.view_count)
+
+        # manually increment to ensure the next call gets the 'next image'
+        self.image_service.increment_view_count(getted_image)
 
         # create second image and ensure its called 'next'
         second_image_data = {
@@ -57,7 +61,7 @@ class TestImageService(TestCase):
             "file_name": "second_image.jpg"
         }
         second_image = self.image_service.create(second_image_data)
-        image = self.image_service.get_next()
+        image = self.image_service.get_next()[0]
 
         self.assertEqual(second_image.external_id, image.external_id)
 

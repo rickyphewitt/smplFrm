@@ -1,8 +1,7 @@
 
 from django.test import TestCase, RequestFactory
 
-from smplfrm.services import ImageService
-from smplfrm.services import LibraryService
+from smplfrm.services import ImageService, LibraryService
 from smplfrm.views.api.v1.images import Images as imageView
 from django.db.models import ObjectDoesNotExist
 
@@ -16,6 +15,7 @@ class TestImagesView(TestCase):
             "file_path": "./nested/file/",
             "file_name": "image.jpg"
         }
+
 
     def test_list_read_update_delete(self):
 
@@ -57,6 +57,10 @@ class TestImagesView(TestCase):
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, 200)
 
+        # assert view count was updated
+        displayed_image = self.image_service.read(image.external_id)
+        self.assertEqual(image.view_count + 1, displayed_image.view_count)
+
     def test_display_cached_image(self):
         # bootstrap the images so they can be read
         LibraryService().scan()
@@ -76,6 +80,10 @@ class TestImagesView(TestCase):
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, 200)
 
+        # assert view count was updated
+        displayed_image = self.image_service.read(image.external_id)
+        self.assertEqual(image.view_count + 1, displayed_image.view_count)
+
     def test_image_not_found(self):
         # bootstrap the images so they can be read
         LibraryService().scan()
@@ -88,7 +96,7 @@ class TestImagesView(TestCase):
 
         # attempt to display image that doesn't exist
         # @ToDo use a fake image instead of 404
-        response = self.client.get(f"{self.uri}/{image.external_id}/display")
+        response = self.client.get(f"{self.uri}/{image.external_id}/display?width=1&height=2")
         self.assertEqual(response.status_code, 404)
 
     def test_next_image(self):

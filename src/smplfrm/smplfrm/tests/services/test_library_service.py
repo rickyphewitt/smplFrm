@@ -2,8 +2,7 @@ import os
 
 from django.test import TestCase
 
-from src.smplfrm.smplfrm.services import ImageService
-from src.smplfrm.smplfrm.services import LibraryService
+from src.smplfrm.smplfrm.services import ImageService, LibraryService
 from django.test.utils import override_settings
 
 test_library = [os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'library'))]
