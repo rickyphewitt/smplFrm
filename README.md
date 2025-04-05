@@ -46,22 +46,23 @@ services:
 
 ### Environment Variables
 
-| Name                              | Default                            | Description                                                                                  |
-|-----------------------------------|------------------------------------|----------------------------------------------------------------------------------------------|
-| `SMPL_FRM_LIBRARY_DIRS`           | "<settings.py-dir>./../../library" | Comma Separated String of directory paths                                                    |
-| `SMPL_FRM_IMAGE_FORMATS`          | "jpg,png"                          | Comma Separated String of directory paths                                                    |
-| `SMPL_FRM_IMAGE_REFRESH_INTERVAL` | 30000                              | How long to display an image (millis)                                                        |
-| `SMPL_FRM_EXTERNAL_PORT`          | 8321                               | Used in Docker when the external port differs from the server port                           |
-| `SMPL_FRM_HOST`                   | localhost                          | Used when running the application on a server                                                |
-| `SMPL_FRM_PROTOCOL`               | "http://"                          | Set to "https://" for ssl                                                                    |
-| `SMPL_FRM_DISPLAY_DATE`           | True                               | Display date (Month, Year) of photo. This reads the exif image data                          |
-| `SMPL_FRM_FORCE_DATE_FROM_PATH`   | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12                                |
-| `SMPL_FRM_DISPLAY_CLOCK`          | True                               | Display the Clock                                                                            |
-| `SMPL_FRM_DISPLAY_WEATHER`        | True                               | Display the Weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                |
-| `SMPL_FRM_WEATHER_COORDS`         | "63.1786,-147.4661"                | Lat,Long for weather                                                                         |
-| `SMPL_FRM_WEATHER_TEMP_UNIT`      | "F"                                | `F` for Fahrenheit, `C` for Celsius                                                          |
-| `SMPL_FRM_WEATHER_PRECIP_UNIT`    | "in"                               | `in` for inches, `mm` for millimeters                                                        |
-| `SMPL_FRM_WEATHER_WINDSPEED_UNIT` | "mph"                              | `kmh` kilos per hour, `kn` knots, `ms` meters per second, `mph` miles per hour               |
-| `SMPL_FRM_TIMEZONE`               | "America/Los_Angeles"              | TZ Identified from [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) |
-| `SMPL_FRM_IMAGE_CACHE_TIMEOUT`    | "86400"                            | Seconds until the image should be removed from the cache                                     |
-| `SMPL_FRM_CLEAR_CACHE_ON_BOOT`    | False                              | Clears Cache on Service Boot                                                                 |
+| Name                                 | Default                            | Description                                                                                  |
+|--------------------------------------|------------------------------------|----------------------------------------------------------------------------------------------|
+| `SMPL_FRM_LIBRARY_DIRS`              | "<settings.py-dir>./../../library" | Comma Separated String of directory paths                                                    |
+| `SMPL_FRM_IMAGE_FORMATS`             | "jpg,png"                          | Comma Separated String of directory paths                                                    |
+| `SMPL_FRM_IMAGE_REFRESH_INTERVAL`    | 30000                              | How long to display an image (millis)                                                        |
+| `SMPL_FRM_IMAGE_TRANSITION_INTERVAL` | 10000                              | How long to transition the image (millis)                                                    |
+| `SMPL_FRM_EXTERNAL_PORT`             | 8321                               | Used in Docker when the external port differs from the server port                           |
+| `SMPL_FRM_HOST`                      | localhost                          | Used when running the application on a server                                                |
+| `SMPL_FRM_PROTOCOL`                  | "http://"                          | Set to "https://" for ssl                                                                    |
+| `SMPL_FRM_DISPLAY_DATE`              | True                               | Display date (Month, Year) of photo. This reads the exif image data                          |
+| `SMPL_FRM_FORCE_DATE_FROM_PATH`      | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12                                |
+| `SMPL_FRM_DISPLAY_CLOCK`             | True                               | Display the Clock                                                                            |
+| `SMPL_FRM_DISPLAY_WEATHER`           | True                               | Display the Weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                |
+| `SMPL_FRM_WEATHER_COORDS`            | "63.1786,-147.4661"                | Lat,Long for weather                                                                         |
+| `SMPL_FRM_WEATHER_TEMP_UNIT`         | "F"                                | `F` for Fahrenheit, `C` for Celsius                                                          |
+| `SMPL_FRM_WEATHER_PRECIP_UNIT`       | "in"                               | `in` for inches, `mm` for millimeters                                                        |
+| `SMPL_FRM_WEATHER_WINDSPEED_UNIT`    | "mph"                              | `kmh` kilos per hour, `kn` knots, `ms` meters per second, `mph` miles per hour               |
+| `SMPL_FRM_TIMEZONE`                  | "America/Los_Angeles"              | TZ Identified from [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) |
+| `SMPL_FRM_IMAGE_CACHE_TIMEOUT`       | "86400"                            | Seconds until the image should be removed from the cache                                     |
+| `SMPL_FRM_CLEAR_CACHE_ON_BOOT`       | False                              | Clears Cache on Service Boot                                                                 |

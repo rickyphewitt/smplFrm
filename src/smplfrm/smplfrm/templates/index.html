@@ -14,10 +14,12 @@
             margin: auto;
         }
 
-        #main-img {
+        .main-img {
             position: absolute;
             z-index: 150;
+            opacity: 0.0;
         }
+        
 
         #middle-section {
             position: fixed;
@@ -162,87 +164,134 @@
 
 
  </div>
+<div id="image-container"></div>
 </body>
 
 <script>
+    const imageContainer = document.getElementById("image-container");
+    const progressBar = document.getElementById("progress-bar");
+    const imageTransitionSeconds = {{transition_interval}};
+    const imageIdAttr = "image-id";
 
-    var headers = new Headers();
-
-    var window_width = window.innerWidth;
-    var window_height = window.innerHeight;
-    var current_img = "";
-
-    // call the backend with info about the clients resolution
-    fetch(`{{host}}:{{port}}/api/v1/images/next?width=${window_width}&height=${window_height}`, {
-        method: 'GET',
-        headers: headers
-    })
-  .then(response => response.json())
-  .then((data) => {
-    const img = document.createElement('img');
-    img.src = `{{host}}:{{port}}/api/v1/images/${data.id}/display?width=${window_width}&height=${window_height}`
-    img.setAttribute("id","main-img");
-    document.body.appendChild(img);
-    current_img = data
-  })
-  .then(() => {
-    // handle the image date overlay
-    fetch(`{{host}}:{{port}}/api/v1/images_metadata?image__external_id=${current_img.id}`)
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-        }
-        return response.json(); // Parse JSON response
-    })
-    .then(data => {
-        if (!{{display_date}}) {
-            return;
-        } else {
-            // Set the value of the div with id="myDiv"
-            const taken_date = Date.parse(data[0].taken);
-            let options = {
-              year: "numeric",
-              month: "long",
-            };
-            var pretty_date = new Intl.DateTimeFormat("en-US", options).format(taken_date)
-            document.getElementById("bottom-left-box").innerHTML = pretty_date;
-        }
-    })
-    .catch(error => {
-        console.error('Fetch error:', error);
-    });
-  });
-
-  <!-- START progress bar script-->
-  let width = 100;
-  let interval = setInterval(() => {
-        width -= 1;
-        if (width <= 0) {
-            clearInterval(interval);
-            width = 0;
-        }
-        document.getElementById("progress-bar").style.width = width + "%";
-    }, {{refresh_interval}} / 100);
-  <!-- END progress bar script-->
-
-  <!-- START Full Page Refresh -->
-  setInterval(function() {
-    window.location.reload();
-    },
-    {{refresh_interval}}
-  );
-  <!-- END Full Page Refresh -->
-
-<!-- START Clock script-->
-    if ({{display_clock}}) {
-            window.onload = displayClock();
-            function displayClock() {
-              document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
-              setTimeout(displayClock, 1000);
+  <!-- Handles the progress bar -->
+    function startProgress() {
+      let width = 100;
+      let interval = setInterval(() => {
+            width -= 1;
+            if (width <= 0) {
+                clearInterval(interval);
+                width = 0;
             }
-<!-- END Clock script-->
+            progressBar.style.width = width + "%";
+        }, ({{refresh_interval}}) / 100);
+    }
 
-}
+    <!-- Requests the Next image to be displayed    -->
+    async function getNextImage() {
+        var headers = new Headers();
+        var window_width = window.innerWidth;
+        var window_height = window.innerHeight;
+
+        const response = await fetch(`{{host}}:{{port}}/api/v1/images/next?width=${window_width}&height=${window_height}`, {
+            method: 'GET',
+            headers: headers
+        })
+        return response.json();
+    }
+
+    <!-- Display metadata of image    -->
+    async function displayMetadata(imageId) {
+        // handle the image date overlay
+        fetch(`{{host}}:{{port}}/api/v1/images_metadata?image__external_id=${imageId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.json(); // Parse JSON response
+        })
+        .then(data => {
+            if (!{{display_date}}) {
+                return;
+            } else {
+                // Set the value of the div with id="myDiv"
+                const taken_date = Date.parse(data[0].taken);
+                let options = {
+                  year: "numeric",
+                  month: "long",
+                };
+                var pretty_date = new Intl.DateTimeFormat("en-US", options).format(taken_date)
+                document.getElementById("bottom-left-box").innerHTML = pretty_date;
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+        });
+    }
+
+    <!-- builds the url for the next image    -->
+    async function buildImage() {
+        const nextImage = await getNextImage();
+        var headers = new Headers();
+        var window_width = window.innerWidth;
+        var window_height = window.innerHeight;
+        const img = new Image();
+        img.src = `{{host}}:{{port}}/api/v1/images/${nextImage.id}/display?width=${window_width}&height=${window_height}`;
+        img.setAttribute(imageIdAttr,  nextImage.id);
+        return img
+    }
+
+    <!-- Displays the loaded image and loads the next one -->
+    async function loadNext(currentImage) {
+        const newImage = await buildImage();
+        newImage.classList.add("main-img");
+        newImage.onload = () => {
+
+            imageContainer.appendChild(newImage);
+            // Display after delay
+            setTimeout(() => {
+                let opacity = 0;
+                let interval = setInterval(() => {
+                    opacity += 0.1;
+                    if (opacity >= 1) {
+                        clearInterval(interval);
+                        imageContainer.removeChild(currentImage);
+                        opacity = 1.0;
+                    }
+                newImage.style.opacity = opacity;
+                displayMetadata(newImage.getAttribute(imageIdAttr));
+            }, imageTransitionSeconds / 100)
+
+
+            // Preload the next one again
+            startProgress();
+            loadNext(newImage);
+          }, {{refresh_interval}}); // 2 second display time per image
+        }
+    }
+
+    <!-- Main function that kicks off the looping -->
+    async function startImages() {
+           const newImage = await buildImage();
+          newImage.onload = () => {
+                newImage.classList.add("main-img");
+                imageContainer.appendChild(newImage);
+                loadNext(newImage);
+
+        }
+    }
+
+    <!--Start main loop-->
+    startImages();
+
+
+    <!-- Displays the clock   -->
+     if ({{display_clock}}) {
+        window.onload = displayClock();
+        function displayClock() {
+          document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
+          setTimeout(displayClock, 1000);
+        }
+    }
 
 
 </script>
