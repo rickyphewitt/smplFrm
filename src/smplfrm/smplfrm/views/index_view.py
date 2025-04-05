@@ -1,7 +1,10 @@
 from django.views.generic import TemplateView
 from smplfrm.services.weather_service import WeatherService
 
-from smplfrm.settings import SMPL_FRM_EXTERNAL_PORT, SMPL_FRM_HOST, SMPL_FRM_IMAGE_REFRESH_INTERVAL, SMPL_FRM_PROTOCOL, SMPL_FRM_DISPLAY_DATE, SMPL_FRM_DISPLAY_CLOCK
+from smplfrm.settings import (SMPL_FRM_EXTERNAL_PORT, SMPL_FRM_HOST,
+                              SMPL_FRM_IMAGE_REFRESH_INTERVAL, SMPL_FRM_PROTOCOL,
+                              SMPL_FRM_DISPLAY_DATE, SMPL_FRM_DISPLAY_CLOCK,
+                              SMPL_FRM_IMAGE_TRANSITION_INTERVAL)
 class IndexView(TemplateView):
     template_name = "index.html"
 
@@ -21,6 +24,7 @@ class IndexView(TemplateView):
             "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
             "port": SMPL_FRM_EXTERNAL_PORT,
             "refresh_interval": SMPL_FRM_IMAGE_REFRESH_INTERVAL,
+            "transition_interval": SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
             "display_date": str(SMPL_FRM_DISPLAY_DATE).lower(),
             "display_clock": str(SMPL_FRM_DISPLAY_CLOCK).lower(),
             "weather_current_temp": weather_data['current_temp'],
