@@ -68,6 +68,9 @@ class ImageService(BaseService):
         except Image.DoesNotExist:
             return None
 
+    def increment_view_count(self, image):
+        image.view_count = image.view_count + 1
+        self.update(image)
 
     def get_next(self):
         """
@@ -76,11 +79,8 @@ class ImageService(BaseService):
         """
 
         try:
-            images = Image.objects.all().filter(deleted=False).order_by("view_count", "-created")[:1]
-            image = images[0]
-            image.view_count = image.view_count + 1
-            image.save()
-            return image
+            return Image.objects.all().filter(deleted=False).order_by("view_count", "-created")
+
         except Exception as e:
             logger.error(f"Failed to load next image: {str(e)}")
 

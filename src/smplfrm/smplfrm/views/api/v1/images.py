@@ -9,10 +9,8 @@ from smplfrm.views.serializers.v1.image_serializer import ImageSerializer
 
 from rest_framework import viewsets
 
-from smplfrm.services.image_service import ImageService
-from smplfrm.services.cache_service import CacheService
-
-from smplfrm.services.image_manipulation_service import ImageManipulationService
+from smplfrm.services import CacheService, ImageService, ImageManipulationService
+from smplfrm.tasks import cache_images_task
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ class Images(viewsets.ModelViewSet):
             width = request.GET.get('width', '100')
             height = request.GET.get('height', '100')
 
-            cache_key = self._get_image_cache_key(image.external_id, height, width)
+            cache_key = self.cache_service.get_image_cache_key(image.external_id, height, width)
             cached_image = self.cache_service.read(cache_key=cache_key)
             if cached_image is None:
                 try:
@@ -58,6 +56,10 @@ class Images(viewsets.ModelViewSet):
                 # cache image
                 self.cache_service.upsert(cache_key=cache_key, cache_data=cached_image)
 
+            # mark image as viewed
+            self.service.increment_view_count(image)
+
+            # send to client
             response = HttpResponse(status=200, headers={'Content-type': 'image/jpeg'})
             response.write(cached_image.tobytes())
             return response
@@ -72,13 +74,25 @@ class Images(viewsets.ModelViewSet):
         :return:
         """
 
-        image = self.service.get_next()
+        # get next 5 images from db
+        images = self.service.get_next()[:5]
+        # grab the 1st image to be sent back
+        image = images[0]
+
         serializer = self.get_serializer(image)
+
+        # get w/h of caller
+        width = request.GET.get('width', '100')
+        height = request.GET.get('height', '100')
+
+        cache_image_list = []
+        for img in images:
+            cache_image_list.append(img.external_id)
+
+        cache_images_task.delay(cache_image_list, height, width)
+
         return Response(serializer.data)
 
     # for create when needed
     def perform_create(self, serializer):
         self.service.create(serializer.validated_data)
-
-    def _get_image_cache_key(self, id, height, width):
-        return f"{id}:{height}:{width}"

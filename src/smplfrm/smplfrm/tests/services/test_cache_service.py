@@ -50,3 +50,10 @@ class TestImageService(TestCase):
 
 
 
+    def test_image_cache_key(self):
+        ext_id = "foo"
+        height = "10"
+        width = "20"
+
+        self.assertEqual(f"{ext_id}:{height}:{width}", self.service.get_image_cache_key(ext_id, height, width))
+

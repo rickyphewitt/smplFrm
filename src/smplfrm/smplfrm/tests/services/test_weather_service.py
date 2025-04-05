@@ -5,8 +5,6 @@ from open_meteo import Forecast, CurrentWeather, DailyForecastUnits, TimeFormat,
 from smplfrm.services import WeatherService
 import datetime
 
-TimeFormat.ISO_8601
-
 class TestWeatherService(TestCase):
     def setUp(self):
         self.service = WeatherService()

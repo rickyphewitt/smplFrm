@@ -7,6 +7,9 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+
+
+
 class CacheService(object):
 
     def __init__(self):
@@ -38,3 +41,8 @@ class CacheService(object):
         if settings.SMPL_FRM_CLEAR_CACHE_ON_BOOT is True or force:
             self.cache.clear()
             print("Cache Cleared")
+
+
+    # cache keys
+    def get_image_cache_key(self, external_id, height, width):
+        return f"{external_id}:{height}:{width}"
