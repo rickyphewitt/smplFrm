@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>SmplFrm</title>
+    <!-- OSS Icons from https://github.com/iconoir-icons/iconoir/blob/main/README.md-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css" />
     <style>
         body {
           margin: 0;
@@ -36,6 +38,21 @@
             justify-content: center;
             align-items: center;
             z-index: 100;
+        }
+
+        #top-bar {
+            position: fixed;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            height: 10%; /* Adjust height as needed */
+            background-color: black;
+            opacity: 0.5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5%;
+            z-index: 200;
         }
 
         #bottom-bar {
@@ -139,6 +156,21 @@
         }
         # end for the progress bar
 
+        # spotify start
+
+        #spotify-now-playing {
+            visibility: hidden;
+        }
+        #spotify-now-playing a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .iconoir-spotify::before {
+            display: inline-flex;
+        }
+        # end spotify
+
 
 
 
@@ -147,6 +179,13 @@
 
 <body>
 <div class="progress-bar" id="progress-bar"></div>
+<div class="top-bar" id="top-bar">
+    <div class="text-box small-font third-column" id="top-left-box">
+        <div id="spotify-now-playing"></div>
+    </div>
+    <div class="text-box large-font third-column" id="top-center-box"></div>
+    <div class="text-box third-column" id="top-right-box"></div>
+</div>
 <div id="middle-section" class="logo-font text-box">smplFrm</div>
  <div id="bottom-bar">
     <div class="text-box large-font third-column" id="bottom-left-box"></div>
@@ -160,9 +199,6 @@
             </div>
         </div>
     </div>
-
-
-
  </div>
 <div id="image-container"></div>
 </body>
@@ -288,10 +324,64 @@
      if ({{display_clock}}) {
         window.onload = displayClock();
         function displayClock() {
-          document.getElementById("bottom-center-box").innerHTML= new Date().toLocaleTimeString();
+          document.getElementById("bottom-center-box").innerHTML = new Date().toLocaleTimeString();
           setTimeout(displayClock, 1000);
         }
     }
+
+
+    async function getNowPlaying() {
+    // handle the image date overlay
+    fetch(`{{host}}:{{port}}/api/v1/plugins/spotify/now_playing`)
+        .then(response => {
+            if (!response.ok) {
+                // attempt to auth
+                fetch(`{{host}}:{{port}}/api/v1/plugins/spotify/auth`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load spotify ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const auth_link = '<a href="' + data.auth_url + '"> Auth Spotify </a>';
+                        sp_div = document.getElementById("spotify-now-playing");
+                        sp_div.innerHTML = auth_link;
+                        sp_div.style.visibility = 'visible';
+                        sp_div.classList.add("iconoir-spotify");
+                    });
+
+            }
+            return response.json(); // Parse JSON response
+        })
+        .then(data => {
+            // Set the value of the div with id="myDiv"
+            const nowPlaying = ' ' + data.artist + ' - ' + data.song;
+            sp_div = document.getElementById("spotify-now-playing");
+            sp_div.innerHTML = nowPlaying;
+            sp_div.style.visibility = 'visible';
+            sp_div.classList.add("iconoir-spotify");
+        })
+        .catch(error => {
+            // use this for debugging as needed
+            // console.error('Fetch error:', error);
+        });
+    }
+
+    <!-- Displays spotify if enabled -->
+    function displaySpotify() {
+         if ({{plugin_spotify_enabled}}) {
+            function refreshSpotify() {
+                getNowPlaying();
+                setTimeout(refreshSpotify, 5000);
+            }
+            refreshSpotify();
+
+        }
+    }
+    
+    displaySpotify();
+
 
 
 </script>

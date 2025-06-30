@@ -9,3 +9,4 @@ redis~=5.2.1
 pytest-django~=4.9.0
 open-meteo~=0.3.2
 django-redis~=5.4.0
+spotipy~=2.25.1
