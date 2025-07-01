@@ -35,7 +35,7 @@ services:
         ports:
          - "8000:8000"
         environment:
-            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
+            - SMPL_FRM_LIBRARY_DIRS=/app/library,/app/assets
             - PYTHONUNBUFFERED=1
         volumes:
             - /example/local/library/here:/app/library

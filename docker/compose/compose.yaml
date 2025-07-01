@@ -5,12 +5,8 @@ services:
             dockerfile: ./docker/images/Dockerfile
         ports:
          - "8321:8321"
-        environment:
-            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
-            - SMPL_FRM_EXTERNAL_PORT=8321
-            - SMPL_FRM_HOST=localhost
-            - REDIS_HOST=cache
-            - PYTHONUNBUFFERED=1
+        env_file:
+          - config.env
         volumes:
             - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
@@ -21,12 +17,8 @@ services:
         build:
             context: ../../
             dockerfile: ./docker/images/Dockerfile
-
-        environment:
-            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
-            - SMPL_FRM_HOST=localhost
-            - REDIS_HOST=cache
-            - PYTHONUNBUFFERED=1
+        env_file:
+          - config.env
         volumes:
             - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
@@ -37,12 +29,8 @@ services:
         build:
             context: ../../
             dockerfile: ./docker/images/Dockerfile
-
-        environment:
-            - SMPL_FRM_ASSET_DIRECTORIES=/app/library,/app/assets
-            - SMPL_FRM_HOST=localhost
-            - REDIS_HOST=cache
-            - PYTHONUNBUFFERED=1
+        env_file:
+          - config.env
         volumes:
             - <local/dir/here>:/app/library
             - db:/app/src/smplfrm/db
