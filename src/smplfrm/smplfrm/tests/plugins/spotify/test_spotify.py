@@ -9,7 +9,7 @@ class TestSpotifyService(TestCase):
 
     @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID="foo")
     @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET="bar")
-    @override_settings(SMPL_FRM__PLUGINS_SPOTIFY_ENABLED=True)
+    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED=True)
     @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
     def setUp(self, mock_spotify_oauth):
         mock_spotify_oauth.return_value = Mock()
@@ -98,7 +98,7 @@ class TestSpotifyService(TestCase):
         self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertTrue(ret_value["success"])
 
-    @override_settings(SMPL_FRM__PLUGINS_SPOTIFY_ENABLED=False)
+    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED=False)
     @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
     def test_spotify_disabled(self, mock_spotify_oauth):
 

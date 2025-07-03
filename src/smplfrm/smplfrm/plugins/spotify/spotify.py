@@ -21,7 +21,7 @@ class SpotifyCacheHandler(CacheFileHandler):
 class SpotifyPlugin(object):
 
     def __init__(self):
-        self.enabled = settings.SMPL_FRM__PLUGINS_SPOTIFY_ENABLED
+        self.enabled = settings.SMPL_FRM_PLUGINS_SPOTIFY_ENABLED
         if not self.enabled:
             return
         self.client_id = settings.SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID
@@ -47,7 +47,7 @@ class SpotifyPlugin(object):
     def auth(self):
 
         auth_url = {"auth_url": "http://not.enabled"}
-        if self.__is_enabled:
+        if not self.__is_enabled:
             return auth_url
 
         auth_url = self.auth_manager.get_authorize_url()
