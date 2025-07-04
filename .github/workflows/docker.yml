@@ -16,6 +16,9 @@ name: Publish Docker image
 on:
   push:
     branches: [ main, djangoMain]
+    tags:
+      - 'v*'
+
   pull_request:
     branches: [ main, djangoMain ]
 
@@ -43,6 +46,8 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: dke39vsh3gghs/smplfrm
+          tags: | 
+            type=semver,pattern={{version}}
 
       - name: Build and push Docker image
         id: push
