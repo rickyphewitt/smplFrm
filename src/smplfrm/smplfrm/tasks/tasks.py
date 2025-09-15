@@ -9,6 +9,12 @@ from smplfrm.services import LibraryService, WeatherService, CacheService, Image
 def scan_library(**kwargs):
     LibraryService().scan()
 
+
+@signals.worker_ready.connect
+@app.task(name='reset_image_count')
+def reset_image_counts(**kwargs):
+    ImageService().reset_all_view_count()
+
 @signals.worker_ready.connect
 @app.task(name='refresh_weather')
 def refresh_weather(**kwargs):
@@ -19,6 +25,8 @@ def refresh_weather(**kwargs):
 @app.task(name='clear_cache')
 def clear_cache(**kwargs):
     CacheService().clear()
+
+
 
 
 def cache_images(images_ext_ids: list, height: str, width: str):
@@ -49,6 +57,8 @@ def cache_images(images_ext_ids: list, height: str, width: str):
 def cache_images_task(images_ext_ids=None, height=None, width=None):
     print("Running Cache Images Task")
     cache_images(images_ext_ids, height,width)
+
+
 
 
 

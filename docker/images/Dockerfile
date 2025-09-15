@@ -3,7 +3,8 @@ FROM python:3.12
 # Install system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-dev \
-    libgl1-mesa-glx \
+    libglx-mesa0 \
+    libgl1 \
     make \
     && rm -rf /var/lib/apt/lists/*
 

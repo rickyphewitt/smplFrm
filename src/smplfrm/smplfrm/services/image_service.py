@@ -4,6 +4,9 @@ from typing import Dict
 
 from smplfrm.models import Image
 
+from smplfrm.settings import SMPL_FRM_RESET_IMAGE_VIEW_COUNT
+
+
 from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
@@ -85,4 +88,16 @@ class ImageService(BaseService):
             logger.error(f"Failed to load next image: {str(e)}")
 
         return None
+
+    def reset_all_view_count(self):
+        """
+        Reset view count for all images
+        :return:
+        """
+        if SMPL_FRM_RESET_IMAGE_VIEW_COUNT:
+            logger.info("Resetting All Image Counts")
+            for image in Image.objects.all():
+                image.view_count = 0
+                image.save()
+            logger.info("Image Count Reset")
 
