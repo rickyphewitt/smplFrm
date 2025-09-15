@@ -8,7 +8,7 @@ services:
         env_file:
           - config.env
         volumes:
-            - <local/dir/here>:/app/library
+            - ../../library:/app/library
             - db:/app/src/smplfrm/db
         networks:
           - smpl_frm_net
@@ -20,7 +20,7 @@ services:
         env_file:
           - config.env
         volumes:
-            - <local/dir/here>:/app/library
+            - ../../library:/app/library
             - db:/app/src/smplfrm/db
         networks:
           - smpl_frm_net
@@ -32,7 +32,7 @@ services:
         env_file:
           - config.env
         volumes:
-            - <local/dir/here>:/app/library
+            - ../../library:/app/library
             - db:/app/src/smplfrm/db
         networks:
           - smpl_frm_net
