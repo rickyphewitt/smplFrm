@@ -9,15 +9,13 @@
 
 name: Publish Docker image
 
-#on:
-#  release:
-#    types: [published]
-
 on:
   push:
     branches: [ main, djangoMain]
   pull_request:
     branches: [ main, djangoMain ]
+  release:
+    types: [ published ]
 
 jobs:
   push_to_registry:
