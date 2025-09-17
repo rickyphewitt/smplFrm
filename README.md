@@ -50,6 +50,7 @@ services:
 ### Code Formating
 * This repo uses [black](https://pypi.org/project/black/) to format the code
 * Run `make pre-commit` to install the pre-commit hook
+* To mostly ignore the commit that formatted the repo run `make ignore-format-commit`
 
 
 ### Environment Variables
