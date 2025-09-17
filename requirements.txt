@@ -10,3 +10,4 @@ pytest-django~=4.9.0
 open-meteo~=0.3.2
 django-redis~=5.4.0
 spotipy~=2.25.1
+pre-commit~=4.3.0

@@ -5,7 +5,9 @@ from smplfrm.services import ImageService, LibraryService, CacheService
 from smplfrm.tasks import cache_images
 from django.test.utils import override_settings
 
-test_library = [os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'library'))]
+test_library = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "library"))
+]
 
 
 @override_settings(SMPL_FRM_LIBRARY_DIRS=test_library)
@@ -21,7 +23,6 @@ class TestCacheImagesTask(TestCase):
         self.image_ext_ids = []
         for image in images:
             self.image_ext_ids.append(image.external_id)
-
 
     def test_cache_images(self):
         self.cache_service.clear(force=True)

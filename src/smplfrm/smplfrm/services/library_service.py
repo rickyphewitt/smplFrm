@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -13,9 +12,8 @@ logger = logging.getLogger(__name__)
 
 class LibraryService(object):
 
-# need to mark images not found in the scan as deleted in the DB, do not actually delete them
-# should we also resurect them? I think so
-
+    # need to mark images not found in the scan as deleted in the DB, do not actually delete them
+    # should we also resurect them? I think so
 
     def __init__(self):
         from smplfrm.services import ImageMetadataService
@@ -24,10 +22,9 @@ class LibraryService(object):
         self.image_service = ImageService()
         self.image_metadata_service = ImageMetadataService()
 
-
     def scan(self):
         logger.info(f"BASE DIR: {BASE_DIR}")
-        current_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ )))
+        current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
         logger.info(f"{current_dir}")
         valid_image_ids = []
         for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
@@ -39,20 +36,28 @@ class LibraryService(object):
                     try:
                         file_ext = filename.rsplit(".", 1)[1]
                     except IndexError:
-                        logger.warning(f"Unable to parse file extension for file with name: {filename}")
+                        logger.warning(
+                            f"Unable to parse file extension for file with name: {filename}"
+                        )
                         continue
                     # load image files
                     if file_ext in SMPL_FRM_IMAGE_FORMATS:
                         file_path = os.path.join(dirpath, filename)
                         image_data = {
-                            "name" : filename,
+                            "name": filename,
                             "file_path": file_path,
-                            "file_name": filename
+                            "file_name": filename,
                         }
-                        logger.info(f"Found image with filename: {filename} and path: {file_path}")
+                        logger.info(
+                            f"Found image with filename: {filename} and path: {file_path}"
+                        )
                         image_count = image_count + 1
                         # see if one exists with fpath and fname
-                        existing_image = self.image_service.read_by_file_name_and_file_path(filename, file_path)
+                        existing_image = (
+                            self.image_service.read_by_file_name_and_file_path(
+                                filename, file_path
+                            )
+                        )
                         if existing_image:
                             if existing_image.deleted:
                                 existing_image.deleted = False
@@ -65,14 +70,14 @@ class LibraryService(object):
                             valid_image_ids.append(created_image.external_id)
                             self.save_image_meta(created_image)
 
-
-            logger.info(f"found {image_count} image(s) and created {images_created} images(s)")
+            logger.info(
+                f"found {image_count} image(s) and created {images_created} images(s)"
+            )
         # mark images as deleted if they didn't show up on the scan
         all_images = self.image_service.list().exclude(external_id__in=valid_image_ids)
         for image in all_images.iterator():
             image.deleted = True
             image.save()
-
 
     def save_image_meta(self, image):
         tag_dict = self.__extract_metadata(image.file_path)
@@ -81,7 +86,6 @@ class LibraryService(object):
             "exif": tag_dict,
         }
 
-
         existing_meta = None
         try:
             existing_meta = image.meta
@@ -89,13 +93,6 @@ class LibraryService(object):
             self.image_metadata_service.update(existing_meta)
         except Exception as e:
             self.image_metadata_service.create(image_meta)
-
-
-
-
-
-
-
 
     def __extract_metadata(self, image_path):
         tag_dict = {}
@@ -108,7 +105,9 @@ class LibraryService(object):
                 try:
                     tag_dict[TAGS.get(k, k)] = self.__cast_to_json_compatible(v)
                 except Exception as e:
-                    logger.warning(f"Failed to parse all metadata for image: {image_path}, error: {str(e)}")
+                    logger.warning(
+                        f"Failed to parse all metadata for image: {image_path}, error: {str(e)}"
+                    )
         return tag_dict
 
     def __cast_to_json_compatible(self, value):

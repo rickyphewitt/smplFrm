@@ -27,3 +27,6 @@ docker-run:
 
 docker-run-no-cache:
 	cd ./docker/compose; docker compose -f compose.yaml up --build
+
+pre-commit: packages
+	. ./local_venv/bin/activate; pre-commit install

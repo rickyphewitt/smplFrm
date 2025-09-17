@@ -4,18 +4,18 @@ from spotipy import Spotify, CacheFileHandler
 from django.conf import settings
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class SpotifyCacheHandler(CacheFileHandler):
     """
     @ToDo implement better caching, waiting on v3 of spotipy
     or if I get impatient, for now this saves things in .cache
     """
+
     def __init__(self):
-        super().__init__(
-            cache_path=None,
-             username=None,
-             encoder_cls=None)
+        super().__init__(cache_path=None, username=None, encoder_cls=None)
 
 
 class SpotifyPlugin(object):
@@ -31,7 +31,9 @@ class SpotifyPlugin(object):
         # if we don't have the required config, set as disabled
         if not self.client_id or not self.client_secret or not self.redirect_uri:
             self.enabled = False
-            logger.warning("Client Id, Secret, or Redirect Uri Not Defined, Disabling Spotify")
+            logger.warning(
+                "Client Id, Secret, or Redirect Uri Not Defined, Disabling Spotify"
+            )
             return
 
         self.cache_manager = SpotifyCacheHandler()
@@ -40,7 +42,7 @@ class SpotifyPlugin(object):
             client_secret=self.client_secret,
             redirect_uri=self.redirect_uri,
             scope="user-read-currently-playing",
-            cache_handler=self.cache_manager
+            cache_handler=self.cache_manager,
         )
         self.sp = None
 
@@ -59,7 +61,6 @@ class SpotifyPlugin(object):
         :return:
         """
 
-
         now_playing = {"success": False}
 
         if not self.__is_enabled:
@@ -70,8 +71,8 @@ class SpotifyPlugin(object):
             results = self.sp.current_user_playing_track()
 
             if results.get("currently_playing_type") == "track":
-                artist = results.get("item").get('artists')[0]['name']
-                song = results.get("item").get('name')
+                artist = results.get("item").get("artists")[0]["name"]
+                song = results.get("item").get("name")
             elif results.get("currently_playing_type") == "episode":
                 # currently doesn't support podcasts :/
                 # https://developer.spotify.com/documentation/web-api/reference/get-recently-played
@@ -91,7 +92,6 @@ class SpotifyPlugin(object):
             logger.error("Failed to get now playing song: %s", str(e))
         return now_playing
 
-
     def callback(self, code):
         """
         Save code into auth manager
@@ -106,13 +106,11 @@ class SpotifyPlugin(object):
 
         try:
             self.auth_manager.get_access_token(code)
-            callback_response["success"] =  True
+            callback_response["success"] = True
         except Exception as e:
             logger.error(f"Failed to exchange code: {str(e)}")
 
         return callback_response
-
-
 
     def __is_enabled(self):
         if not self.enabled:

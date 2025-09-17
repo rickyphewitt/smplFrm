@@ -8,24 +8,36 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Image',
+            name="Image",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('external_id', models.CharField(default=smplfrm.models.base.generate_external_id, max_length=16)),
-                ('created_date', models.DateTimeField()),
-                ('updated_date', models.DateTimeField()),
-                ('deleted', models.BooleanField(default=False)),
-                ('name', models.CharField(max_length=100)),
-                ('file_name', models.CharField(max_length=100)),
-                ('file_path', models.CharField(max_length=200)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "external_id",
+                    models.CharField(
+                        default=smplfrm.models.base.generate_external_id, max_length=16
+                    ),
+                ),
+                ("created_date", models.DateTimeField()),
+                ("updated_date", models.DateTimeField()),
+                ("deleted", models.BooleanField(default=False)),
+                ("name", models.CharField(max_length=100)),
+                ("file_name", models.CharField(max_length=100)),
+                ("file_path", models.CharField(max_length=200)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]

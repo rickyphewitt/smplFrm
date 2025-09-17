@@ -1,2 +1,1 @@
-
 from .spotify import SpotifyPlugin

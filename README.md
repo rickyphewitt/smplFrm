@@ -1,6 +1,9 @@
 # smplFrm
 Digital Photoframe for displaying photos on any device that has a web browser
 
+#### Code Quality
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 
 ## Run
 ### Native
@@ -42,6 +45,11 @@ services:
 
 ```
 * Then `cd` into `./docker` and run `docker-compose up -d` and browse to `http://localhost:8000`
+
+## Development
+### Code Formating
+* This repo uses [black](https://pypi.org/project/black/) to format the code
+* Run `make pre-commit` to install the pre-commit hook
 
 
 ### Environment Variables
