@@ -313,6 +313,18 @@
                 imageContainer.appendChild(newImage);
                 loadNext(newImage);
 
+                let opacity = 0;
+                let interval = setInterval(() => {
+                    opacity += 0.1;
+                    if (opacity >= 1) {
+                        clearInterval(interval);
+                        opacity = 1.0;
+                    }
+                newImage.style.opacity = opacity;
+                displayMetadata(newImage.getAttribute(imageIdAttr));
+            }, imageTransitionSeconds / 100)
+            startProgress();
+
         }
     }
 
