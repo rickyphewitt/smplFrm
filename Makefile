@@ -30,3 +30,6 @@ docker-run-no-cache:
 
 pre-commit: packages
 	. ./local_venv/bin/activate; pre-commit install
+
+ignore-format-commit:
+	git config blame.ignoreRevsFile .git-blame-ignore-revs
