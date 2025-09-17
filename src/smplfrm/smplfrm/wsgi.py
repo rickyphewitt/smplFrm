@@ -11,6 +11,6 @@ import os
 from celery import Celery
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'smplfrm.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "smplfrm.settings")
 
 application = get_wsgi_application()

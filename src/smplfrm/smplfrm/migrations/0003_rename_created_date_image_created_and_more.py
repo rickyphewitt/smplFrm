@@ -6,18 +6,18 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('smplfrm', '0002_alter_image_created_date_alter_image_updated_date'),
+        ("smplfrm", "0002_alter_image_created_date_alter_image_updated_date"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='image',
-            old_name='created_date',
-            new_name='created',
+            model_name="image",
+            old_name="created_date",
+            new_name="created",
         ),
         migrations.RenameField(
-            model_name='image',
-            old_name='updated_date',
-            new_name='updated',
+            model_name="image",
+            old_name="updated_date",
+            new_name="updated",
         ),
     ]

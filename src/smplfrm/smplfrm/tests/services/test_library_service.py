@@ -5,7 +5,10 @@ from django.test import TestCase
 from src.smplfrm.smplfrm.services import ImageService, LibraryService
 from django.test.utils import override_settings
 
-test_library = [os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'library'))]
+test_library = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "library"))
+]
+
 
 @override_settings(SMPL_FRM_LIBRARY_DIRS=test_library)
 class TestLibraryService(TestCase):
@@ -13,7 +16,6 @@ class TestLibraryService(TestCase):
 
         self.library_service = LibraryService()
         self.image_service = ImageService()
-
 
     def test_scan(self):
         self.library_service.scan()
@@ -34,20 +36,18 @@ class TestLibraryService(TestCase):
         image_data = {
             "name": "should_be_deleted",
             "file_path": "./filePathDoesNotExist/",
-            "file_name": "fileNameDoesNotExist.jpg"
+            "file_name": "fileNameDoesNotExist.jpg",
         }
         created_image = self.image_service.create(image_data)
         self.assertFalse(created_image.deleted, "Image should not be deleted")
 
         self.library_service.scan()
-        deleted_image = self.image_service.read(ext_id=created_image.external_id, deleted=True)
+        deleted_image = self.image_service.read(
+            ext_id=created_image.external_id, deleted=True
+        )
         undeleted_image = self.image_service.read(ext_id=valid_image.external_id)
 
         # verify metadata exif
         image_meta = undeleted_image.meta
         self.assertIsNotNone(image_meta)
         self.assertIsNotNone(image_meta.exif)
-
-
-
-

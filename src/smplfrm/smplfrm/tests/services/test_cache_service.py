@@ -1,4 +1,3 @@
-
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -9,9 +8,7 @@ class TestImageService(TestCase):
     def setUp(self):
         self.service = CacheService()
         self.cache_key = "randomHere"
-        self.cache_data = {
-            "some": "data"
-        }
+        self.cache_data = {"some": "data"}
 
     def test_create_get_invalidate_cache_item(self):
 
@@ -24,6 +21,7 @@ class TestImageService(TestCase):
     def test_configurable_cache_timeout(self):
         self.service.upsert(self.cache_key, self.cache_data)
         from time import sleep
+
         sleep(2)
         self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
 
@@ -48,12 +46,12 @@ class TestImageService(TestCase):
         self.service.clear(force=True)
         self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
 
-
-
     def test_image_cache_key(self):
         ext_id = "foo"
         height = "10"
         width = "20"
 
-        self.assertEqual(f"{ext_id}:{height}:{width}", self.service.get_image_cache_key(ext_id, height, width))
-
+        self.assertEqual(
+            f"{ext_id}:{height}:{width}",
+            self.service.get_image_cache_key(ext_id, height, width),
+        )

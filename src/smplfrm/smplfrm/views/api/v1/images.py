@@ -14,6 +14,7 @@ from smplfrm.tasks import cache_images_task
 
 logger = logging.getLogger(__name__)
 
+
 class Images(viewsets.ModelViewSet):
 
     queryset = Image.objects.all()
@@ -37,19 +38,23 @@ class Images(viewsets.ModelViewSet):
         raise PermissionDenied()
 
     # handle displaying an image
-    @action(methods=['get'], detail=True, url_path="display")
+    @action(methods=["get"], detail=True, url_path="display")
     def display_image(self, request, external_id=None):
         image = self.service.read(ext_id=external_id)
         if image:
             # get w/h of caller
-            width = request.GET.get('width', '100')
-            height = request.GET.get('height', '100')
+            width = request.GET.get("width", "100")
+            height = request.GET.get("height", "100")
 
-            cache_key = self.cache_service.get_image_cache_key(image.external_id, height, width)
+            cache_key = self.cache_service.get_image_cache_key(
+                image.external_id, height, width
+            )
             cached_image = self.cache_service.read(cache_key=cache_key)
             if cached_image is None:
                 try:
-                    cached_image = self.image_manipulation.display(image, int(height), int(width))
+                    cached_image = self.image_manipulation.display(
+                        image, int(height), int(width)
+                    )
                 except FileNotFoundError:
                     return HttpResponse(status=404)
 
@@ -60,13 +65,13 @@ class Images(viewsets.ModelViewSet):
             self.service.increment_view_count(image)
 
             # send to client
-            response = HttpResponse(status=200, headers={'Content-type': 'image/jpeg'})
+            response = HttpResponse(status=200, headers={"Content-type": "image/jpeg"})
             response.write(cached_image.tobytes())
             return response
         else:
             return HttpResponse(status=404)
 
-    @action(methods=['get'], detail=False, url_path="next")
+    @action(methods=["get"], detail=False, url_path="next")
     def next_image(self, request):
         """
 
@@ -82,8 +87,8 @@ class Images(viewsets.ModelViewSet):
         serializer = self.get_serializer(image)
 
         # get w/h of caller
-        width = request.GET.get('width', '100')
-        height = request.GET.get('height', '100')
+        width = request.GET.get("width", "100")
+        height = request.GET.get("height", "100")
 
         cache_image_list = []
         for img in images:

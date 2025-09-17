@@ -10,17 +10,16 @@ from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
-class ImageMetadataService(BaseService):
 
+class ImageMetadataService(BaseService):
 
     def create(self, data: Dict):
         date = self.extract_date(data["image"].file_path, data["exif"])
         data["taken"] = date
         return ImageMetadata.objects.create(**data)
 
-    def read(self, ext_id: string, deleted: bool=False):
-        return ImageMetadata.objects.get(external_id = ext_id, deleted=deleted)
-
+    def read(self, ext_id: string, deleted: bool = False):
+        return ImageMetadata.objects.get(external_id=ext_id, deleted=deleted)
 
     def list(self, **kwargs):
 
@@ -30,25 +29,26 @@ class ImageMetadataService(BaseService):
             return ImageMetadata.objects.all()
 
         pass
+
     def update(self, image_meta: ImageMetadata):
         date = self.extract_date(image_meta.image.file_path, image_meta.exif)
         image_meta.taken = date
         image_meta.save()
         return image_meta
 
-
     def delete(self, ext_id: string):
 
         image_meta_to_soft_delete = None
 
         try:
-            image_meta_to_soft_delete = ImageMetadata.objects.get(external_id = ext_id, deleted=False)
+            image_meta_to_soft_delete = ImageMetadata.objects.get(
+                external_id=ext_id, deleted=False
+            )
         except ImageMetadata.DoesNotExist:
             return
 
         image_meta_to_soft_delete.deleted = True
         image_meta_to_soft_delete.save()
-
 
     def destroy(self, ext_id: string):
         """
@@ -60,7 +60,7 @@ class ImageMetadataService(BaseService):
         image_meta_to_destroy = None
 
         try:
-            image_meta_to_destroy = ImageMetadata.objects.get(external_id = ext_id)
+            image_meta_to_destroy = ImageMetadata.objects.get(external_id=ext_id)
         except ImageMetadata.DoesNotExist:
             return
 
@@ -71,21 +71,19 @@ class ImageMetadataService(BaseService):
     def read_by_image_id(self, image_ext_id):
         return ImageMetadata.objects.get(image__external_id=image_ext_id)
 
-
-
-
     def extract_date(self, image_path, image_meta):
         date_str = ""
         if SMPL_FRM_FORCE_DATE_FROM_PATH:
             date_str = self.parse_date_from_path(image_path)
             logger.info(f"Found Date String {date_str} from path.")
         elif "DateTime" not in image_meta:
-            logger.error(f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name.")
+            logger.error(
+                f"Unable to Find DateTime in image meta: {image_meta}, defaulting to image name."
+            )
             image_meta.update({"DateTime": "Unknown"})
             date_str = self.parse_date_from_meta(image_meta)
 
         return date_str
-
 
     def parse_date_from_meta(self, image_meta):
         """
@@ -95,9 +93,9 @@ class ImageMetadataService(BaseService):
         """
 
         manual_dt_parsing = [
-            "%Y:%m:%d %H:%M:%S",    # '2014:10:18 13:49:12'
-            "%Y:%m:%d %H:%M:%S.%f", # '2014:07:25 19:39:59.283'
-            "%Y:%m:%d %H:%M:%S%z"   # '2014:03:19 18:15:53+00:00'
+            "%Y:%m:%d %H:%M:%S",  # '2014:10:18 13:49:12'
+            "%Y:%m:%d %H:%M:%S.%f",  # '2014:07:25 19:39:59.283'
+            "%Y:%m:%d %H:%M:%S%z",  # '2014:03:19 18:15:53+00:00'
         ]
 
         string_date = image_meta["DateTime"]
@@ -107,12 +105,13 @@ class ImageMetadataService(BaseService):
             try:
                 return datetime.strptime(string_date, dt_format)
             except Exception as e:
-                print(f"Failed to extract DateTime from meta {string_date}, error: {str(e)}")
+                print(
+                    f"Failed to extract DateTime from meta {string_date}, error: {str(e)}"
+                )
                 pass
 
         if parsed_date is None:
             return string_date
-
 
     def parse_date_from_path(self, path):
         import re

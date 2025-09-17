@@ -5,7 +5,10 @@ from django.db import models
 
 
 def generate_external_id():
-    return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+    return "".join(
+        random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits)
+        for _ in range(16)
+    )
 
 
 class ModelBase(models.Model):
@@ -20,7 +23,6 @@ class ModelBase(models.Model):
     # soft delete support
     deleted = models.BooleanField(default=False)
 
-
     class Meta:
         abstract = True
-        app_label = 'smplfrm'
+        app_label = "smplfrm"

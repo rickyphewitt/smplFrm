@@ -1,14 +1,24 @@
 import asyncio
 
 from open_meteo import OpenMeteo
-from open_meteo.models import DailyParameters, HourlyParameters, TemperatureUnit, PrecipitationUnit, WindSpeedUnit
+from open_meteo.models import (
+    DailyParameters,
+    HourlyParameters,
+    TemperatureUnit,
+    PrecipitationUnit,
+    WindSpeedUnit,
+)
 from django.core.cache import cache
 from datetime import datetime, timedelta, timezone
 import logging
 
-from smplfrm.settings import (SMPL_FRM_WEATHER_COORDS, SMPL_FRM_TIMEZONE,
-                              SMPL_FRM_WEATHER_TEMP_UNIT, SMPL_FRM_WEATHER_PRECIP_UNIT,
-                              SMPL_FRM_WEATHER_WINDSPEED_UNIT)
+from smplfrm.settings import (
+    SMPL_FRM_WEATHER_COORDS,
+    SMPL_FRM_TIMEZONE,
+    SMPL_FRM_WEATHER_TEMP_UNIT,
+    SMPL_FRM_WEATHER_PRECIP_UNIT,
+    SMPL_FRM_WEATHER_WINDSPEED_UNIT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +34,6 @@ class WeatherService(object):
         self.__determine_temp_unit()
         self.precip_unit = self.__determine_precip_unit()
         self.windspeed_unit = self.__determine_windspeed_unit()
-
-
 
     async def collect_weather(self):
         """Collect the weather and then persist in redis for fetching"""
@@ -45,17 +53,15 @@ class WeatherService(object):
                     HourlyParameters.RELATIVE_HUMIDITY_2M,
                 ],
                 temperature_unit=self.temp_unit,
-                wind_speed_unit=self.windspeed_unit
+                wind_speed_unit=self.windspeed_unit,
             )
             self.create(forecast)
 
     def create(self, data):
-        expires = timedelta(days = 6).total_seconds()
+        expires = timedelta(days=6).total_seconds()
         cache.set(key=self.redis_key, value=data, timeout=expires)
         logger.debug("Persisted Weather Data: " + str(data))
         print("Weather Synced")
-
-
 
     def delete(self):
         cache.delete(self.redis_key)
@@ -87,17 +93,15 @@ class WeatherService(object):
                 logger.error(f"Failed to get low/high temps: {str(e)}")
                 pass
 
-
         if not current_low_temp_value:
-             current_low_temp_value = "N/A"
+            current_low_temp_value = "N/A"
         if not current_high_temp_value:
-             current_high_temp_value = "N/A"
-
+            current_high_temp_value = "N/A"
 
         return {
             "current_temp": f"{current_temp_value} {self.temp_unit_display}",
             "current_low_temp": f"{current_low_temp_value}{self.temp_unit_display}",
-            "current_high_temp": f"{current_high_temp_value}{self.temp_unit_display}"
+            "current_high_temp": f"{current_high_temp_value}{self.temp_unit_display}",
         }
 
     def __get_current_temp(self, raw_data, index):
@@ -107,12 +111,15 @@ class WeatherService(object):
             logger.error(f"Unable to get hourly temp: {str(e)}")
             return "N/A"
 
-
     def __get_current_daily_index(self, raw_data, now):
         try:
             daily_time = raw_data.daily.time
             for i in range(len(daily_time)):
-                if daily_time[i].year == now.year and daily_time[i].month == now.month and daily_time[i].day == now.day:
+                if (
+                    daily_time[i].year == now.year
+                    and daily_time[i].month == now.month
+                    and daily_time[i].day == now.day
+                ):
                     index_of_temp = i
                     return index_of_temp
                 else:
@@ -120,7 +127,6 @@ class WeatherService(object):
         except Exception as e:
             logger.error(f"Unable to determine daily index: {str(e)}")
             return None
-
 
     def __get_current_temp_index(self, raw_data, now):
 
@@ -131,7 +137,6 @@ class WeatherService(object):
         except Exception as e:
             logger.error(f"Failed to extract hourly time, error: {str(e)}")
 
-
         if time:
             now_year = now.year
             now_month = now.month
@@ -139,7 +144,12 @@ class WeatherService(object):
             now_hour = now.hour
 
             for i in range(len(time)):
-                if time[i].year == now_year and time[i].month == now_month and time[i].day == now_day and time[i].hour == now_hour:
+                if (
+                    time[i].year == now_year
+                    and time[i].month == now_month
+                    and time[i].day == now_day
+                    and time[i].hour == now_hour
+                ):
                     return i
         else:
             return None

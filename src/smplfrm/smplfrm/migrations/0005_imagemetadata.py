@@ -8,24 +8,44 @@ import smplfrm.models.base
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('smplfrm', '0004_image_view_count'),
+        ("smplfrm", "0004_image_view_count"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ImageMetadata',
+            name="ImageMetadata",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('external_id', models.CharField(default=smplfrm.models.base.generate_external_id, max_length=16)),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('deleted', models.BooleanField(default=False)),
-                ('exif', models.JSONField()),
-                ('taken', models.DateTimeField(null=True)),
-                ('image', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='meta', to='smplfrm.image')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "external_id",
+                    models.CharField(
+                        default=smplfrm.models.base.generate_external_id, max_length=16
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("updated", models.DateTimeField(auto_now=True)),
+                ("deleted", models.BooleanField(default=False)),
+                ("exif", models.JSONField()),
+                ("taken", models.DateTimeField(null=True)),
+                (
+                    "image",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="meta",
+                        to="smplfrm.image",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]
