@@ -11,3 +11,4 @@ open-meteo~=0.3.2
 django-redis~=6.0.0
 spotipy~=2.25.1
 pre-commit~=4.3.0
+noaa_coops~=0.4.0

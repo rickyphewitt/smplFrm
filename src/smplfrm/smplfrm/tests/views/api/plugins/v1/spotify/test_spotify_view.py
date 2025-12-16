@@ -1,12 +1,6 @@
-import datetime
-
-from django.test import TestCase, RequestFactory
 from unittest.mock import Mock, patch
 
-from smplfrm.services import ImageMetadataService, ImageService
-from smplfrm.services import LibraryService
-from smplfrm.views.api.v1.images import Images as imageView
-from django.db.models import ObjectDoesNotExist
+from django.test import TestCase
 
 
 class TestImagesMetadata(TestCase):
@@ -14,7 +8,6 @@ class TestImagesMetadata(TestCase):
     @patch("smplfrm.plugins.spotify.spotify.SpotifyPlugin")
     def setUp(self, mock_spotify_service):
         self.uri = "/api/v1/plugins/spotify"
-        spotify_service_mock = Mock()
         mock_spotify_service = Mock()
         self.service = mock_spotify_service
         self.now_playing_success = {
