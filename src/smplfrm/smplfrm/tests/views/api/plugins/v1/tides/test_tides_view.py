@@ -1,15 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.test import TestCase
-from smplfrm.services import ImageMetadataService, ImageService
-from smplfrm.services import LibraryService
-from smplfrm.views.api.v1.images import Images as imageView
-
-
 from smplfrm.plugins.tides import TidesPlugin
 
 
-class TestImagesMetadata(TestCase):
+class TestTidesView(TestCase):
 
     @patch("smplfrm.plugins.tides.tides.TidesPlugin")
     def setUp(self, mock_tides_plugin):
@@ -26,7 +21,7 @@ class TestImagesMetadata(TestCase):
     @patch("smplfrm.views.api.plugins.v1.tides.tides_view.TidesPlugin")
     def test_tides_success(self, mock_tides_plugin):
         mock_tides_instance = Mock()
-        mock_tides_plugin.return_value = mock_tides_plugin
+        mock_tides_plugin.return_value = mock_tides_instance
         mock_tides_instance.get_for_display.return_value = self.tide_data_success
 
         response = self.client.get(f"{self.uri}")
@@ -42,3 +37,15 @@ class TestImagesMetadata(TestCase):
         self.assertEqual(returned_json["1759334820000"]["height"], 4.833)
         self.assertEqual(returned_json["1759351260000"]["type"], "L")
         self.assertEqual(returned_json["1759351260000"]["height"], 3.891)
+
+    @patch("smplfrm.views.api.plugins.v1.tides.tides_view.TidesPlugin")
+    def test_tides_no_tides_found(self, mock_tides_plugin):
+        mock_tides_instance = Mock()
+        mock_tides_plugin.return_value = mock_tides_instance
+        mock_tides_instance.get_for_display.return_value = None
+
+        response = self.client.get(f"{self.uri}")
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status_code, 200)
+        returned_json = response.json()
+        self.assertEqual(len(returned_json), 0)

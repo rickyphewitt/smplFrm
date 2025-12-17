@@ -2,11 +2,15 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 
 from smplfrm.plugins import TidesPlugin
+import json
+from django.http import HttpResponse
 
 
 class TidesView(viewsets.ViewSet):
 
-    @action(methods=["get"], detail=False)
-    def read(self, *args, **kwargs):
-
-        return HttpResponse(json.dumps(auth_url), content_type="application/json")
+    def list(self, *args, **kwargs):
+        tides = TidesPlugin().get_for_display()
+        if tides:
+            return HttpResponse(json.dumps(tides), content_type="application/json")
+        else:
+            return HttpResponse(json.dumps({}), content_type="application/json")

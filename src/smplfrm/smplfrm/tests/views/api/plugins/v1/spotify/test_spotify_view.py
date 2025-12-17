@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 from django.test import TestCase
 
 
-class TestImagesMetadata(TestCase):
+class TestSpotifyView(TestCase):
 
     @patch("smplfrm.plugins.spotify.spotify.SpotifyPlugin")
     def setUp(self, mock_spotify_service):
