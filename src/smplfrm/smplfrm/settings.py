@@ -48,6 +48,7 @@ SMPL_FRM_RESET_IMAGE_VIEW_COUNT = bool(
     os.getenv("SMPL_FRM_RESET_IMAGE_VIEW_COUNT", False)
 )
 
+# spotify plugin
 SMPL_FRM_PLUGINS_SPOTIFY_ENABLED = bool(
     os.getenv("SMPL_FRM_PLUGINS_SPOTIFY_ENABLED", False)
 )
@@ -57,6 +58,12 @@ SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET = os.getenv(
 )
 SMPL_FRM_PLUGINS_SPOTIFY_REDIRECT_URI = (
     f"Http://{SMPL_FRM_HOST}:{SMPL_FRM_EXTERNAL_PORT}/api/v1/plugins/spotify/callback"
+)
+
+
+# tides plugin
+SMPL_FRM_PLUGINS_TIDES_STATION_ID = str(
+    os.getenv("SMPL_FRM_PLUGINS_TIDES_STATION_ID", "9439040")
 )
 
 SMPL_FRM_DB_FOLDER = "db"
