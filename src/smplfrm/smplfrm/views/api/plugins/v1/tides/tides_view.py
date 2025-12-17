@@ -1,6 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
+from smplfrm.plugins import TidesPlugin
+
 
 class TidesView(viewsets.ViewSet):
 
