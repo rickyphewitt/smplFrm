@@ -1,27 +1,76 @@
 import abc
-import logging
-import string
-from typing import Dict
-
-logger = logging.getLogger(__name__)
+from typing import Any, Dict, Optional
 
 
 class BaseService(abc.ABC):
+    """Abstract base class for service layer implementations.
 
-    def create(self, data: Dict):
+    Provides CRUD operations interface for data access and business logic.
+    """
+
+    @abc.abstractmethod
+    def create(self, data: Dict[str, Any]) -> Any:
+        """Create a new entity with the provided data.
+
+        Args:
+            data: Dictionary containing entity attributes
+
+        Returns:
+            The created entity instance
+        """
         pass
 
-    def read(self, ext_id: string, deleted: bool = False):
+    @abc.abstractmethod
+    def read(self, ext_id: str, deleted: bool = False) -> Any:
+        """Retrieve an entity by its external ID.
+
+        Args:
+            ext_id: External identifier of the entity
+            deleted: Whether to include soft-deleted entities
+
+        Returns:
+            The entity instance if found
+        """
         pass
 
-    def list(self, **kwargs):
+    @abc.abstractmethod
+    def list(self, **kwargs) -> Any:
+        """List entities with optional filtering.
+
+        Args:
+            **kwargs: Filter parameters
+
+        Returns:
+            Collection of entity instances
+        """
         pass
 
-    def update(self, object):
+    @abc.abstractmethod
+    def update(self, entity: Any) -> Any:
+        """Update an existing entity.
+
+        Args:
+            entity: The entity instance to update
+
+        Returns:
+            The updated entity instance
+        """
         pass
 
-    def delete(self, ext_id: string):
+    @abc.abstractmethod
+    def delete(self, ext_id: str) -> None:
+        """Soft delete an entity by its external ID.
+
+        Args:
+            ext_id: External identifier of the entity
+        """
         pass
 
-    def destroy(self, ext_id: string):
+    @abc.abstractmethod
+    def destroy(self, ext_id: str) -> None:
+        """Permanently delete an entity by its external ID.
+
+        Args:
+            ext_id: External identifier of the entity
+        """
         pass

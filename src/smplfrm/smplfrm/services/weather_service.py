@@ -1,5 +1,8 @@
-import asyncio
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 
+from django.core.cache import cache
 from open_meteo import OpenMeteo
 from open_meteo.models import (
     DailyParameters,
@@ -8,9 +11,6 @@ from open_meteo.models import (
     PrecipitationUnit,
     WindSpeedUnit,
 )
-from django.core.cache import cache
-from datetime import datetime, timedelta, timezone
-import logging
 
 from smplfrm.settings import (
     SMPL_FRM_WEATHER_COORDS,
@@ -23,20 +23,21 @@ from smplfrm.settings import (
 logger = logging.getLogger(__name__)
 
 
-class WeatherService(object):
+class WeatherService:
+    """Service for collecting and managing weather data."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis_key = "weather"
         coords = SMPL_FRM_WEATHER_COORDS.split(",")
         self.lat = coords[0].strip()
         self.long = coords[1].strip()
         self.tz = SMPL_FRM_TIMEZONE
-        self.__determine_temp_unit()
-        self.precip_unit = self.__determine_precip_unit()
-        self.windspeed_unit = self.__determine_windspeed_unit()
+        self._determine_temp_unit()
+        self.precip_unit = self._determine_precip_unit()
+        self.windspeed_unit = self._determine_windspeed_unit()
 
-    async def collect_weather(self):
-        """Collect the weather and then persist in redis for fetching"""
+    async def collect_weather(self) -> None:
+        """Collect weather forecast and persist in cache."""
         async with OpenMeteo() as open_meteo:
             forecast = await open_meteo.forecast(
                 latitude=self.lat,
@@ -57,41 +58,60 @@ class WeatherService(object):
             )
             self.create(forecast)
 
-    def create(self, data):
+    def create(self, data: Any) -> None:
+        """Store weather data in cache.
+
+        Args:
+            data: Weather forecast data to cache
+        """
         expires = timedelta(days=6).total_seconds()
         cache.set(key=self.redis_key, value=data, timeout=expires)
-        logger.debug("Persisted Weather Data: " + str(data))
-        print("Weather Synced")
+        logger.debug(f"Persisted Weather Data: {data}")
+        logger.info("Weather Synced")
 
-    def delete(self):
+    def delete(self) -> None:
+        """Delete cached weather data."""
         cache.delete(self.redis_key)
 
-    def read(self):
+    def read(self) -> Any:
+        """Retrieve cached weather data.
+
+        Returns:
+            Cached weather forecast data or None
+        """
         return cache.get(self.redis_key)
 
-    def get_for_display(self, now=None):
+    def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
+        """Get formatted weather data for display.
+
+        Args:
+            now: Current datetime, defaults to UTC now
+
+        Returns:
+            Dictionary with current, low, and high temperatures
+        """
         if not now:
-            # or ease of unit testing, should mock later
             now = datetime.now(tz=timezone.utc)
 
         raw_data = self.read()
-        current_temp_index = self.__get_current_temp_index(raw_data, now)
+        current_temp_index = self._get_current_temp_index(raw_data, now)
         logger.debug(f"Current Temp Index: {current_temp_index}")
+
         if current_temp_index is not None:
-            current_temp_value = self.__get_current_temp(raw_data, current_temp_index)
+            current_temp_value = self._get_current_temp(raw_data, current_temp_index)
         else:
             current_temp_value = "N/A"
 
-        daily_index = self.__get_current_daily_index(raw_data, now)
+        daily_index = self._get_current_daily_index(raw_data, now)
         current_low_temp_value = None
         current_high_temp_value = None
+
         if daily_index is not None:
             try:
                 current_low_temp_value = raw_data.daily.temperature_2m_min[daily_index]
                 current_high_temp_value = raw_data.daily.temperature_2m_max[daily_index]
             except Exception as e:
-                logger.error(f"Failed to get low/high temps: {str(e)}")
-                pass
+                logger.error(f"Failed to get low/high temps: {e}")
 
         if not current_low_temp_value:
             current_low_temp_value = "N/A"
@@ -104,14 +124,32 @@ class WeatherService(object):
             "current_high_temp": f"{current_high_temp_value}{self.temp_unit_display}",
         }
 
-    def __get_current_temp(self, raw_data, index):
+    def _get_current_temp(self, raw_data: Any, index: int) -> Any:
+        """Get current temperature from hourly data.
+
+        Args:
+            raw_data: Weather forecast data
+            index: Index of current hour
+
+        Returns:
+            Temperature value or "N/A"
+        """
         try:
             return raw_data.hourly.temperature_2m[index]
         except Exception as e:
-            logger.error(f"Unable to get hourly temp: {str(e)}")
+            logger.error(f"Unable to get hourly temp: {e}")
             return "N/A"
 
-    def __get_current_daily_index(self, raw_data, now):
+    def _get_current_daily_index(self, raw_data: Any, now: datetime) -> Optional[int]:
+        """Find index of current day in daily forecast data.
+
+        Args:
+            raw_data: Weather forecast data
+            now: Current datetime
+
+        Returns:
+            Index of current day or None
+        """
         try:
             daily_time = raw_data.daily.time
             for i in range(len(daily_time)):
@@ -120,56 +158,63 @@ class WeatherService(object):
                     and daily_time[i].month == now.month
                     and daily_time[i].day == now.day
                 ):
-                    index_of_temp = i
-                    return index_of_temp
-                else:
-                    continue
+                    return i
         except Exception as e:
-            logger.error(f"Unable to determine daily index: {str(e)}")
-            return None
+            logger.error(f"Unable to determine daily index: {e}")
+        return None
 
-    def __get_current_temp_index(self, raw_data, now):
+    def _get_current_temp_index(self, raw_data: Any, now: datetime) -> Optional[int]:
+        """Find index of current hour in hourly forecast data.
 
-        time = None
+        Args:
+            raw_data: Weather forecast data
+            now: Current datetime
 
+        Returns:
+            Index of current hour or None
+        """
         try:
             time = raw_data.hourly.time
         except Exception as e:
-            logger.error(f"Failed to extract hourly time, error: {str(e)}")
-
-        if time:
-            now_year = now.year
-            now_month = now.month
-            now_day = now.day
-            now_hour = now.hour
-
-            for i in range(len(time)):
-                if (
-                    time[i].year == now_year
-                    and time[i].month == now_month
-                    and time[i].day == now_day
-                    and time[i].hour == now_hour
-                ):
-                    return i
-        else:
+            logger.error(f"Failed to extract hourly time, error: {e}")
             return None
 
-    ### private methods
-    def __determine_temp_unit(self):
+        if time:
+            for i in range(len(time)):
+                if (
+                    time[i].year == now.year
+                    and time[i].month == now.month
+                    and time[i].day == now.day
+                    and time[i].hour == now.hour
+                ):
+                    return i
+        return None
+
+    def _determine_temp_unit(self) -> None:
+        """Set temperature unit based on configuration."""
         self.temp_unit = TemperatureUnit.FAHRENHEIT
         self.temp_unit_display = "°F"
         if SMPL_FRM_WEATHER_TEMP_UNIT == "C":
             self.temp_unit = TemperatureUnit.CELSIUS
-            self.temp_unit_diplay = "°C"
+            self.temp_unit_display = "°C"
 
-    def __determine_precip_unit(self):
+    def _determine_precip_unit(self) -> PrecipitationUnit:
+        """Determine precipitation unit based on configuration.
+
+        Returns:
+            PrecipitationUnit enum value
+        """
         unit = PrecipitationUnit.INCHES
         if SMPL_FRM_WEATHER_PRECIP_UNIT == "mm":
             unit = PrecipitationUnit.MILLIMETERS
-
         return unit
 
-    def __determine_windspeed_unit(self):
+    def _determine_windspeed_unit(self) -> WindSpeedUnit:
+        """Determine wind speed unit based on configuration.
+
+        Returns:
+            WindSpeedUnit enum value
+        """
         unit = WindSpeedUnit.MILES_PER_HOUR
         if SMPL_FRM_WEATHER_WINDSPEED_UNIT == "kmh":
             unit = WindSpeedUnit.KILOMETERS_PER_HOUR
@@ -177,5 +222,4 @@ class WeatherService(object):
             unit = WindSpeedUnit.KNOTS
         elif SMPL_FRM_WEATHER_WINDSPEED_UNIT == "ms":
             unit = WindSpeedUnit.METERS_PER_SECOND
-
         return unit

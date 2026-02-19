@@ -1,5 +1,8 @@
 import logging
+from typing import Any, Dict, Tuple
+
 import cv2
+import numpy as np
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
 
@@ -8,35 +11,71 @@ from smplfrm.models import Image
 logger = logging.getLogger(__name__)
 
 
-class ImageManipulationService(object):
+class ImageManipulationService:
+    """Service for image manipulation and display operations."""
 
-    def display(self, image, window_height=100, window_width=100):
-        return self.__display_image(image, window_height, window_width)
+    def display(
+        self, image: Image, window_height: int = 100, window_width: int = 100
+    ) -> np.ndarray:
+        """Display an image scaled to fit within specified dimensions.
 
-    def __display_image(self, image, window_height, window_width):
+        Args:
+            image: Image instance to display
+            window_height: Target window height in pixels
+            window_width: Target window width in pixels
 
-        image_metadata = self.__extract_metadata(image.file_path)
+        Returns:
+            Encoded image as numpy array
+        """
+        return self._display_image(image, window_height, window_width)
 
-        return self.__scale(
+    def _display_image(
+        self, image: Image, window_height: int, window_width: int
+    ) -> np.ndarray:
+        """Internal method to display and scale an image.
+
+        Args:
+            image: Image instance to display
+            window_height: Target window height
+            window_width: Target window width
+
+        Returns:
+            Scaled and encoded image
+        """
+        image_metadata = self._extract_metadata(image.file_path)
+        return self._scale(
             image, window_height, window_width, image_meta=image_metadata
         )
 
-    def __scale(self, image: Image, window_height, window_width, image_meta={}):
+    def _scale(
+        self,
+        image: Image,
+        window_height: int,
+        window_width: int,
+        image_meta: Dict[str, Any] = None,
+    ) -> np.ndarray:
+        """Scale an image to fit within target dimensions with borders.
 
-        # sanitize the incoming image path and make sure its one we have
+        Args:
+            image: Image instance to scale
+            window_height: Target window height
+            window_width: Target window width
+            image_meta: Optional image metadata dictionary
+
+        Returns:
+            Scaled and bordered image as encoded numpy array
+        """
         if image_meta is None:
             image_meta = {}
-        image_ext = image.file_path.rsplit(".", 1)[1]
 
+        image_ext = image.file_path.rsplit(".", 1)[1]
         padding = 0
-        # load image and get its w/h
+
         img = cv2.imread(image.file_path)
-        # tuple of width / height
         size = img.shape[:2]
         image_h = size[0]
         image_w = size[1]
 
-        # if target_width/height is 0 set it to the image_w/height
         if window_height == 0 or window_width == 0:
             window_height = image_h
             window_width = image_w
@@ -47,10 +86,10 @@ class ImageManipulationService(object):
         logger.debug(f"window height: {window_height}")
         logger.debug(f"window width: {window_width}")
 
-        scale_height_size, scale_width_size = self.__determine_scaled_dimensions(
+        scale_height_size, scale_width_size = self._determine_scaled_dimensions(
             target_width, target_height, image_w, image_h
         )
-        vert_border, horz_border = self.__determine_boarder(
+        vert_border, horz_border = self._determine_border(
             scale_width_size, scale_height_size, target_width, target_height
         )
 
@@ -68,28 +107,27 @@ class ImageManipulationService(object):
             vert_border,
             cv2.BORDER_REPLICATE,
             value=(0, 0, 0, 100),
-        )  # is opacity doing anything?
+        )
 
         logger.info(f"Resized Image: {image.name}")
         _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
         return enc_image
 
-    def __determine_scaled_dimensions(
-        self, target_width, target_height, image_w, image_h
-    ):
-        """
-        Determine scaled values of image
-        :param target_width:
-        :param target_height:
-        :param image_w:
-        :param image_h:
-        :return: scaled height, scaled width
-        """
+    def _determine_scaled_dimensions(
+        self, target_width: int, target_height: int, image_w: int, image_h: int
+    ) -> Tuple[int, int]:
+        """Determine scaled dimensions to fit image within target size.
 
-        # determine viewport orientation
+        Args:
+            target_width: Target width in pixels
+            target_height: Target height in pixels
+            image_w: Original image width
+            image_h: Original image height
+
+        Returns:
+            Tuple of (scaled_height, scaled_width)
+        """
         portrait_viewport = target_height > target_width
-
-        # determine image orientation
         portrait_image = image_h > image_w
 
         scale_height_size = target_height
@@ -98,38 +136,38 @@ class ImageManipulationService(object):
         if (portrait_viewport and portrait_image) or (
             not portrait_viewport and portrait_image
         ):
-            # scale by height
-            scale_width_size = self.__scale_by(target_height, image_w, image_h)
+            scale_width_size = self._scale_by(target_height, image_w, image_h)
         elif (portrait_viewport and not portrait_image) or (
             not portrait_viewport and not portrait_image
         ):
-            # scale by width
-            scale_height_size = self.__scale_by(target_width, image_h, image_w)
+            scale_height_size = self._scale_by(target_width, image_h, image_w)
 
-        # check to see if either of the scaled sizes are larger than target
         if scale_height_size > target_height:
-            scale_width_size = self.__scale_by(target_height, image_w, image_h)
+            scale_width_size = self._scale_by(target_height, image_w, image_h)
             scale_height_size = target_height
-
         elif scale_width_size > target_width:
-            scale_height_size = self.__scale_by(target_width, image_h, image_w)
+            scale_height_size = self._scale_by(target_width, image_h, image_w)
             scale_width_size = target_width
 
         return scale_height_size, scale_width_size
 
-    def __determine_boarder(
-        self, scale_width, scale_height, target_width, target_height
-    ):
-        """
-        Determines the boarder
-        :param scale_width:
-        :param scale_height:
-        :param target_width:
-        :param target_height:
-        :return:
+    def _determine_border(
+        self, scale_width: int, scale_height: int, target_width: int, target_height: int
+    ) -> Tuple[int, int]:
+        """Calculate border sizes to center scaled image.
+
+        Args:
+            scale_width: Scaled image width
+            scale_height: Scaled image height
+            target_width: Target width
+            target_height: Target height
+
+        Returns:
+            Tuple of (vertical_border, horizontal_border)
         """
         vertical_border = 0
         horizontal_border = 0
+
         if scale_width < target_width:
             vertical_border = target_width - scale_width
             vertical_border = int(vertical_border / 2)
@@ -140,23 +178,31 @@ class ImageManipulationService(object):
 
         return vertical_border, horizontal_border
 
-    def __scale_by(self, scale_to, size_1, size_2):
-        """
-        Scale an image
-        :param scale_to: size to scale image to
-        :param size_1: w or h
-        :param size_2: w or h
-        :return:
+    def _scale_by(self, scale_to: int, size_1: int, size_2: int) -> int:
+        """Calculate scaled dimension maintaining aspect ratio.
+
+        Args:
+            scale_to: Target size to scale to
+            size_1: First dimension (width or height)
+            size_2: Second dimension (width or height)
+
+        Returns:
+            Scaled dimension as integer
         """
         return int(scale_to * size_1 / size_2)
 
-    def __extract_metadata(self, image_path):
+    def _extract_metadata(self, image_path: str) -> Dict[str, Any]:
+        """Extract EXIF metadata from an image file.
+
+        Args:
+            image_path: Path to the image file
+
+        Returns:
+            Dictionary of EXIF tags and values
+        """
         tag_dict = {}
         with PIL_Image.open(image_path) as img_pil:
-
-            # Extract EXIF metadata using Pillow
             exif_data = img_pil.getexif()
-
             for k, v in exif_data.items():
                 tag_dict[TAGS.get(k, k)] = v
 
