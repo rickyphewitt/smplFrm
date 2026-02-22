@@ -2,8 +2,11 @@
 packages:
 	python -m venv ./local_venv; . ./local_venv/bin/activate; pip install -r requirements.txt
 
-run: migrations
+run: staticfiles migrations
 	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py runserver 0.0.0.0:8321
+
+staticfiles:
+	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py collectstatic --noinput
 
 migrations:
 	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py migrate

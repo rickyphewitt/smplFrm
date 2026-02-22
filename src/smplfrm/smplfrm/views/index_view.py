@@ -22,7 +22,6 @@ class IndexView(TemplateView):
         :param kwargs:
         :return:
         """
-
         weather_data = WeatherService().get_for_display()
 
         context = {
