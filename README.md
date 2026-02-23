@@ -13,6 +13,8 @@ ___
   * . ./local_venv/bin/activate`
 * Install requirements with `pip`
   * `pip install -r requirements.txt`
+* Run the required docker services
+  * `make docker-services`
 * Run the server
   * `python main.py`
 * Browse to `http://localhost:8000`
@@ -32,11 +34,9 @@ ___
 ```
 services:
     smpl_frm:
-        build:
-            context: ../
-            dockerfile: docker/images/Dockerfile
+        image: dke39vsh3gghs/smplfrm:latest
         ports:
-         - "8000:8000"
+         - "8321:8321"
         environment:
             - SMPL_FRM_LIBRARY_DIRS=/app/library,/app/assets
             - PYTHONUNBUFFERED=1
@@ -44,7 +44,16 @@ services:
             - /example/local/library/here:/app/library
 
 ```
-* Then `cd` into `./docker` and run `docker-compose up -d` and browse to `http://localhost:8000`
+* Then run `docker-compose up -d` and browse to `http://localhost:8321`
+
+### Docker Hub Labels
+Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
+* `vX.X.X`
+  * Official releases. This is the recommended tag to use.
+* `latest`
+  * This is the most recent code on `main`. Useful for development and testing.
+* `<commit-hash>`
+  * For each commit merged into `main` an image is created with the corresponding git hash. Useful for pinning to a specific version outside the release cycle. 
 
 ## Development
 
