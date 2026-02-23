@@ -1,11 +1,14 @@
 from django.test import TestCase
+from django.db.models import ObjectDoesNotExist
 
 from smplfrm.services import ImageService
-from django.db.models import ObjectDoesNotExist
 
 
 class TestImageService(TestCase):
+    """Test suite for ImageService."""
+
     def setUp(self):
+        """Set up test fixtures."""
         self.image_service = ImageService()
         self.full_image_data = {
             "name": "foo",
@@ -14,23 +17,23 @@ class TestImageService(TestCase):
         }
 
     def test_create_get_delete_image(self):
-
+        """Test creating, retrieving, updating, and deleting an image."""
         created_image = self.image_service.create(self.full_image_data)
         self._assert_image(created_image)
 
         # get image from db by external id
-        getted_image = self.image_service.read(ext_id=created_image.external_id)
-        self._assert_image(created_image)
+        retrieved_image = self.image_service.read(ext_id=created_image.external_id)
+        self._assert_image(retrieved_image)
         self.assertEqual(
             created_image.external_id,
-            getted_image.external_id,
+            retrieved_image.external_id,
             "External Ids should match!",
         )
 
         # update image
-        getted_image.name = "bar"
-        updated_image = self.image_service.update(getted_image)
-        self.assertEqual(updated_image.name, getted_image.name, "Name not set.")
+        retrieved_image.name = "bar"
+        updated_image = self.image_service.update(retrieved_image)
+        self.assertEqual(updated_image.name, retrieved_image.name, "Name not set.")
         self.assertFalse(updated_image.deleted, "Image should not be deleted")
 
         # soft delete image
@@ -43,25 +46,24 @@ class TestImageService(TestCase):
         soft_deleted_image = self.image_service.read(
             updated_image.external_id, deleted=True
         )
-        self.assertEqual(
-            soft_deleted_image.name, soft_deleted_image.name, "Name not set."
-        )
+        self.assertEqual(soft_deleted_image.name, updated_image.name, "Name not set.")
         self.assertTrue(soft_deleted_image.deleted, "Image should be deleted")
 
     def test_next(self):
+        """Test retrieving next image based on view count."""
         created_image = self.image_service.create(self.full_image_data)
         self._assert_image(created_image)
-        getted_image = self.image_service.read(ext_id=created_image.external_id)
+        retrieved_image = self.image_service.read(ext_id=created_image.external_id)
 
-        view_count_before_next = getted_image.view_count
+        view_count_before_next = retrieved_image.view_count
         image = self.image_service.get_next()[0]
 
-        getted_image = self.image_service.read(ext_id=created_image.external_id)
+        retrieved_image = self.image_service.read(ext_id=created_image.external_id)
         # assert the view count remains the same, this is updated on display image
         self.assertEqual(view_count_before_next, image.view_count)
 
         # manually increment to ensure the next call gets the 'next image'
-        self.image_service.increment_view_count(getted_image)
+        self.image_service.increment_view_count(retrieved_image)
 
         # create second image and ensure its called 'next'
         second_image_data = {
@@ -75,7 +77,12 @@ class TestImageService(TestCase):
         self.assertEqual(second_image.external_id, image.external_id)
 
     def _assert_image(self, image, name="name"):
-        self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
+        """Assert that image has expected attributes.
+
+        Args:
+            image: Image instance to validate
+            name: Key name for the name field in test data
+        """
         self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
         self.assertIsNotNone(image.created, "Created Datetime not set.")
         self.assertIsNotNone(image.updated, "Updated Datetime not set.")

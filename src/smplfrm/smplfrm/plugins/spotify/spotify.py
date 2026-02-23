@@ -18,7 +18,8 @@ class SpotifyCacheHandler(CacheFileHandler):
         super().__init__(cache_path=None, username=None, encoder_cls=None)
 
 
-class SpotifyPlugin(object):
+class SpotifyPlugin:
+    """Spotify integration plugin for displaying now playing information."""
 
     def __init__(self):
         self.enabled = settings.SMPL_FRM_PLUGINS_SPOTIFY_ENABLED
@@ -46,24 +47,35 @@ class SpotifyPlugin(object):
         )
         self.sp = None
 
-    def auth(self):
+    @property
+    def is_enabled(self):
+        """Check if Spotify plugin is enabled."""
+        if not self.enabled:
+            logger.warning("Spotify Plugin Not Enabled")
+        return self.enabled
 
+    def auth(self):
+        """Get Spotify authorization URL.
+
+        Returns:
+            Dictionary containing auth_url
+        """
         auth_url = {"auth_url": "http://not.enabled"}
-        if not self.__is_enabled:
+        if not self.is_enabled:
             return auth_url
 
         auth_url = self.auth_manager.get_authorize_url()
         return {"auth_url": auth_url}
 
     def get_now_playing(self):
-        """
-        Get Now Playing Song
-        :return:
-        """
+        """Get currently playing track information.
 
+        Returns:
+            Dictionary with artist, song, and success status
+        """
         now_playing = {"success": False}
 
-        if not self.__is_enabled:
+        if not self.is_enabled:
             return now_playing
 
         try:
@@ -93,15 +105,17 @@ class SpotifyPlugin(object):
         return now_playing
 
     def callback(self, code):
-        """
-        Save code into auth manager
-        :param code:
-        :return:
-        """
+        """Exchange authorization code for access token.
 
+        Args:
+            code: Authorization code from Spotify
+
+        Returns:
+            Dictionary with success status
+        """
         callback_response = {"success": False}
 
-        if not self.__is_enabled:
+        if not self.is_enabled:
             return callback_response
 
         try:
@@ -111,9 +125,3 @@ class SpotifyPlugin(object):
             logger.error(f"Failed to exchange code: {str(e)}")
 
         return callback_response
-
-    def __is_enabled(self):
-        if not self.enabled:
-            logger.warning("Spotify Plugin Not Enabled")
-
-        return self.enabled

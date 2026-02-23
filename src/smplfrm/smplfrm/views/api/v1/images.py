@@ -14,8 +14,13 @@ from smplfrm.tasks import cache_images_task
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_WIDTH = "100"
+DEFAULT_HEIGHT = "100"
+NEXT_IMAGE_COUNT = 5
+
 
 class Images(viewsets.ModelViewSet):
+    """ViewSet for managing and displaying images."""
 
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
@@ -27,77 +32,80 @@ class Images(viewsets.ModelViewSet):
         self.image_manipulation = ImageManipulationService()
         self.cache_service = CacheService()
 
-    # for now only allow list and read
     def create(self, request, *args, **kwargs):
+        """Create operation is not allowed."""
         raise PermissionDenied()
 
     def update(self, request, *args, **kwargs):
+        """Update operation is not allowed."""
         raise PermissionDenied()
 
     def destroy(self, request, *args, **kwargs):
+        """Delete operation is not allowed."""
         raise PermissionDenied()
 
-    # handle displaying an image
     @action(methods=["get"], detail=True, url_path="display")
     def display_image(self, request, external_id=None):
+        """Display an image with optional resizing.
+
+        Args:
+            request: HTTP request with optional width/height parameters
+            external_id: External ID of the image
+
+        Returns:
+            HTTP response with image data or 404 if not found
+        """
         image = self.service.read(ext_id=external_id)
-        if image:
-            # get w/h of caller
-            width = request.GET.get("width", "100")
-            height = request.GET.get("height", "100")
-
-            cache_key = self.cache_service.get_image_cache_key(
-                image.external_id, height, width
-            )
-            cached_image = self.cache_service.read(cache_key=cache_key)
-            if cached_image is None:
-                try:
-                    cached_image = self.image_manipulation.display(
-                        image, int(height), int(width)
-                    )
-                except FileNotFoundError:
-                    return HttpResponse(status=404)
-
-                # cache image
-                self.cache_service.upsert(cache_key=cache_key, cache_data=cached_image)
-
-            # mark image as viewed
-            self.service.increment_view_count(image)
-
-            # send to client
-            response = HttpResponse(status=200, headers={"Content-type": "image/jpeg"})
-            response.write(cached_image.tobytes())
-            return response
-        else:
+        if not image:
             return HttpResponse(status=404)
+
+        width = request.GET.get("width", DEFAULT_WIDTH)
+        height = request.GET.get("height", DEFAULT_HEIGHT)
+
+        cache_key = self.cache_service.get_image_cache_key(
+            image.external_id, height, width
+        )
+        cached_image = self.cache_service.read(cache_key=cache_key)
+
+        if cached_image is None:
+            try:
+                cached_image = self.image_manipulation.display(
+                    image, int(height), int(width)
+                )
+            except FileNotFoundError:
+                return HttpResponse(status=404)
+
+            self.cache_service.upsert(cache_key=cache_key, cache_data=cached_image)
+
+        self.service.increment_view_count(image)
+
+        response = HttpResponse(status=200, headers={"Content-type": "image/jpeg"})
+        response.write(cached_image.tobytes())
+        return response
 
     @action(methods=["get"], detail=False, url_path="next")
     def next_image(self, request):
-        """
+        """Get the next image to display and preload upcoming images.
 
-        :param request:
-        :return:
-        """
+        Args:
+            request: HTTP request with optional width/height parameters
 
-        # get next 5 images from db
-        images = self.service.get_next()[:5]
-        # grab the 1st image to be sent back
+        Returns:
+            Serialized image data
+        """
+        images = self.service.get_next()[:NEXT_IMAGE_COUNT]
         image = images[0]
 
         serializer = self.get_serializer(image)
 
-        # get w/h of caller
-        width = request.GET.get("width", "100")
-        height = request.GET.get("height", "100")
+        width = request.GET.get("width", DEFAULT_WIDTH)
+        height = request.GET.get("height", DEFAULT_HEIGHT)
 
-        cache_image_list = []
-        for img in images:
-            cache_image_list.append(img.external_id)
-
+        cache_image_list = [img.external_id for img in images]
         cache_images_task.delay(cache_image_list, height, width)
 
         return Response(serializer.data)
 
-    # for create when needed
     def perform_create(self, serializer):
+        """Create image record from validated data."""
         self.service.create(serializer.validated_data)
