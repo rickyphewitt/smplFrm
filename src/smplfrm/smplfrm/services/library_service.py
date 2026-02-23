@@ -35,12 +35,8 @@ class LibraryService:
 
             for dirpath, subdirs, filenames in os.walk(asset_dir):
                 for filename in filenames:
-                    try:
-                        file_ext = filename.rsplit(".", 1)[1]
-                    except IndexError:
-                        logger.warning(
-                            f"Unable to parse file extension for file with name: {filename}"
-                        )
+                    file_ext = self._get_file_extension(filename)
+                    if not file_ext:
                         continue
 
                     if file_ext in SMPL_FRM_IMAGE_FORMATS:
@@ -76,7 +72,31 @@ class LibraryService:
                 f"found {image_count} image(s) and created {images_created} images(s)"
             )
 
-        # Mark images as deleted if they didn't show up in the scan
+        self._mark_missing_images_as_deleted(valid_image_ids)
+
+    def _get_file_extension(self, filename: str) -> str:
+        """Extract file extension from filename.
+
+        Args:
+            filename: Name of the file
+
+        Returns:
+            File extension or empty string if not found
+        """
+        try:
+            return filename.rsplit(".", 1)[1]
+        except IndexError:
+            logger.warning(
+                f"Unable to parse file extension for file with name: {filename}"
+            )
+            return ""
+
+    def _mark_missing_images_as_deleted(self, valid_image_ids: List[str]) -> None:
+        """Mark images as deleted if they weren't found in the scan.
+
+        Args:
+            valid_image_ids: List of image IDs found during scan
+        """
         all_images = self.image_service.list().exclude(external_id__in=valid_image_ids)
         for image in all_images.iterator():
             image.deleted = True

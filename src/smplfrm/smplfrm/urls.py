@@ -15,8 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from sys import prefix
-
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
@@ -43,4 +43,4 @@ urlpatterns = [
     path("api/v1/", include(api_v1_router.urls)),
     path("", IndexView.as_view()),
     path("api/v1/plugins/", include(api_v1_plugins_router.urls)),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
