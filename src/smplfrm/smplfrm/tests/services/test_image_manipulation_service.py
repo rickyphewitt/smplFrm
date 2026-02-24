@@ -1,15 +1,19 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from smplfrm.services import ImageService
 from smplfrm.services import LibraryService
 
 import cv2
+import numpy as np
 
 from smplfrm.services.image_manipulation_service import ImageManipulationService
 
 
-class TestImageService(TestCase):
+class TestImageManipulationService(TestCase):
+    """Test suite for ImageManipulationService."""
+
     def setUp(self):
+        """Set up test fixtures."""
         self.image_service = ImageService()
         self.image_manipulation_service = ImageManipulationService()
         self.padding = 0
@@ -17,18 +21,15 @@ class TestImageService(TestCase):
         LibraryService().scan()
 
     def test_display_image(self):
-
+        """Test basic image display functionality."""
         image = self.image_service.list()[0]
 
         displayed_image = self.image_manipulation_service.display(image, 100, 100)
         self.assertIsNotNone(displayed_image, "Displayed Image should not be None!")
 
-    def test_scale_horizontal_image(self):
-        """
-        Test scaling an image to keep aspect ratio
-        :return:
-        """
-
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_scale_horizontal_image_with_border(self):
+        """Test scaling horizontal image with border fill mode."""
         window_h = 100
         window_w = 100
 
@@ -41,20 +42,17 @@ class TestImageService(TestCase):
         )
 
         # read raw image data and assert new values
-        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        img = cv2.imdecode(displayed_image, -1)
         size = img.shape[:2]
         image_h = size[0]
         image_w = size[1]
 
         self.assertEqual(window_w - self.padding, image_w)
-        self.assertEqual(window_h - self.padding, image_h)  # for rounding
+        self.assertEqual(window_h - self.padding, image_h)
 
-    def test_scale_vertical_image(self):
-        """
-        Test scaling an image to keep aspect ratio
-        :return:
-        """
-
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_scale_vertical_image_with_border(self):
+        """Test scaling vertical image with border fill mode."""
         window_h = 100
         window_w = 100
 
@@ -67,22 +65,17 @@ class TestImageService(TestCase):
         )
 
         # read raw image data and assert new values
-        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        img = cv2.imdecode(displayed_image, -1)
         size = img.shape[:2]
         image_h = size[0]
         image_w = size[1]
 
         self.assertEqual(window_h - self.padding, image_h)
-        # assert that the width has been filled as well
         self.assertEqual(window_w - self.padding, image_w)
-        self.assertEqual(window_h - self.padding, image_h)
 
-    def test_scale_horizontal_image_height_larger_than_viewport(self):
-        """
-        This test ensures that the image height matches when the scale
-        image height exceeds the height of the viewport
-        :return:
-        """
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_scale_horizontal_image_height_larger_than_viewport_with_border(self):
+        """Test border mode when scaled image height exceeds viewport height."""
         window_h = 100
         window_w = 1000
 
@@ -95,7 +88,7 @@ class TestImageService(TestCase):
         )
 
         # read raw image data and assert new values
-        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        img = cv2.imdecode(displayed_image, -1)
         size = img.shape[:2]
         image_h = size[0]
         image_w = size[1]
@@ -103,8 +96,9 @@ class TestImageService(TestCase):
         self.assertEqual(window_w - self.padding, image_w)
         self.assertEqual(window_h - self.padding, image_h)
 
-    def test_scale_panoramic_image(self):
-
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_scale_panoramic_image_with_border(self):
+        """Test scaling panoramic image with border fill mode."""
         window_h = 433
         window_w = 952
 
@@ -117,23 +111,95 @@ class TestImageService(TestCase):
         )
 
         # read raw image data and assert new values
-        img = cv2.imdecode(displayed_image, -1)  # -1 means do not change image
+        img = cv2.imdecode(displayed_image, -1)
         size = img.shape[:2]
         image_h = size[0]
         image_w = size[1]
 
         self.assertEqual(window_w - self.padding, image_w)
-        self.assertEqual(window_h - self.padding, image_h)  # rounding
+        self.assertEqual(window_h - self.padding, image_h)
 
-    def _assert_image(self, image, name="name"):
-        self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
-        self.assertIsNotNone(image.external_id, "External Id should be set on Create.")
-        self.assertIsNotNone(image.created, "Created Datetime not set.")
-        self.assertIsNotNone(image.updated, "Updated Datetime not set.")
-        self.assertEqual(image.name, self.full_image_data[name], "Name not set.")
-        self.assertEqual(
-            image.file_path, self.full_image_data["file_path"], "File_path not set."
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="blur")
+    def test_scale_horizontal_image_with_blur(self):
+        """Test scaling horizontal image with blur background fill mode."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list(
+            file_name="david-becker-F7SBonu15d8-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
         )
-        self.assertEqual(
-            image.file_name, self.full_image_data["file_name"], "File_name not set."
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w, image_w)
+        self.assertEqual(window_h, image_h)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="blur")
+    def test_scale_vertical_image_with_blur(self):
+        """Test scaling vertical image with blur background fill mode."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list(
+            file_name="kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
         )
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_h, image_h)
+        self.assertEqual(window_w, image_w)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="blur")
+    def test_scale_panoramic_image_with_blur(self):
+        """Test scaling panoramic image with blur background fill mode."""
+        window_h = 433
+        window_w = 952
+
+        image = self.image_service.list(
+            file_name="bernd-dittrich-73scJ3UOdHM-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        self.assertEqual(window_w, image_w)
+        self.assertEqual(window_h, image_h)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="blur")
+    def test_blur_background_creates_valid_image(self):
+        """Test that blur background mode creates a valid image array."""
+        window_h = 200
+        window_w = 300
+
+        image = self.image_service.list()[0]
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+
+        # Verify it's a valid numpy array
+        self.assertIsInstance(img, np.ndarray)
+        # Verify it has 3 color channels (BGR)
+        self.assertEqual(len(img.shape), 3)
+        self.assertEqual(img.shape[2], 3)

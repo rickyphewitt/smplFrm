@@ -7,6 +7,7 @@ from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
 
 from smplfrm.models import Image
+from smplfrm.settings import SMPL_FRM_IMAGE_FILL_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class ImageManipulationService:
         window_width: int,
         image_meta: Dict[str, Any] = None,
     ) -> np.ndarray:
-        """Scale an image to fit within target dimensions with borders.
+        """Scale an image to fit within target dimensions.
 
         Args:
             image: Image instance to scale
@@ -63,28 +64,90 @@ class ImageManipulationService:
             image_meta: Optional image metadata dictionary
 
         Returns:
-            Scaled and bordered image as encoded numpy array
+            Scaled image as encoded numpy array
         """
         if image_meta is None:
             image_meta = {}
 
         image_ext = image.file_path.rsplit(".", 1)[1]
-        padding = 0
-
         img = cv2.imread(image.file_path)
-        size = img.shape[:2]
-        image_h = size[0]
-        image_w = size[1]
+
+        if SMPL_FRM_IMAGE_FILL_MODE == "blur":
+            resized_img = self._scale_with_blur_background(
+                img, window_width, window_height
+            )
+        else:
+            resized_img = self._scale_with_border(img, window_width, window_height)
+
+        logger.info(f"Resized Image: {image.name}")
+        _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
+        return enc_image
+
+    def _scale_with_blur_background(
+        self, img: np.ndarray, window_width: int, window_height: int
+    ) -> np.ndarray:
+        """Scale image with blurred background fill.
+
+        Args:
+            img: Source image
+            window_width: Target width
+            window_height: Target height
+
+        Returns:
+            Scaled image with blurred background
+        """
+        image_h, image_w = img.shape[:2]
 
         if window_height == 0 or window_width == 0:
-            window_height = image_h
-            window_width = image_w
+            return img
+
+        # Calculate scaled dimensions maintaining aspect ratio
+        scale_height, scale_width = self._determine_scaled_dimensions(
+            window_width, window_height, image_w, image_h
+        )
+
+        # Resize main image
+        resized_main = cv2.resize(
+            img, (scale_width, scale_height), interpolation=cv2.INTER_AREA
+        )
+
+        # Create blurred background
+        background = cv2.resize(img, (window_width, window_height))
+        background = cv2.GaussianBlur(background, (51, 51), 0)
+        background = cv2.convertScaleAbs(background, alpha=0.6, beta=0)
+
+        # Calculate position to center main image
+        y_offset = (window_height - scale_height) // 2
+        x_offset = (window_width - scale_width) // 2
+
+        # Overlay main image on blurred background
+        background[
+            y_offset : y_offset + scale_height, x_offset : x_offset + scale_width
+        ] = resized_main
+
+        return background
+
+    def _scale_with_border(
+        self, img: np.ndarray, window_width: int, window_height: int
+    ) -> np.ndarray:
+        """Scale image with border fill (original behavior).
+
+        Args:
+            img: Source image
+            window_width: Target width
+            window_height: Target height
+
+        Returns:
+            Scaled image with borders
+        """
+        image_h, image_w = img.shape[:2]
+        padding = 0
+
+        if window_height == 0 or window_width == 0:
+            return img
 
         target_width = int(window_width) - padding
         target_height = int(window_height) - padding
-
-        logger.debug(f"window height: {window_height}")
-        logger.debug(f"window width: {window_width}")
 
         scale_height_size, scale_width_size = self._determine_scaled_dimensions(
             target_width, target_height, image_w, image_h
@@ -92,9 +155,6 @@ class ImageManipulationService:
         vert_border, horz_border = self._determine_border(
             scale_width_size, scale_height_size, target_width, target_height
         )
-
-        logger.debug(f"target_height: {target_height}")
-        logger.debug(f"target_width: {target_width}")
 
         resized_img = cv2.resize(
             img, (scale_width_size, scale_height_size), interpolation=cv2.INTER_AREA
@@ -109,9 +169,7 @@ class ImageManipulationService:
             value=(0, 0, 0, 100),
         )
 
-        logger.info(f"Resized Image: {image.name}")
-        _, enc_image = cv2.imencode(ext=f".{image_ext}", img=resized_img)
-        return enc_image
+        return resized_img
 
     def _determine_scaled_dimensions(
         self, target_width: int, target_height: int, image_w: int, image_h: int
