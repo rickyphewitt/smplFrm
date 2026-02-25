@@ -94,7 +94,7 @@ However, there are some additional guidelines that should be used for AI commits
 | `SMPL_FRM_TIMEZONE`                     | "America/Los_Angeles"              | TZ Identified from [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)                              |
 | `SMPL_FRM_IMAGE_CACHE_TIMEOUT`          | "86400"                            | Seconds until the image should be removed from the cache                                                                  |
 | `SMPL_FRM_CLEAR_CACHE_ON_BOOT`          | False                              | Clears Cache on Service Boot                                                                                              |
-| `SMPL_FRM_IMAGE_FILL_MODE`              | "blur"                             | How to fill aspect ratio gaps: `border` (replicate edges) or `blur` (blurred background)                                  |
+| `SMPL_FRM_IMAGE_FILL_MODE`              | "blur"                             | How to fill aspect ratio gaps: `border` (replicate edges), `blur` (blurred background), or `zoom_to_fill` (zoom to fill) |
 | `SMPL_FRM_PLUGINS_SPOTIFY_ENABLED`      | False                              | Enables Spotify Now Playing Plugin                                                                                        |
 | `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID`    | None                               | See: https://spotipy.readthedocs.io/en/latest/#getting-started                                                            |
 | `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET` | None                               | See ^ - Ensure your Redirect URI matches  Http://`SMPL_FRM_HOST`:`SMPL_FRM_EXTERNAL_PORT`/api/v1/plugins/spotify/callback |

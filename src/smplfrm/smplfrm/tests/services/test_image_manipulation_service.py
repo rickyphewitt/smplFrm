@@ -203,3 +203,91 @@ class TestImageManipulationService(TestCase):
         # Verify it has 3 color channels (BGR)
         self.assertEqual(len(img.shape), 3)
         self.assertEqual(img.shape[2], 3)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
+    def test_scale_horizontal_image_with_zoom_to_fill(self):
+        """Test scaling horizontal image with Ken Burns effect."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list(
+            file_name="david-becker-F7SBonu15d8-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        # Ken Burns fills entire viewport
+        self.assertEqual(window_w, image_w)
+        self.assertEqual(window_h, image_h)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
+    def test_scale_vertical_image_with_zoom_to_fill(self):
+        """Test scaling vertical image with Ken Burns effect."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list(
+            file_name="kelly-sikkema-PqqQDpS6H6A-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        # Ken Burns fills entire viewport
+        self.assertEqual(window_h, image_h)
+        self.assertEqual(window_w, image_w)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
+    def test_scale_panoramic_image_with_zoom_to_fill(self):
+        """Test scaling panoramic image with Ken Burns effect."""
+        window_h = 433
+        window_w = 952
+
+        image = self.image_service.list(
+            file_name="bernd-dittrich-73scJ3UOdHM-unsplash.jpg"
+        )[0]
+
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        size = img.shape[:2]
+        image_h = size[0]
+        image_w = size[1]
+
+        # Ken Burns fills entire viewport
+        self.assertEqual(window_w, image_w)
+        self.assertEqual(window_h, image_h)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
+    def test_zoom_to_fill_crops_to_fill(self):
+        """Test that Ken Burns mode crops image to fill viewport without gaps."""
+        window_h = 200
+        window_w = 300
+
+        image = self.image_service.list()[0]
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+
+        # Verify exact dimensions (no borders or gaps)
+        self.assertEqual(img.shape[0], window_h)
+        self.assertEqual(img.shape[1], window_w)
+        # Verify it's a valid color image
+        self.assertEqual(img.shape[2], 3)

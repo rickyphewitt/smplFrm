@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+from smplfrm.settings import SMPL_FRM_IMAGE_FILL_MODE
 
 
 class CacheService:
@@ -67,4 +68,4 @@ class CacheService:
         Returns:
             Formatted cache key string
         """
-        return f"{external_id}:{height}:{width}"
+        return f"{external_id}:{SMPL_FRM_IMAGE_FILL_MODE}:{height}:{width}"
