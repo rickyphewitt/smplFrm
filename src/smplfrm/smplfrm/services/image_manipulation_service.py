@@ -76,7 +76,12 @@ class ImageManipulationService:
             resized_img = self._scale_with_blur_background(
                 img, window_width, window_height
             )
+        elif SMPL_FRM_IMAGE_FILL_MODE == "zoom_to_fill":
+            resized_img = self._scale_with_zoom_to_fill(
+                img, window_width, window_height
+            )
         else:
+            logger.warning("Invalid SMPL_FRM_IMAGE_FILL_MODE, using border fill")
             resized_img = self._scale_with_border(img, window_width, window_height)
 
         logger.info(f"Resized Image: {image.name}")
@@ -126,6 +131,51 @@ class ImageManipulationService:
         ] = resized_main
 
         return background
+
+    def _scale_with_zoom_to_fill(
+        self, img: np.ndarray, window_width: int, window_height: int
+    ) -> np.ndarray:
+        """Scale image by zooming and cropping to fill viewport.
+
+        Args:
+            img: Source image
+            window_width: Target width
+            window_height: Target height
+
+        Returns:
+            Cropped and scaled image filling entire viewport
+        """
+        image_h, image_w = img.shape[:2]
+
+        if window_height == 0 or window_width == 0:
+            return img
+
+        # Calculate aspect ratios
+        target_aspect = window_width / window_height
+        image_aspect = image_w / image_h
+
+        # Zoom to fill (crop to fit)
+        if image_aspect > target_aspect:
+            # Image is wider, scale by height and crop width
+            new_height = window_height
+            new_width = int(window_height * image_aspect)
+        else:
+            # Image is taller, scale by width and crop height
+            new_width = window_width
+            new_height = int(window_width / image_aspect)
+
+        # Resize image
+        resized = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+        # Center crop to target dimensions
+        y_offset = (new_height - window_height) // 2
+        x_offset = (new_width - window_width) // 2
+
+        cropped = resized[
+            y_offset : y_offset + window_height, x_offset : x_offset + window_width
+        ]
+
+        return cropped
 
     def _scale_with_border(
         self, img: np.ndarray, window_width: int, window_height: int
