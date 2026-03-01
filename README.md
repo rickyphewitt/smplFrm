@@ -8,26 +8,22 @@ ___
 ## Run
 ### Native
 * After downloading this repo create a python virtual environment                                                    
-  * `python -m venv local_venv`
-* Activate the `local_venv`
-  * . ./local_venv/bin/activate`
-* Install requirements with `pip`
-  * `pip install -r requirements.txt`
+  * `make packages`
 * Run the required docker services
   * `make docker-services`
 * Run the server
   * `python main.py`
-* Browse to `http://localhost:8000`
+* Browse to `http://localhost:8321`
 * Add your own assets to the `assets` folder and re-run the server to display your own photos
 
 ### Docker
 * Build the dockerfile
   * `docker build -t smplFrm .`
 * Run the docker file exposing ports
-  * `docker run -p 8000:8000 smpl_frm`
-* Browse to `http://localhost:8000`
+  * `docker run -p 8321:8321`
+* Browse to `http://localhost:8321`
 * To add your own as assets mount a local volume to the `/app/assets` folder in the image
-  * `docker run -p 8000:8000 -v <local/Folder/Path>:/app/assets smpl_frm`
+  * `docker run -p 8321:8321 -v <local/Folder/Path>:/app/assets smpl_frm`
 ### Docker Compose
 * An example compose file exists at [compose.yaml](docker/compose/compose.yaml)
 * Essentially you just need to update the `SMPL_FRM_ASSET_DIRECTORIES` and mount a local volume like below
@@ -56,6 +52,16 @@ Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
   * For each commit merged into `main` an image is created with the corresponding git hash. Useful for pinning to a specific version outside the release cycle. 
 
 ## Development
+
+### Python
+This repo uses python 3.14. Ensure you download the following dependencies
+* python3.14, pyton3.14-dev
+  * You may need to get this from [deadsnakes](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) 
+* pip3.14
+  * This can be dowloaded after downloading python3.14 using get-pip
+  * `curl -sS https://bootstrap.pypa.io/get-pip.py | python3.14 `
+* python3.14-venv
+  * Same note about deadsnakes above
 
 ### AI
 PR's that include AI generated code is permitted. They undergo the same scrutiny as PR's that are unassisted by AI.

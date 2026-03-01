@@ -1,26 +1,32 @@
 
+PYTHON = python3.14
+PIP = pip3.14
+
 packages:
-	python -m venv ./local_venv; . ./local_venv/bin/activate; pip install -r requirements.txt
+	$(PYTHON) -m venv ./local_venv; . ./local_venv/bin/activate; $(PIP) install -r requirements.txt
+
+packages-clean:
+	rm -fr ./local_venv
 
 run: staticfiles migrations
-	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py runserver 0.0.0.0:8321
+	. ./local_venv/bin/activate; cd ./src/smplfrm;  $(PYTHON) manage.py runserver 0.0.0.0:8321
 
 staticfiles:
-	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py collectstatic --noinput
+	. ./local_venv/bin/activate; cd ./src/smplfrm;  $(PYTHON) manage.py collectstatic --noinput
 
 migrations:
-	. ./local_venv/bin/activate; cd ./src/smplfrm;  python manage.py migrate
+	. ./local_venv/bin/activate; cd ./src/smplfrm;  $(PYTHON) manage.py migrate
 
 makemigrations:
-	. ./local_venv/bin/activate; cd ./src/smplfrm; python manage.py makemigrations
+	. ./local_venv/bin/activate; cd ./src/smplfrm; $(PYTHON) manage.py makemigrations
 
 test:
 	. ./local_venv/bin/activate; cd ./src/smplfrm; pytest
 
 start-celery:
-	. ./local_venv/bin/activate; cd ./src/smplfrm; python -m celery -A smplfrm worker -E -l info
+	. ./local_venv/bin/activate; cd ./src/smplfrm; $(PYTHON) -m celery -A smplfrm worker -E -l info
 start-celery-beat:
-	. ./local_venv/bin/activate; cd ./src/smplfrm; python -m celery -A smplfrm beat -l info
+	. ./local_venv/bin/activate; cd ./src/smplfrm; $(PYTHON) -m celery -A smplfrm beat -l info
 
 docker-services:
 	cd ./docker/compose; docker compose -f services.yaml up -d
