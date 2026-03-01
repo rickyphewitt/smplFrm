@@ -4,6 +4,8 @@ ___
 # smplFrm
 *Digital photoframe for displaying photos on any device that has a web browser*
 
+![UI](examples/exampleWithAllPlugins.png)
+
 
 ## Run
 ### Native

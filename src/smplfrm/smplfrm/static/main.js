@@ -48,14 +48,19 @@ async function displayMetadata(imageId) {
         
         const data = await response.json();
         const takenDate = Date.parse(data[0].taken);
-        const prettyDate = new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "long"
-        }).format(takenDate);
         
-        document.getElementById("bottom-left-box").innerHTML = prettyDate;
+        if (isNaN(takenDate)) {
+            document.getElementById("photo-date").innerHTML = `📷`;
+        } else {
+            const prettyDate = new Intl.DateTimeFormat("en-US", {
+                year: "numeric",
+                month: "long"
+            }).format(takenDate);
+            document.getElementById("photo-date").innerHTML = `📷 ${prettyDate}`;
+        }
     } catch (error) {
         console.error('Fetch error:', error);
+        document.getElementById("photo-date").innerHTML = `📷`;
     }
 }
 
@@ -113,15 +118,36 @@ async function startImages() {
 }
 
 function displayClock() {
-    document.getElementById("bottom-center-box").innerHTML = new Date().toLocaleTimeString();
+    const now = new Date();
+    
+    // Display current date
+    const currentDate = new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    }).format(now);
+    document.getElementById("current-date").innerHTML = `📅 ${currentDate}`;
+    
+    // Display current time without seconds
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+    });
+    document.getElementById("current-time").innerHTML = `🕐 ${timeString}`;
+    
     setTimeout(displayClock, CLOCK_REFRESH_MS);
+}
+
+function displayWeather() {
+    if (config.weatherCurrentTemp) {
+        document.getElementById("weather-temp").innerHTML = `🌡️ ${config.weatherCurrentTemp}`;
+    }
 }
 
 function updateSpotifyDisplay(content) {
     const spotifyDiv = document.getElementById("spotify-now-playing");
     spotifyDiv.innerHTML = content;
-    spotifyDiv.style.visibility = 'visible';
-    spotifyDiv.classList.add("iconoir-spotify");
 }
 
 async function getNowPlaying() {
@@ -131,22 +157,27 @@ async function getNowPlaying() {
         if (!response.ok) {
             const authResponse = await fetch(buildApiUrl('plugins/spotify/auth'));
             if (!authResponse.ok) {
-                throw new Error(`Failed to load spotify: ${authResponse.statusText}`);
+                updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i>`);
+                return;
             }
             
             const authData = await authResponse.json();
-            updateSpotifyDisplay(`<a href="${authData.auth_url}"> Auth Spotify </a>`);
+            updateSpotifyDisplay(`<a href="${authData.auth_url}"><i class="iconoir-spotify spotify-icon"></i></a>`);
             return;
         }
         
         const data = await response.json();
-        updateSpotifyDisplay(` ${data.artist} - ${data.song}`);
+        updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i> ${data.artist} - ${data.song}`);
     } catch (error) {
-        // Silent fail for spotify errors
+        console.error('Spotify error:', error);
+        updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i>`);
     }
 }
 
 function refreshSpotify() {
+    const spotifyBar = document.getElementById("spotify-bar");
+    spotifyBar.style.display = 'flex';
+    
     getNowPlaying();
     setTimeout(refreshSpotify, SPOTIFY_REFRESH_MS);
 }
@@ -156,6 +187,8 @@ startImages();
 if (config.displayClock) {
     window.onload = displayClock;
 }
+
+displayWeather();
 
 if (config.pluginSpotifyEnabled) {
     refreshSpotify();
