@@ -65,10 +65,10 @@
             display: flex;
             gap: 50px;
             align-items: center;
-            font-size: 17px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             z-index: 200;
-            color: white;
+            max-width: 96%;
+            white-space: nowrap;
         }
         
         #spotify-bar {
@@ -82,7 +82,6 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            font-size: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             z-index: 200;
             color: white;
@@ -93,7 +92,6 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            color: white;
         }
         
         .group-separator {
@@ -107,15 +105,12 @@
             margin: 0 -5px;
         }
 
-        .logo-font {
-             font-size: 15em;
-        }
-
         .text-box {
-            font-family: Cursive;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-style: italic;
             text-align: center;
             color: white;
+            font-size: 20px;
         }
 
         # for the progress bar
@@ -170,6 +165,13 @@
             color: #1DB954;
             font-size: 20px;
         }
+
+        .spotify-icon-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         # end spotify
 
 
@@ -182,17 +184,17 @@
 <div class="progress-bar" id="progress-bar"></div>
 <div class="top-bar" id="top-bar">
     <div class="text-box small-font third-column" id="top-left-box">
-         <div id="spotify-bar" style="display: none;">
+         <div id="spotify-bar" style="display: none;" />
     <div class="info-group">
-        <span id="spotify-now-playing"></span>
+        <span id="spotify-now-playing" class="spotify-icon-container"></span>
     </div>
  </div>
     </div>
     <div class="text-box large-font third-column" id="top-center-box"></div>
     <div class="text-box third-column" id="top-right-box"></div>
 </div>
-<div id="middle-section" class="logo-font text-box">smplFrm</div>
- <div id="bottom-bar">
+<div id="middle-section" class="text-box">smplFrm</div>
+ <div id="bottom-bar" class="text-box">
     <div class="info-group" id="photo-date-group">
         <span id="photo-date"></span>
     </div>
