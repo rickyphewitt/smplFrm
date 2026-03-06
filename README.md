@@ -55,6 +55,23 @@ Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
 
 ## Development
 
+### JavaScript Testing
+This project uses Vitest for JavaScript testing.
+
+**Setup:**
+```bash
+make packages-js
+```
+
+**Run tests:**
+```bash
+make test-js              # Run tests once (silent mode)
+make test-js-watch        # Watch mode for development
+make test-js-coverage     # Generate coverage report
+```
+
+**Test location:** Tests are in `tests/javascript/` to avoid Django static bundling.
+
 ### Python
 This repo uses python 3.14. Ensure you download the following dependencies
 * python3.14, pyton3.14-dev
