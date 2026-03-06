@@ -80,6 +80,10 @@ function fadeInImage(image, onComplete) {
         if (opacity >= OPACITY_MAX) {
             clearInterval(interval);
             opacity = OPACITY_MAX;
+            if (config.imageZoomEffect) {
+                const zoomDuration = config.refreshInterval / 1000;
+                image.style.animation = `zoomIn ${zoomDuration}s linear forwards`;
+            }
             if (onComplete) onComplete();
         }
         image.style.opacity = opacity;
