@@ -164,3 +164,7 @@ cython_debug/
 # Django Static files
 /src/smplfrm/static
 /src/smplfrm/staticfiles
+
+# Node / JavaScript
+node_modules/
+coverage/

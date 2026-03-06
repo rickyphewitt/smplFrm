@@ -8,18 +8,18 @@ const imageContainer = document.getElementById("image-container");
 const progressBar = document.getElementById("progress-bar");
 const config = window.SMPL_CONFIG;
 
-function getWindowDimensions() {
+export function getWindowDimensions() {
     return {
         width: window.innerWidth,
         height: window.innerHeight
     };
 }
 
-function buildApiUrl(endpoint) {
+export function buildApiUrl(endpoint) {
     return `${config.host}:${config.port}/api/v1/${endpoint}`;
 }
 
-function startProgress() {
+export function startProgress() {
     let width = 100;
     const interval = setInterval(() => {
         width -= 1;
@@ -31,7 +31,7 @@ function startProgress() {
     }, config.refreshInterval / 100);
 }
 
-async function getNextImage() {
+export async function getNextImage() {
     const { width, height } = getWindowDimensions();
     const response = await fetch(buildApiUrl(`images/next?width=${width}&height=${height}`));
     return response.json();
@@ -73,7 +73,7 @@ async function buildImage() {
     return img;
 }
 
-function fadeInImage(image, onComplete) {
+export function fadeInImage(image, onComplete) {
     let opacity = 0;
     const interval = setInterval(() => {
         opacity += OPACITY_INCREMENT;
@@ -186,14 +186,16 @@ function refreshSpotify() {
     setTimeout(refreshSpotify, SPOTIFY_REFRESH_MS);
 }
 
-startImages();
+export function init() {
+    startImages();
 
-if (config.displayClock) {
-    window.onload = displayClock;
-}
+    if (config.displayClock) {
+        window.onload = displayClock;
+    }
 
-displayWeather();
+    displayWeather();
 
-if (config.pluginSpotifyEnabled) {
-    refreshSpotify();
+    if (config.pluginSpotifyEnabled) {
+        refreshSpotify();
+    }
 }
