@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
+from django.conf import settings
 
 from smplfrm.models import Image
-from smplfrm.settings import SMPL_FRM_IMAGE_FILL_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +72,11 @@ class ImageManipulationService:
         image_ext = image.file_path.rsplit(".", 1)[1]
         img = cv2.imread(image.file_path)
 
-        if SMPL_FRM_IMAGE_FILL_MODE == "blur":
+        if settings.SMPL_FRM_IMAGE_FILL_MODE == "blur":
             resized_img = self._scale_with_blur_background(
                 img, window_width, window_height
             )
-        elif SMPL_FRM_IMAGE_FILL_MODE == "zoom_to_fill":
+        elif settings.SMPL_FRM_IMAGE_FILL_MODE == "zoom_to_fill":
             resized_img = self._scale_with_zoom_to_fill(
                 img, window_width, window_height
             )

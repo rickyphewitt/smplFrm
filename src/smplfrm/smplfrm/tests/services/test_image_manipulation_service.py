@@ -291,3 +291,35 @@ class TestImageManipulationService(TestCase):
         self.assertEqual(img.shape[1], window_w)
         # Verify it's a valid color image
         self.assertEqual(img.shape[2], 3)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_fill_mode_dynamically_loaded_border(self):
+        """Test that SMPL_FRM_IMAGE_FILL_MODE is loaded dynamically, not cached."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list()[0]
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        # Border mode should match window dimensions
+        self.assertEqual(img.shape[0], window_h)
+        self.assertEqual(img.shape[1], window_w)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="invalid_mode")
+    def test_fill_mode_invalid_falls_back_to_border(self):
+        """Test that invalid fill mode falls back to border mode."""
+        window_h = 100
+        window_w = 100
+
+        image = self.image_service.list()[0]
+        displayed_image = self.image_manipulation_service.display(
+            image, window_height=window_h, window_width=window_w
+        )
+
+        img = cv2.imdecode(displayed_image, -1)
+        # Should fall back to border mode
+        self.assertEqual(img.shape[0], window_h)
+        self.assertEqual(img.shape[1], window_w)
