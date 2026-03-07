@@ -37,6 +37,64 @@
             }
         }
         
+        .transition-fade {
+            animation: fadeIn linear;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .transition-slide-left {
+            animation: slideInLeft linear;
+        }
+        
+        .transition-slide-right {
+            animation: slideInRight linear;
+        }
+        
+        .transition-zoom {
+            animation: zoomInTransition linear;
+        }
+        
+        @keyframes slideInLeft {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes zoomInTransition {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
 
         #middle-section {
             position: fixed;
@@ -145,6 +203,7 @@
             transition: width 1s linear;
             z-index: 200;
             position: fixed;
+            border-radius: 0 50px 50px 0;
         }
         # end for the progress bar
 
@@ -239,7 +298,8 @@
         displayClock: {{display_clock}},
         pluginSpotifyEnabled: {{plugin_spotify_enabled}},
         weatherCurrentTemp: '{{weather_current_temp}}',
-        imageZoomEffect: {{image_zoom_effect}}
+        imageZoomEffect: {{image_zoom_effect}},
+        imageTransitionType: '{{image_transition_type}}'
     };
 </script>
 {% load static %}

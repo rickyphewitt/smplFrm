@@ -3,7 +3,7 @@ import { JSDOM } from 'jsdom';
 
 describe('main.js', () => {
   let window, document;
-  let buildApiUrl, getWindowDimensions, fadeInImage, getNextImage;
+  let buildApiUrl, getWindowDimensions, fadeInImage, getNextImage, applyTransition, getRandomTransition;
 
   beforeEach(async () => {
     const dom = new JSDOM(`
@@ -35,7 +35,8 @@ describe('main.js', () => {
       displayClock: false,
       pluginSpotifyEnabled: false,
       weatherCurrentTemp: '72°F',
-      imageZoomEffect: true
+      imageZoomEffect: true,
+      imageTransitionType: 'fade'
     };
 
     // Import functions after setting up globals
@@ -44,6 +45,8 @@ describe('main.js', () => {
     getWindowDimensions = module.getWindowDimensions;
     fadeInImage = module.fadeInImage;
     getNextImage = module.getNextImage;
+    applyTransition = module.applyTransition;
+    getRandomTransition = module.getRandomTransition;
   });
 
   describe('buildApiUrl', () => {
@@ -91,17 +94,13 @@ describe('main.js', () => {
       expect(completed).toBe(true);
     });
 
-    it('increments opacity gradually', () => {
+    it('applies fade transition with CSS animation', () => {
       const img = document.createElement('img');
       fadeInImage(img);
 
-      vi.advanceTimersByTime(100);
-      const opacity1 = parseFloat(img.style.opacity);
-      expect(opacity1).toBeGreaterThan(0);
-      expect(opacity1).toBeLessThan(1);
-
-      vi.advanceTimersByTime(900);
-      expect(parseFloat(img.style.opacity)).toBe(1);
+      // Should have fade animation applied
+      expect(img.style.animation).toContain('fadeIn');
+      expect(img.style.opacity).toBe('1');
     });
   });
 
@@ -122,6 +121,64 @@ describe('main.js', () => {
         'http://localhost:8321/api/v1/images/next?width=1920&height=1080'
       );
       expect(result).toEqual({ id: 'test-123', url: '/test.jpg' });
+    });
+  });
+
+  describe('transitions', () => {
+    it('applies fade transition by default', () => {
+      vi.useFakeTimers();
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'fade');
+      
+      expect(result).toBe('fade');
+    });
+
+    it('applies slide-left transition', () => {
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'slide-left');
+      
+      expect(result).toBe('slide-left');
+      expect(img.style.animation).toContain('slideInLeft');
+      expect(img.style.opacity).toBe('1');
+    });
+
+    it('applies slide-right transition', () => {
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'slide-right');
+      
+      expect(result).toBe('slide-right');
+      expect(img.style.animation).toContain('slideInRight');
+      expect(img.style.opacity).toBe('1');
+    });
+
+    it('applies zoom transition', () => {
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'zoom');
+      
+      expect(result).toBe('zoom');
+      expect(img.style.animation).toContain('zoomInTransition');
+      expect(img.style.opacity).toBe('1');
+    });
+
+    it('applies no transition when set to none', () => {
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'none');
+      
+      expect(result).toBe('none');
+      expect(img.style.opacity).toBe('1');
+    });
+
+    it('applies random transition', () => {
+      const img = document.createElement('img');
+      const result = applyTransition(img, 'random');
+      
+      // Random should return one of the valid transitions
+      expect(['fade', 'slide-left', 'slide-right', 'zoom']).toContain(result);
+    });
+
+    it('getRandomTransition returns valid transition', () => {
+      const result = getRandomTransition();
+      expect(['fade', 'slide-left', 'slide-right', 'zoom']).toContain(result);
     });
   });
 });

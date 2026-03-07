@@ -73,21 +73,59 @@ async function buildImage() {
     return img;
 }
 
+export function getRandomTransition() {
+    const transitions = ['fade', 'slide-left', 'slide-right', 'zoom'];
+    return transitions[Math.floor(Math.random() * transitions.length)];
+}
+
+export function applyTransition(image, transitionType) {
+    const transition = transitionType === 'random' ? getRandomTransition() : transitionType;
+    const duration = config.transitionInterval / 1000;
+    
+    if (transition === 'fade') {
+        image.style.animation = `fadeIn ${duration}s linear forwards`;
+        image.style.opacity = '1';
+        return 'fade';
+    } else if (transition === 'slide-left') {
+        image.style.animation = `slideInLeft ${duration}s linear forwards`;
+        image.style.opacity = '1';
+        return 'slide-left';
+    } else if (transition === 'slide-right') {
+        image.style.animation = `slideInRight ${duration}s linear forwards`;
+        image.style.opacity = '1';
+        return 'slide-right';
+    } else if (transition === 'zoom') {
+        image.style.animation = `zoomInTransition ${duration}s linear forwards`;
+        image.style.opacity = '1';
+        return 'zoom';
+    } else if (transition === 'none') {
+        image.style.opacity = '1';
+        return 'none';
+    }
+    return 'fade';
+}
+
 export function fadeInImage(image, onComplete) {
-    let opacity = 0;
-    const interval = setInterval(() => {
-        opacity += OPACITY_INCREMENT;
-        if (opacity >= OPACITY_MAX) {
-            clearInterval(interval);
-            opacity = OPACITY_MAX;
-            if (config.imageZoomEffect) {
-                const zoomDuration = config.refreshInterval / 1000;
-                image.style.animation = `zoomIn ${zoomDuration}s linear forwards`;
-            }
-            if (onComplete) onComplete();
+    const transitionType = applyTransition(image, config.imageTransitionType);
+    
+    if (transitionType === 'none') {
+        // No transition, apply zoom effect immediately if enabled
+        if (config.imageZoomEffect) {
+            const zoomDuration = config.refreshInterval / 1000;
+            image.style.animation = `zoomIn ${zoomDuration}s linear forwards`;
         }
-        image.style.opacity = opacity;
-    }, config.transitionInterval / 100);
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    // CSS animation-based transitions
+    setTimeout(() => {
+        if (config.imageZoomEffect) {
+            const zoomDuration = config.refreshInterval / 1000;
+            image.style.animation = `zoomIn ${zoomDuration}s linear forwards`;
+        }
+        if (onComplete) onComplete();
+    }, config.transitionInterval);
 }
 
 async function loadNext(currentImage) {
