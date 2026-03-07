@@ -11,6 +11,7 @@ from smplfrm.settings import (
     SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
     SMPL_FRM_PLUGINS_SPOTIFY_ENABLED,
     SMPL_FRM_IMAGE_ZOOM_EFFECT,
+    SMPL_FRM_IMAGE_TRANSITION_TYPE,
 )
 
 
@@ -37,6 +38,7 @@ class IndexView(TemplateView):
             "current_high_temp": weather_data["current_high_temp"],
             "plugin_spotify_enabled": str(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED).lower(),
             "image_zoom_effect": str(SMPL_FRM_IMAGE_ZOOM_EFFECT).lower(),
+            "image_transition_type": SMPL_FRM_IMAGE_TRANSITION_TYPE,
         }
 
         return context
