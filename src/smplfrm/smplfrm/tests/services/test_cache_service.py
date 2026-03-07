@@ -56,3 +56,21 @@ class TestImageService(TestCase):
             f"{ext_id}:{display_type}:{height}:{width}",
             self.service.get_image_cache_key(ext_id, height, width),
         )
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
+    def test_image_cache_key_with_different_fill_mode(self):
+        ext_id = "foo"
+        height = "10"
+        width = "20"
+
+        cache_key = self.service.get_image_cache_key(ext_id, height, width)
+        self.assertEqual(f"{ext_id}:border:{height}:{width}", cache_key)
+
+    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
+    def test_image_cache_key_dynamically_uses_setting(self):
+        ext_id = "bar"
+        height = "100"
+        width = "200"
+
+        cache_key = self.service.get_image_cache_key(ext_id, height, width)
+        self.assertEqual(f"{ext_id}:zoom_to_fill:{height}:{width}", cache_key)
