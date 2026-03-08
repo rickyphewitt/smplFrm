@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 <head>
     <meta charset="UTF-8">
-    <title>SmplFrm</title>
+    <title>smplFrm</title>
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- OSS Icons from https://github.com/iconoir-icons/iconoir/blob/main/README.md-->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css" />
     <style>
@@ -267,7 +272,17 @@
     <div class="text-box large-font third-column" id="top-center-box"></div>
     <div class="text-box third-column" id="top-right-box"></div>
 </div>
-<div id="middle-section" class="text-box">smplFrm</div>
+<div id="middle-section" class="text-box">
+    <div style="display: flex; align-items: center; gap: 15px; justify-content: center;">
+        <div style="width: 60px; height: 60px; background: #667eea; border-radius: 6px; border: 4px solid #333; position: relative; overflow: hidden; flex-shrink: 0;">
+            <div style="position: absolute; width: 15px; height: 15px; background: #ffd700; border-radius: 50%; top: 9px; right: 9px;"></div>
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: #764ba2; clip-path: polygon(0 100%, 0 50%, 30% 30%, 60% 50%, 100% 20%, 100% 100%);"></div>
+        </div>
+        <div style="font-size: 48px; font-weight: 500; color: white; font-family: 'Inter', sans-serif;">
+            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">smpl</span>Frm
+        </div>
+    </div>
+</div>
  <div id="bottom-bar" class="text-box">
     <div class="info-group" id="photo-date-group">
         <span id="photo-date"></span>
@@ -302,7 +317,7 @@
         imageTransitionType: '{{image_transition_type}}'
     };
 </script>
-{% load static %}
+
 <script type="module">
     import { init } from "{% static '/main.js' %}";
     init();

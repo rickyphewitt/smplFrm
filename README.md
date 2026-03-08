@@ -1,8 +1,14 @@
 [![CI](https://github.com/rickyphewitt/smplFrm/actions/workflows/ci.yml/badge.svg)](https://github.com/rickyphewitt/smplFrm/actions/workflows/ci.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ___
-# smplFrm
-*Digital photoframe for displaying photos on any device that has a web browser*
+
+<p align="center">
+  <img src="assets/smplfrm-logo-1200x400.png" alt="smplFrm Logo" width="600">
+</p>
+
+<p align="center">
+  <em>Digital photoframe for displaying photos on any device that has a web browser</em>
+</p>
 
 ![UI](examples/exampleWithAllPlugins.png)
 
