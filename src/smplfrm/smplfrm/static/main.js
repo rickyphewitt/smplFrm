@@ -225,6 +225,7 @@ function refreshSpotify() {
 }
 
 export function init() {
+    initSettingsModal();
     startImages();
 
     if (config.displayClock) {
@@ -236,4 +237,56 @@ export function init() {
     if (config.pluginSpotifyEnabled) {
         refreshSpotify();
     }
+}
+
+function initSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    const logoIcon = document.getElementById('logo-icon');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-settings');
+    const saveBtn = document.getElementById('save-settings');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+
+    logoIcon.addEventListener('click', () => {
+        modal.classList.add('open');
+    });
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+            closeModal();
+        }
+    });
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        });
+    });
+
+    saveBtn.addEventListener('click', () => {
+        // TODO: Implement settings save functionality
+        console.log('Settings saved');
+        closeModal();
+    });
 }

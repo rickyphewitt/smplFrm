@@ -21,7 +21,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 
-from smplfrm.views.api.v1 import images, images_metadata
+from smplfrm.views.api.v1 import images, images_metadata, config
 from smplfrm.views.index_view import IndexView
 from smplfrm.views.api.plugins.v1 import SpotifyView
 
@@ -32,6 +32,7 @@ api_v1_router.register(r"images", images.Images, basename="images")
 api_v1_router.register(
     r"images_metadata", images_metadata.ImagesMetadata, basename="images_metadata"
 )
+api_v1_router.register(r"configs", config.ConfigViewSet, basename="configs")
 
 api_v1_plugins_router = routers.DefaultRouter(trailing_slash=False)
 api_v1_plugins_router.include_root_view = False
