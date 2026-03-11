@@ -1,17 +1,14 @@
 from django.views.generic import TemplateView
+from django.conf import settings
 from smplfrm.services.weather_service import WeatherService
+from smplfrm.services.config_service import ConfigService
 
 from smplfrm.settings import (
     SMPL_FRM_EXTERNAL_PORT,
     SMPL_FRM_HOST,
-    SMPL_FRM_IMAGE_REFRESH_INTERVAL,
     SMPL_FRM_PROTOCOL,
-    SMPL_FRM_DISPLAY_DATE,
-    SMPL_FRM_DISPLAY_CLOCK,
-    SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
     SMPL_FRM_PLUGINS_SPOTIFY_ENABLED,
-    SMPL_FRM_IMAGE_ZOOM_EFFECT,
-    SMPL_FRM_IMAGE_TRANSITION_TYPE,
+    SMPL_FRM_DISPLAY_WEATHER,
 )
 
 
@@ -24,21 +21,25 @@ class IndexView(TemplateView):
         :param kwargs:
         :return:
         """
+
         weather_data = WeatherService().get_for_display()
+
+        # Initialize config from environment on first page load
+        config = ConfigService().load_config()
 
         context = {
             "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
             "port": SMPL_FRM_EXTERNAL_PORT,
-            "refresh_interval": SMPL_FRM_IMAGE_REFRESH_INTERVAL,
-            "transition_interval": SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
-            "display_date": str(SMPL_FRM_DISPLAY_DATE).lower(),
-            "display_clock": str(SMPL_FRM_DISPLAY_CLOCK).lower(),
+            "refresh_interval": config.image_refresh_interval,
+            "transition_interval": config.image_transition_interval,
+            "display_date": str(config.display_date).lower(),
+            "display_clock": str(config.display_clock).lower(),
             "weather_current_temp": weather_data["current_temp"],
             "current_low_temp": weather_data["current_low_temp"],
             "current_high_temp": weather_data["current_high_temp"],
             "plugin_spotify_enabled": str(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED).lower(),
-            "image_zoom_effect": str(SMPL_FRM_IMAGE_ZOOM_EFFECT).lower(),
-            "image_transition_type": SMPL_FRM_IMAGE_TRANSITION_TYPE,
+            "image_zoom_effect": str(config.image_zoom_effect).lower(),
+            "image_transition_type": config.image_transition_type,
         }
 
         return context
