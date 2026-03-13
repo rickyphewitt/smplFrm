@@ -30,25 +30,44 @@ class TestConfigAPI(TestCase):
         self.assertEqual(response.data["image_refresh_interval"], 30000)
         self.assertEqual(response.data["image_transition_type"], "fade")
 
-    def test_update_config(self):
-        """Test updating a config via API."""
+    def test_update_config_with_put(self):
+        """Test updating a config via API with PUT."""
         update_data = {
             "display_date": False,
+            "display_clock": False,
             "image_refresh_interval": 60000,
+            "image_transition_interval": 5000,
+            "image_zoom_effect": False,
             "image_transition_type": "zoom",
         }
 
-        response = self.client.patch(self.url, update_data, format="json")
+        response = self.client.put(
+            self.url, update_data, content_type="application/json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["display_date"])
+        self.assertFalse(response.data["display_clock"])
         self.assertEqual(response.data["image_refresh_interval"], 60000)
+        self.assertEqual(response.data["image_transition_interval"], 5000)
+        self.assertFalse(response.data["image_zoom_effect"])
         self.assertEqual(response.data["image_transition_type"], "zoom")
 
         # Verify persistence
         self.config.refresh_from_db()
         self.assertFalse(self.config.display_date)
         self.assertEqual(self.config.image_refresh_interval, 60000)
+
+    def test_patch_config_forbidden(self):
+        """Test that PATCH is not allowed."""
+        update_data = {
+            "display_date": False,
+        }
+
+        response = self.client.patch(
+            self.url, update_data, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_config_forbidden(self):
         """Test that creating config via API is forbidden."""
@@ -59,6 +78,24 @@ class TestConfigAPI(TestCase):
         """Test that listing configs via API is forbidden."""
         response = self.client.get("/api/v1/configs")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_config_with_invalid_data(self):
+        """Test that invalid data returns error."""
+        update_data = {
+            "display_date": False,
+            "display_clock": False,
+            "image_refresh_interval": -1,  # Invalid: negative value
+            "image_transition_interval": 5000,
+            "image_zoom_effect": False,
+            "image_transition_type": "zoom",
+        }
+
+        response = self.client.put(
+            self.url, update_data, content_type="application/json"
+        )
+
+        # Should return 400 for invalid data
+        self.assertNotEqual(response.status_code, status.HTTP_200_OK)
 
     def test_delete_config_forbidden(self):
         """Test that deleting config via API is forbidden."""

@@ -59,7 +59,7 @@
  </div>
 <div id="image-container"></div>
 
-<div class="settings-modal" id="settings-modal">
+<div class="settings-modal" id="settings-modal" data-config-id="{{ config_id }}">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Settings</h2>
@@ -78,21 +78,14 @@
                 <div class="setting-item">
                     <label for="setting-date">Show Photo Date</label>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="setting-date" checked>
+                        <input type="checkbox" id="setting-date">
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-clock">Show Clock</label>
+                    <label for="setting-clock">Show Date And Time</label>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="setting-clock" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="setting-weather">Show Weather</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="setting-weather" checked>
+                        <input type="checkbox" id="setting-clock">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -105,15 +98,15 @@
                 <div class="setting-item">
                     <label for="setting-refresh">Refresh Interval</label>
                     <div class="number-input">
-                        <input type="number" id="setting-refresh" value="30" min="5" max="300">
-                        <span>sec</span>
+                        <input type="number" id="setting-refresh" min="5" max="300">
+                        <span>ms</span>
                     </div>
                 </div>
                 <div class="setting-item">
                     <label for="setting-transition">Transition Time</label>
                     <div class="number-input">
-                        <input type="number" id="setting-transition" value="10" min="1" max="30">
-                        <span>sec</span>
+                        <input type="number" id="setting-transition" min="1000" max="300000">
+                        <span>ms</span>
                     </div>
                 </div>
             </div>
@@ -123,7 +116,7 @@
                 <div class="setting-item">
                     <label for="setting-zoom">Zoom Effect</label>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="setting-zoom" checked>
+                        <input type="checkbox" id="setting-zoom">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -155,6 +148,7 @@
             <button class="btn btn-primary" id="save-settings">Save Changes</button>
             <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
         </div>
+        <div class="error-message" id="error-message"></div>
     </div>
 </div>
 </body>

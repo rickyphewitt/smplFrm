@@ -21,11 +21,14 @@ class ConfigViewSet(viewsets.ModelViewSet):
         super().__init__(**kwargs)
         self.service = ConfigService()
 
-    # for now only allow get one and update
+    # Only allow retrieve and update (PUT)
     def create(self, request, *args, **kwargs):
         raise PermissionDenied()
 
     def list(self, request, *args, **kwargs):
+        raise PermissionDenied()
+
+    def partial_update(self, request, *args, **kwargs):
         raise PermissionDenied()
 
     def destroy(self, request, *args, **kwargs):
