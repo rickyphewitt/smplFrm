@@ -50,6 +50,9 @@ class ConfigService(BaseService):
         Returns:
             Updated Config instance
         """
+        logger.info(
+            f"Updating config {config.external_id}: display_date={config.display_date}, display_clock={config.display_clock}, refresh={config.image_refresh_interval}"
+        )
         config.save()
         return config
 

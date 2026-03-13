@@ -30,6 +30,7 @@ class IndexView(TemplateView):
         context = {
             "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
             "port": SMPL_FRM_EXTERNAL_PORT,
+            "config_id": config.external_id,
             "refresh_interval": config.image_refresh_interval,
             "transition_interval": config.image_transition_interval,
             "display_date": str(config.display_date).lower(),
