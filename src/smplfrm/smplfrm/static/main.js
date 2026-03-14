@@ -225,15 +225,182 @@ function refreshSpotify() {
 }
 
 export function init() {
+    initSettingsModal();
     startImages();
 
     if (config.displayClock) {
         window.onload = displayClock;
+    } else {
+        document.getElementById('current-date-group').style.display = 'none';
+        document.getElementById('current-time-group').style.display = 'none';
+    }
+
+    if (!config.displayDate) {
+        document.getElementById('photo-date-group').style.display = 'none';
     }
 
     displayWeather();
+    if (!config.weatherCurrentTemp) {
+        document.getElementById('weather-group').style.display = 'none';
+    }
+
+    // Hide separators between hidden groups
+    updateSeparators();
 
     if (config.pluginSpotifyEnabled) {
         refreshSpotify();
     }
+}
+
+function updateSeparators() {
+    const bottomBar = document.getElementById('bottom-bar');
+    const groups = bottomBar.querySelectorAll('.info-group');
+    const separators = bottomBar.querySelectorAll('.group-separator');
+
+    // Hide all separators first
+    separators.forEach(sep => sep.style.display = 'none');
+
+    // Show separators only between visible groups
+    const visibleGroups = Array.from(groups).filter(g => g.style.display !== 'none');
+    visibleGroups.forEach((group, index) => {
+        if (index < visibleGroups.length - 1) {
+            const sep = group.nextElementSibling;
+            if (sep && sep.classList.contains('group-separator')) {
+                sep.style.display = '';
+            }
+        }
+    });
+}
+
+async function loadConfig() {
+    const modal = document.getElementById('settings-modal');
+    const configId = modal.dataset.configId;
+    
+    try {
+        const response = await fetch(buildApiUrl(`configs/${configId}`));
+        if (!response.ok) throw new Error('Failed to load config');
+        
+        const config = await response.json();
+        
+        document.getElementById('setting-date').checked = config.display_date;
+        document.getElementById('setting-clock').checked = config.display_clock;
+        document.getElementById('setting-refresh').value = config.image_refresh_interval;
+        document.getElementById('setting-transition').value = config.image_transition_interval;
+        document.getElementById('setting-zoom').checked = config.image_zoom_effect;
+        document.getElementById('setting-transition-type').value = config.image_transition_type;
+    } catch (error) {
+        console.error('Error loading config:', error);
+    }
+}
+
+async function saveConfig() {
+    const modal = document.getElementById('settings-modal');
+    const configId = modal.dataset.configId;
+    const errorMessage = document.getElementById('error-message');
+    const cancelBtn = document.getElementById('cancel-settings');
+    
+    const configData = {
+        display_date: document.getElementById('setting-date').checked,
+        display_clock: document.getElementById('setting-clock').checked,
+        image_refresh_interval: parseInt(document.getElementById('setting-refresh').value),
+        image_transition_interval: parseInt(document.getElementById('setting-transition').value),
+        image_zoom_effect: document.getElementById('setting-zoom').checked,
+        image_transition_type: document.getElementById('setting-transition-type').value
+    };
+    
+    try {
+        const response = await fetch(buildApiUrl(`configs/${configId}`), {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(configData)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save settings');
+        }
+        
+        console.log('Settings saved successfully');
+        
+        // Mark that changes were saved
+        modal.dataset.changesSaved = 'true';
+        
+        // Change cancel button to reload button
+        cancelBtn.textContent = 'Reload Now';
+        cancelBtn.classList.remove('btn-secondary');
+        cancelBtn.classList.add('btn-primary');
+        
+        return true;
+    } catch (error) {
+        console.error('Error saving config:', error);
+        errorMessage.textContent = 'Failed to save settings. Please try again.';
+        errorMessage.classList.add('show');
+        
+        setTimeout(() => {
+            errorMessage.classList.remove('show');
+        }, 3000);
+        
+        return false;
+    }
+}
+
+function initSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    const logoIcon = document.getElementById('logo-icon');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-settings');
+    const saveBtn = document.getElementById('save-settings');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+
+    logoIcon.addEventListener('click', () => {
+        modal.classList.add('open');
+        modal.dataset.changesSaved = 'false';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.classList.remove('btn-primary');
+        cancelBtn.classList.add('btn-secondary');
+        loadConfig();
+    });
+
+    const closeModal = () => {
+        const changesSaved = modal.dataset.changesSaved === 'true';
+        if (changesSaved) {
+            location.reload();
+        } else {
+            modal.classList.remove('open');
+        }
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+            closeModal();
+        }
+    });
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        });
+    });
+
+    saveBtn.addEventListener('click', async () => {
+        await saveConfig();
+    });
 }
