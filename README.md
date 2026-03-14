@@ -131,4 +131,3 @@ However, there are some additional guidelines that should be used for AI commits
 | `SMPL_FRM_PLUGINS_SPOTIFY_ENABLED`      | False                              | Enables Spotify Now Playing Plugin                                                                                        |
 | `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID`    | None                               | See: https://spotipy.readthedocs.io/en/latest/#getting-started                                                            |
 | `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET` | None                               | See ^ - Ensure your Redirect URI matches  Http://`SMPL_FRM_HOST`:`SMPL_FRM_EXTERNAL_PORT`/api/v1/plugins/spotify/callback |
-| `SMPL_FRM_RESET_IMAGE_VIEW_COUNT`        | False                              | When set to True all image counts are reset.                                                                              |
