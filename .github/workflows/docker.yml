@@ -11,9 +11,9 @@ name: Publish Docker image
 
 on:
   push:
-    branches: [ main, djangoMain]
+    branches: [ main ]
   pull_request:
-    branches: [ main, djangoMain ]
+    branches: [ main ]
   release:
     types: [ published ]
 
