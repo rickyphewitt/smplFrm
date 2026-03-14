@@ -46,15 +46,10 @@ class CacheService:
         """
         self.cache.delete(cache_key)
 
-    def clear(self, force: bool = False) -> None:
-        """Clear all cached data if configured or forced.
-
-        Args:
-            force: Force cache clear regardless of configuration
-        """
-        if settings.SMPL_FRM_CLEAR_CACHE_ON_BOOT or force:
-            self.cache.clear()
-            logger.info("Cache Cleared")
+    def clear(self) -> None:
+        """Clear all cached data."""
+        self.cache.clear()
+        logger.info("Cache Cleared")
 
     def get_image_cache_key(self, external_id: str, height: int, width: int) -> str:
         """Generate cache key for an image with specific dimensions.
