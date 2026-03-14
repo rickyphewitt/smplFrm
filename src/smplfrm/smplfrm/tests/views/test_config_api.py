@@ -39,6 +39,7 @@ class TestConfigAPI(TestCase):
             "image_transition_interval": 5000,
             "image_zoom_effect": False,
             "image_transition_type": "zoom",
+            "image_cache_timeout": 600,
         }
 
         response = self.client.put(
@@ -52,6 +53,7 @@ class TestConfigAPI(TestCase):
         self.assertEqual(response.data["image_transition_interval"], 5000)
         self.assertFalse(response.data["image_zoom_effect"])
         self.assertEqual(response.data["image_transition_type"], "zoom")
+        self.assertEqual(response.data["image_cache_timeout"], 600)
 
         # Verify persistence
         self.config.refresh_from_db()
@@ -88,6 +90,7 @@ class TestConfigAPI(TestCase):
             "image_transition_interval": 5000,
             "image_zoom_effect": False,
             "image_transition_type": "zoom",
+            "image_cache_timeout": 300,
         }
 
         response = self.client.put(

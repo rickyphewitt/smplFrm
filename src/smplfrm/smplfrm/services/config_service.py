@@ -7,6 +7,7 @@ from smplfrm.models import Config
 from smplfrm.settings import (
     SMPL_FRM_DISPLAY_CLOCK,
     SMPL_FRM_DISPLAY_DATE,
+    SMPL_FRM_IMAGE_CACHE_TIMEOUT,
     SMPL_FRM_IMAGE_REFRESH_INTERVAL,
     SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
     SMPL_FRM_IMAGE_TRANSITION_TYPE,
@@ -96,6 +97,7 @@ class ConfigService(BaseService):
             config.image_transition_interval = SMPL_FRM_IMAGE_TRANSITION_INTERVAL
             config.image_zoom_effect = SMPL_FRM_IMAGE_ZOOM_EFFECT
             config.image_transition_type = SMPL_FRM_IMAGE_TRANSITION_TYPE
+            config.image_cache_timeout = SMPL_FRM_IMAGE_CACHE_TIMEOUT
             config = self.update(config)
 
         return config

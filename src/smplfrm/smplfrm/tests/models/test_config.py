@@ -20,6 +20,9 @@ class TestConfig(TestCase):
         self.assertTrue(config.image_zoom_effect)
         self.assertEqual(config.image_transition_type, "random")
 
+        # Cache
+        self.assertEqual(config.image_cache_timeout, 300)
+
     def test_update_config(self):
         """Test updating config values."""
         config = Config.objects.create()
