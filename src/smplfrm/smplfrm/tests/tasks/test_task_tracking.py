@@ -71,3 +71,31 @@ class TestRunWithTaskTracking(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.COMPLETED)
         self.assertEqual(task.progress, 100)
+
+    def test_progress_persists_before_failure(self):
+        """Test that progress made before failure is preserved."""
+        task = Task.objects.create(task_type=Task.TaskType.RESCAN_LIBRARY)
+
+        def work_then_fail(on_progress=None):
+            if on_progress:
+                on_progress(60)
+            raise RuntimeError("mid-task failure")
+
+        with self.assertRaises(RuntimeError):
+            _run_with_task_tracking(task.external_id, work_then_fail)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.FAILED)
+        self.assertEqual(task.error, "mid-task failure")
+        # Progress stays at 60, not reset to 0 or set to 100
+        self.assertEqual(task.progress, 60)
+
+    def test_no_task_id_does_not_pass_callback(self):
+        """Test that without task_id, function is called without on_progress."""
+        received_kwargs = {}
+
+        def capture_kwargs(**kwargs):
+            received_kwargs.update(kwargs)
+
+        _run_with_task_tracking(None, capture_kwargs)
+        self.assertNotIn("on_progress", received_kwargs)

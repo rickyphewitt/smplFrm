@@ -58,3 +58,9 @@ class TestImageService(TestCase):
 
         cache_key = self.service.get_image_cache_key(ext_id, height, width)
         self.assertEqual(f"{ext_id}:zoom_to_fill:{height}:{width}", cache_key)
+
+    def test_clear_cache_accepts_progress_callback(self):
+        """Test that clear works with on_progress callback."""
+        self.service.upsert(self.cache_key, self.cache_data)
+        self.service.clear(on_progress=lambda pct: None)
+        self.assertIsNone(self.service.read(self.cache_key))
