@@ -21,7 +21,7 @@ def _run_with_task_tracking(task_id: str, fn):
 
     Args:
         task_id: External ID of the Task record, or None
-        fn: Callable to execute
+        fn: Callable that accepts an optional on_progress callback
     """
     if not task_id:
         fn()
@@ -31,7 +31,11 @@ def _run_with_task_tracking(task_id: str, fn):
     task = service.read(task_id)
     service.start(task)
     try:
-        fn()
+
+        def on_progress(pct):
+            service.update_progress(task, pct)
+
+        fn(on_progress=on_progress)
         service.complete(task)
     except Exception as e:
         service.fail(task, str(e))

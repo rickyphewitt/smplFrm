@@ -15,7 +15,7 @@ class TestRunWithTaskTracking(TestCase):
         """Test that a successful function marks task as completed."""
         task = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
 
-        _run_with_task_tracking(task.external_id, lambda: None)
+        _run_with_task_tracking(task.external_id, lambda on_progress=None: None)
 
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.COMPLETED)
@@ -25,7 +25,7 @@ class TestRunWithTaskTracking(TestCase):
         """Test that a failed function marks task as failed with error."""
         task = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
 
-        def failing_fn():
+        def failing_fn(on_progress=None):
             raise ValueError("test error")
 
         with self.assertRaises(ValueError):
@@ -46,9 +46,28 @@ class TestRunWithTaskTracking(TestCase):
         task = Task.objects.create(task_type=Task.TaskType.RESCAN_LIBRARY)
         statuses = []
 
-        def capture_status():
+        def capture_status(on_progress=None):
             task.refresh_from_db()
             statuses.append(task.status)
 
         _run_with_task_tracking(task.external_id, capture_status)
         self.assertEqual(statuses[0], Task.Status.RUNNING)
+
+    def test_progress_callback_updates_task(self):
+        """Test that on_progress callback updates task progress."""
+        task = Task.objects.create(task_type=Task.TaskType.RESCAN_LIBRARY)
+
+        def work_with_progress(on_progress=None):
+            if on_progress:
+                on_progress(25)
+                task.refresh_from_db()
+                assert task.progress == 25
+                on_progress(75)
+                task.refresh_from_db()
+                assert task.progress == 75
+
+        _run_with_task_tracking(task.external_id, work_with_progress)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.COMPLETED)
+        self.assertEqual(task.progress, 100)

@@ -130,10 +130,14 @@ class ImageService(BaseService):
             logger.error(f"Failed to load next image: {e}")
             return None
 
-    def reset_all_view_count(self) -> None:
+    def reset_all_view_count(self, on_progress=None) -> None:
         """Reset view count for all images."""
         logger.info("Resetting All Image Counts")
-        for image in Image.objects.all():
+        images = list(Image.objects.all())
+        total = len(images)
+        for i, image in enumerate(images):
             image.view_count = 0
             image.save()
+            if on_progress and total:
+                on_progress(int((i + 1) / total * 100))
         logger.info("Image Count Reset")

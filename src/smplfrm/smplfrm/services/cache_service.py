@@ -46,7 +46,7 @@ class CacheService:
         """
         self.cache.delete(cache_key)
 
-    def clear(self) -> None:
+    def clear(self, on_progress=None) -> None:
         """Clear all cached data."""
         self.cache.clear()
         logger.info("Cache Cleared")
