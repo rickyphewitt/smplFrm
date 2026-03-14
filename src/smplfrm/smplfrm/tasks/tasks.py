@@ -11,20 +11,43 @@ from smplfrm.services import (
     LibraryService,
     WeatherService,
 )
+from smplfrm.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
 
+def _run_with_task_tracking(task_id: str, fn):
+    """Run a function with Task model progress tracking.
+
+    Args:
+        task_id: External ID of the Task record, or None
+        fn: Callable to execute
+    """
+    if not task_id:
+        fn()
+        return
+
+    service = TaskService()
+    task = service.read(task_id)
+    service.start(task)
+    try:
+        fn()
+        service.complete(task)
+    except Exception as e:
+        service.fail(task, str(e))
+        raise
+
+
 @signals.worker_ready.connect
 @app.task
-def scan_library(**kwargs):
-    LibraryService().scan()
+def scan_library(task_id=None, **kwargs):
+    _run_with_task_tracking(task_id, LibraryService().scan)
 
 
 @signals.worker_ready.connect
 @app.task(name="reset_image_count")
-def reset_image_counts(**kwargs):
-    ImageService().reset_all_view_count()
+def reset_image_counts(task_id=None, **kwargs):
+    _run_with_task_tracking(task_id, ImageService().reset_all_view_count)
 
 
 @signals.worker_ready.connect
@@ -35,8 +58,8 @@ def refresh_weather(**kwargs):
 
 @signals.worker_ready.connect
 @app.task(name="clear_cache")
-def clear_cache(**kwargs):
-    CacheService().clear()
+def clear_cache(task_id=None, **kwargs):
+    _run_with_task_tracking(task_id, CacheService().clear)
 
 
 def cache_images(images_ext_ids: list, height: str, width: str):
