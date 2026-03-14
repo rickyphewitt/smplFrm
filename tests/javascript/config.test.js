@@ -267,3 +267,78 @@ describe('Bottom Bar Visibility', () => {
         expect(visibleSeps.length).toBe(3);
     });
 });
+
+describe('Library Maintenance Tasks', () => {
+    beforeEach(() => {
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should POST to create a task', async () => {
+        const mockTask = {
+            id: 'task123',
+            task_type: 'clear_cache',
+            status: 'pending',
+            progress: 0,
+            error: ''
+        };
+
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockTask
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_type: 'clear_cache' })
+        });
+        const task = await response.json();
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            'http://localhost:8321/api/v1/tasks',
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(task.task_type).toBe('clear_cache');
+        expect(task.status).toBe('pending');
+    });
+
+    it('should GET to poll task status', async () => {
+        const mockTask = {
+            id: 'task123',
+            task_type: 'rescan_library',
+            status: 'running',
+            progress: 50,
+            error: ''
+        };
+
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockTask
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks/task123');
+        const task = await response.json();
+
+        expect(task.status).toBe('running');
+        expect(task.progress).toBe(50);
+    });
+
+    it('should handle task creation failure', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 400
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_type: 'invalid' })
+        });
+
+        expect(response.ok).toBe(false);
+    });
+});

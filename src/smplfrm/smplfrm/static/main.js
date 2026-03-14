@@ -288,6 +288,7 @@ async function loadConfig() {
         document.getElementById('setting-transition').value = config.image_transition_interval;
         document.getElementById('setting-zoom').checked = config.image_zoom_effect;
         document.getElementById('setting-transition-type').value = config.image_transition_type;
+        document.getElementById('setting-cache-timeout').value = config.image_cache_timeout;
     } catch (error) {
         console.error('Error loading config:', error);
     }
@@ -305,7 +306,8 @@ async function saveConfig() {
         image_refresh_interval: parseInt(document.getElementById('setting-refresh').value),
         image_transition_interval: parseInt(document.getElementById('setting-transition').value),
         image_zoom_effect: document.getElementById('setting-zoom').checked,
-        image_transition_type: document.getElementById('setting-transition-type').value
+        image_transition_type: document.getElementById('setting-transition-type').value,
+        image_cache_timeout: parseInt(document.getElementById('setting-cache-timeout').value)
     };
     
     try {
@@ -342,6 +344,21 @@ async function saveConfig() {
         }, 3000);
         
         return false;
+    }
+}
+
+export async function startTask(taskType) {
+    try {
+        const response = await fetch(buildApiUrl('tasks'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_type: taskType })
+        });
+        if (!response.ok) throw new Error('Failed to start task');
+        return await response.json();
+    } catch (error) {
+        console.error('Error starting task:', error);
+        return null;
     }
 }
 
@@ -402,5 +419,16 @@ function initSettingsModal() {
 
     saveBtn.addEventListener('click', async () => {
         await saveConfig();
+    });
+
+    // Library maintenance buttons
+    document.getElementById('task-reset-count').addEventListener('click', () => {
+        startTask('reset_image_count');
+    });
+    document.getElementById('task-clear-cache').addEventListener('click', () => {
+        startTask('clear_cache');
+    });
+    document.getElementById('task-rescan-library').addEventListener('click', () => {
+        startTask('rescan_library');
     });
 }

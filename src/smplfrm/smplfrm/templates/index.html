@@ -69,6 +69,7 @@
         <div class="modal-tabs">
             <button class="tab-btn active" data-tab="display">Display</button>
             <button class="tab-btn" data-tab="images">Images</button>
+            <button class="tab-btn" data-tab="library">Library</button>
             <button class="tab-btn" data-tab="about">About</button>
         </div>
         
@@ -130,6 +131,34 @@
                         <option value="zoom">Zoom</option>
                         <option value="none">None</option>
                     </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab-library">
+            <div class="settings-section">
+                <h3>Cache</h3>
+                <div class="setting-item">
+                    <label for="setting-cache-timeout">Cache Timeout</label>
+                    <div class="number-input">
+                        <input type="number" id="setting-cache-timeout" min="0" max="604800">
+                        <span>sec</span>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Maintenance</h3>
+                <div class="setting-item">
+                    <label>Reset Image Count</label>
+                    <button class="btn btn-secondary btn-sm" id="task-reset-count">Reset</button>
+                </div>
+                <div class="setting-item">
+                    <label>Clear Cache</label>
+                    <button class="btn btn-secondary btn-sm" id="task-clear-cache">Clear</button>
+                </div>
+                <div class="setting-item">
+                    <label>Rescan Library</label>
+                    <button class="btn btn-secondary btn-sm" id="task-rescan-library">Rescan</button>
                 </div>
             </div>
         </div>
