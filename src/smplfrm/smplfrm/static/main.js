@@ -355,11 +355,43 @@ export async function startTask(taskType) {
             body: JSON.stringify({ task_type: taskType })
         });
         if (!response.ok) throw new Error('Failed to start task');
-        return await response.json();
+        const task = await response.json();
+        pollTask(task.id);
+        return task;
     } catch (error) {
         console.error('Error starting task:', error);
         return null;
     }
+}
+
+function pollTask(taskId) {
+    const toast = document.getElementById('task-toast');
+    const bar = document.getElementById('task-toast-bar');
+    const text = document.getElementById('task-toast-text');
+
+    toast.classList.add('show');
+    text.textContent = 'Running...';
+    bar.style.width = '0%';
+
+    const interval = setInterval(async () => {
+        try {
+            const response = await fetch(buildApiUrl(`tasks/${taskId}`));
+            if (!response.ok) throw new Error('Poll failed');
+            const task = await response.json();
+
+            bar.style.width = `${task.progress}%`;
+            text.textContent = `${task.status === 'running' ? 'Running' : task.status}... ${task.progress}%`;
+
+            if (task.status === 'completed' || task.status === 'failed') {
+                clearInterval(interval);
+                text.textContent = task.status === 'completed' ? 'Done!' : `Failed: ${task.error}`;
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+        } catch {
+            clearInterval(interval);
+            toast.classList.remove('show');
+        }
+    }, 1000);
 }
 
 function initSettingsModal() {
