@@ -8,21 +8,25 @@ from PIL.ExifTags import TAGS
 from django.conf import settings
 
 from smplfrm.settings import SMPL_FRM_IMAGE_FORMATS, BASE_DIR
+from smplfrm.services.task_reporting_service import TaskReportingService
+from smplfrm.models.task import TaskType
 
 logger = logging.getLogger(__name__)
 
 
-class LibraryService:
+class LibraryService(TaskReportingService):
     """Service for scanning and managing image library."""
 
     def __init__(self) -> None:
         from smplfrm.services import ImageMetadataService, ImageService
 
+        super().__init__(task_type=TaskType.RESCAN_LIBRARY)
         self.image_service = ImageService()
         self.image_metadata_service = ImageMetadataService()
 
-    def scan(self, on_progress=None) -> None:
+    def scan(self, task_id=None) -> None:
         """Scan configured library directories for images and update database."""
+
         logger.info(f"BASE DIR: {BASE_DIR}")
         current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
         logger.info(f"{current_dir}")
@@ -37,56 +41,64 @@ class LibraryService:
                     if file_ext and file_ext in SMPL_FRM_IMAGE_FORMATS:
                         total_files += 1
 
-        processed = 0
-        for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
-            logger.info(f"Scanning dir: {asset_dir}")
-            image_count = 0
-            images_created = 0
+        # start task
+        self.initiate_task(task_id, total_files)
 
-            for dirpath, subdirs, filenames in os.walk(asset_dir):
-                for filename in filenames:
-                    file_ext = self._get_file_extension(filename)
-                    if not file_ext:
-                        continue
+        try:
+            processed = 0
+            for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
+                logger.info(f"Scanning dir: {asset_dir}")
+                image_count = 0
+                images_created = 0
 
-                    if file_ext in SMPL_FRM_IMAGE_FORMATS:
-                        file_path = os.path.join(dirpath, filename)
-                        image_data = {
-                            "name": filename,
-                            "file_path": file_path,
-                            "file_name": filename,
-                        }
-                        logger.info(
-                            f"Found image with filename: {filename} and path: {file_path}"
-                        )
-                        image_count += 1
+                for dirpath, subdirs, filenames in os.walk(asset_dir):
+                    for filename in filenames:
+                        file_ext = self._get_file_extension(filename)
+                        if not file_ext:
+                            continue
 
-                        existing_image = (
-                            self.image_service.read_by_file_name_and_file_path(
-                                filename, file_path
+                        if file_ext in SMPL_FRM_IMAGE_FORMATS:
+                            file_path = os.path.join(dirpath, filename)
+                            image_data = {
+                                "name": filename,
+                                "file_path": file_path,
+                                "file_name": filename,
+                            }
+                            logger.info(
+                                f"Found image with filename: {filename} and path: {file_path}"
                             )
-                        )
-                        if existing_image:
-                            if existing_image.deleted:
-                                existing_image.deleted = False
-                                existing_image.save()
-                            self.save_image_meta(existing_image)
-                            valid_image_ids.append(existing_image.external_id)
-                        else:
-                            created_image = self.image_service.create(image_data)
-                            images_created += 1
-                            valid_image_ids.append(created_image.external_id)
-                            self.save_image_meta(created_image)
+                            image_count += 1
 
-                        processed += 1
-                        if on_progress and total_files:
-                            on_progress(int(processed / total_files * 100))
+                            existing_image = (
+                                self.image_service.read_by_file_name_and_file_path(
+                                    filename, file_path
+                                )
+                            )
+                            if existing_image:
+                                if existing_image.deleted:
+                                    existing_image.deleted = False
+                                    existing_image.save()
+                                self.save_image_meta(existing_image)
+                                valid_image_ids.append(existing_image.external_id)
+                            else:
+                                created_image = self.image_service.create(image_data)
+                                images_created += 1
+                                valid_image_ids.append(created_image.external_id)
+                                self.save_image_meta(created_image)
 
-            logger.info(
-                f"found {image_count} image(s) and created {images_created} images(s)"
-            )
+                            processed += 1
+                            self.report_task(processed)
 
-        self._mark_missing_images_as_deleted(valid_image_ids)
+                logger.info(
+                    f"found {image_count} image(s) and created {images_created} images(s)"
+                )
+
+            self._mark_missing_images_as_deleted(valid_image_ids)
+
+            self.complete_task()
+        except Exception as e:
+            self.fail_task(str(e))
+            raise
 
     def _get_file_extension(self, filename: str) -> str:
         """Extract file extension from filename.
