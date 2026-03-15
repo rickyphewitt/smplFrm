@@ -17,13 +17,26 @@ class TestImageService(TestCase):
         self.service.delete(self.cache_key)
         self.assertIsNone(self.service.read(self.cache_key))
 
-    @override_settings(SMPL_FRM_IMAGE_CACHE_TIMEOUT=1)
     def test_configurable_cache_timeout(self):
-        self.service.upsert(self.cache_key, self.cache_data)
+        from smplfrm.models import Config
+
+        config = Config.objects.create(image_cache_timeout=1)
+        service = CacheService()
+        service.upsert(self.cache_key, self.cache_data)
         from time import sleep
 
         sleep(2)
-        self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
+        self.assertIsNone(service.read(self.cache_key), self.cache_data)
+
+    def test_upsert_uses_config_timeout(self):
+        """Test that upsert reads timeout from Config model."""
+        from smplfrm.models import Config
+
+        Config.objects.create(image_cache_timeout=600)
+        service = CacheService()
+        service.upsert(self.cache_key, self.cache_data)
+        # Data should still be present (600s timeout)
+        self.assertEqual(service.read(self.cache_key), self.cache_data)
 
     def test_clear_cache(self):
         self.service.upsert(self.cache_key, self.cache_data)

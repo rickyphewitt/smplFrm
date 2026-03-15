@@ -72,3 +72,27 @@ class TestTaskAPI(TestCase):
         """Test that DELETE is forbidden."""
         response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_task_dispatches_correct_celery_name(self):
+        """Test that task creation sends the correct Celery task name."""
+        from unittest.mock import patch
+
+        with patch("smplfrm.celery.app") as mock_app:
+            self.client.post(
+                "/api/v1/tasks",
+                {"task_type": "rescan_library"},
+                format="json",
+            )
+            mock_app.send_task.assert_called_once()
+            self.assertEqual(mock_app.send_task.call_args[0][0], "scan_library")
+
+    def test_create_all_task_types_dispatch_correctly(self):
+        """Test that all task types map to correct Celery task names."""
+        from smplfrm.views.api.v1.tasks import TASK_DISPATCH
+
+        expected = {
+            Task.TaskType.RESCAN_LIBRARY: "scan_library",
+            Task.TaskType.RESET_IMAGE_COUNT: "reset_image_count",
+            Task.TaskType.CLEAR_CACHE: "clear_cache",
+        }
+        self.assertEqual(TASK_DISPATCH, expected)
