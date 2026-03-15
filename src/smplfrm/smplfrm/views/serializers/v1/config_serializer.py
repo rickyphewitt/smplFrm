@@ -17,4 +17,5 @@ class ConfigSerializer(serializers.HyperlinkedModelSerializer):
             "image_transition_interval",
             "image_zoom_effect",
             "image_transition_type",
+            "image_cache_timeout",
         ]

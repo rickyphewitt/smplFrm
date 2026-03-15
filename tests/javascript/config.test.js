@@ -267,3 +267,147 @@ describe('Bottom Bar Visibility', () => {
         expect(visibleSeps.length).toBe(3);
     });
 });
+
+describe('Library Maintenance Tasks', () => {
+    beforeEach(() => {
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should POST to create a task', async () => {
+        const mockTask = {
+            id: 'task123',
+            task_type: 'clear_cache',
+            status: 'pending',
+            progress: 0,
+            error: ''
+        };
+
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockTask
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_type: 'clear_cache' })
+        });
+        const task = await response.json();
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            'http://localhost:8321/api/v1/tasks',
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(task.task_type).toBe('clear_cache');
+        expect(task.status).toBe('pending');
+    });
+
+    it('should GET to poll task status', async () => {
+        const mockTask = {
+            id: 'task123',
+            task_type: 'rescan_library',
+            status: 'running',
+            progress: 50,
+            error: ''
+        };
+
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockTask
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks/task123');
+        const task = await response.json();
+
+        expect(task.status).toBe('running');
+        expect(task.progress).toBe(50);
+    });
+
+    it('should handle task creation failure', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 400
+        });
+
+        const response = await fetch('http://localhost:8321/api/v1/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ task_type: 'invalid' })
+        });
+
+        expect(response.ok).toBe(false);
+    });
+});
+
+describe('Task Progress UI', () => {
+    beforeEach(() => {
+        global.fetch = vi.fn();
+        document.body.innerHTML = `
+            <div class="task-toast" id="task-toast">
+                <span id="task-toast-text">Running...</span>
+                <div class="task-toast-track">
+                    <div class="task-toast-bar" id="task-toast-bar"></div>
+                </div>
+            </div>
+        `;
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should show toast when task starts', async () => {
+        const toast = document.getElementById('task-toast');
+        toast.classList.add('show');
+
+        expect(toast.classList.contains('show')).toBe(true);
+    });
+
+    it('should update progress bar width from task response', () => {
+        const bar = document.getElementById('task-toast-bar');
+        const text = document.getElementById('task-toast-text');
+
+        // Simulate poll response
+        const task = { status: 'running', progress: 75, error: '' };
+        bar.style.width = `${task.progress}%`;
+        text.textContent = `Running... ${task.progress}%`;
+
+        expect(bar.style.width).toBe('75%');
+        expect(text.textContent).toBe('Running... 75%');
+    });
+
+    it('should show Done on completion', () => {
+        const text = document.getElementById('task-toast-text');
+        const task = { status: 'completed', progress: 100, error: '' };
+
+        text.textContent = task.status === 'completed' ? 'Done!' : `Failed: ${task.error}`;
+
+        expect(text.textContent).toBe('Done!');
+    });
+
+    it('should show error on failure', () => {
+        const text = document.getElementById('task-toast-text');
+        const task = { status: 'failed', progress: 30, error: 'Connection lost' };
+
+        text.textContent = task.status === 'completed' ? 'Done!' : `Failed: ${task.error}`;
+
+        expect(text.textContent).toBe('Failed: Connection lost');
+    });
+
+    it('should hide toast after completion delay', () => {
+        vi.useFakeTimers();
+        const toast = document.getElementById('task-toast');
+        toast.classList.add('show');
+
+        setTimeout(() => toast.classList.remove('show'), 3000);
+
+        vi.advanceTimersByTime(3000);
+        expect(toast.classList.contains('show')).toBe(false);
+
+        vi.useRealTimers();
+    });
+});

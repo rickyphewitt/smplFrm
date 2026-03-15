@@ -13,6 +13,11 @@ class CacheService:
     def __init__(self) -> None:
         self.cache = cache
 
+    def _get_cache_timeout(self) -> int:
+        from smplfrm.services.config_service import ConfigService
+
+        return ConfigService().load_config().image_cache_timeout
+
     def upsert(
         self, cache_key: str, cache_data: Any, expires: Optional[int] = None
     ) -> None:
@@ -24,7 +29,7 @@ class CacheService:
             expires: Expiration time in seconds, defaults to SMPL_FRM_IMAGE_CACHE_TIMEOUT
         """
         if expires is None:
-            expires = settings.SMPL_FRM_IMAGE_CACHE_TIMEOUT
+            expires = self._get_cache_timeout()
         self.cache.set(key=cache_key, value=cache_data, timeout=expires)
 
     def read(self, cache_key: str) -> Any:
@@ -46,15 +51,10 @@ class CacheService:
         """
         self.cache.delete(cache_key)
 
-    def clear(self, force: bool = False) -> None:
-        """Clear all cached data if configured or forced.
-
-        Args:
-            force: Force cache clear regardless of configuration
-        """
-        if settings.SMPL_FRM_CLEAR_CACHE_ON_BOOT or force:
-            self.cache.clear()
-            logger.info("Cache Cleared")
+    def clear(self, on_progress=None) -> None:
+        """Clear all cached data."""
+        self.cache.clear()
+        logger.info("Cache Cleared")
 
     def get_image_cache_key(self, external_id: str, height: int, width: int) -> str:
         """Generate cache key for an image with specific dimensions.

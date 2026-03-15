@@ -21,13 +21,23 @@ class LibraryService:
         self.image_service = ImageService()
         self.image_metadata_service = ImageMetadataService()
 
-    def scan(self) -> None:
+    def scan(self, on_progress=None) -> None:
         """Scan configured library directories for images and update database."""
         logger.info(f"BASE DIR: {BASE_DIR}")
         current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
         logger.info(f"{current_dir}")
         valid_image_ids: List[str] = []
 
+        # Count total files first for progress reporting
+        total_files = 0
+        for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
+            for dirpath, subdirs, filenames in os.walk(asset_dir):
+                for filename in filenames:
+                    file_ext = self._get_file_extension(filename)
+                    if file_ext and file_ext in SMPL_FRM_IMAGE_FORMATS:
+                        total_files += 1
+
+        processed = 0
         for asset_dir in settings.SMPL_FRM_LIBRARY_DIRS:
             logger.info(f"Scanning dir: {asset_dir}")
             image_count = 0
@@ -67,6 +77,10 @@ class LibraryService:
                             images_created += 1
                             valid_image_ids.append(created_image.external_id)
                             self.save_image_meta(created_image)
+
+                        processed += 1
+                        if on_progress and total_files:
+                            on_progress(int(processed / total_files * 100))
 
             logger.info(
                 f"found {image_count} image(s) and created {images_created} images(s)"

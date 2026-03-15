@@ -93,3 +93,46 @@ class TestImageService(TestCase):
         self.assertEqual(
             image.file_name, self.full_image_data["file_name"], "File_name not set."
         )
+
+    def test_reset_all_view_count(self):
+        """Test that reset_all_view_count resets all image view counts."""
+        image1 = self.image_service.create(self.full_image_data)
+        image2 = self.image_service.create(
+            {"name": "bar", "file_path": "/other/", "file_name": "bar.jpg"}
+        )
+        self.image_service.increment_view_count(image1)
+        self.image_service.increment_view_count(image1)
+        self.image_service.increment_view_count(image2)
+
+        self.image_service.reset_all_view_count()
+
+        image1.refresh_from_db()
+        image2.refresh_from_db()
+        self.assertEqual(image1.view_count, 0)
+        self.assertEqual(image2.view_count, 0)
+
+    def test_reset_all_view_count_reports_progress(self):
+        """Test that reset_all_view_count calls on_progress per image."""
+        self.image_service.create(self.full_image_data)
+        self.image_service.create(
+            {"name": "bar", "file_path": "/other/", "file_name": "bar.jpg"}
+        )
+
+        progress_values = []
+        self.image_service.reset_all_view_count(
+            on_progress=lambda pct: progress_values.append(pct)
+        )
+
+        self.assertEqual(len(progress_values), 2)
+        self.assertEqual(progress_values[0], 50)
+        self.assertEqual(progress_values[1], 100)
+
+    def test_reset_all_view_count_works_without_callback(self):
+        """Test that reset_all_view_count works when on_progress is None."""
+        image = self.image_service.create(self.full_image_data)
+        self.image_service.increment_view_count(image)
+
+        self.image_service.reset_all_view_count()
+
+        image.refresh_from_db()
+        self.assertEqual(image.view_count, 0)

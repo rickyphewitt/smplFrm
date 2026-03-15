@@ -27,5 +27,8 @@ class Config(ModelBase):
         ],
     )
 
+    # Cache
+    image_cache_timeout = models.PositiveIntegerField(default=300)
+
     class Meta:
         db_table = "config"

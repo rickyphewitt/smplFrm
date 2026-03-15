@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional
 from django.db.models import QuerySet
 
 from smplfrm.models import Image
-from smplfrm.settings import SMPL_FRM_RESET_IMAGE_VIEW_COUNT
 
 from .base_service import BaseService
 
@@ -131,11 +130,14 @@ class ImageService(BaseService):
             logger.error(f"Failed to load next image: {e}")
             return None
 
-    def reset_all_view_count(self) -> None:
-        """Reset view count for all images if configured to do so."""
-        if SMPL_FRM_RESET_IMAGE_VIEW_COUNT:
-            logger.info("Resetting All Image Counts")
-            for image in Image.objects.all():
-                image.view_count = 0
-                image.save()
-            logger.info("Image Count Reset")
+    def reset_all_view_count(self, on_progress=None) -> None:
+        """Reset view count for all images."""
+        logger.info("Resetting All Image Counts")
+        images = list(Image.objects.all())
+        total = len(images)
+        for i, image in enumerate(images):
+            image.view_count = 0
+            image.save()
+            if on_progress and total:
+                on_progress(int((i + 1) / total * 100))
+        logger.info("Image Count Reset")

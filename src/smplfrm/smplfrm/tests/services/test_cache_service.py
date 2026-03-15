@@ -17,34 +17,31 @@ class TestImageService(TestCase):
         self.service.delete(self.cache_key)
         self.assertIsNone(self.service.read(self.cache_key))
 
-    @override_settings(SMPL_FRM_IMAGE_CACHE_TIMEOUT=1)
     def test_configurable_cache_timeout(self):
-        self.service.upsert(self.cache_key, self.cache_data)
+        from smplfrm.models import Config
+
+        config = Config.objects.create(image_cache_timeout=1)
+        service = CacheService()
+        service.upsert(self.cache_key, self.cache_data)
         from time import sleep
 
         sleep(2)
-        self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
+        self.assertIsNone(service.read(self.cache_key), self.cache_data)
 
-    def test_clear_cache_forced(self):
-        self.service.upsert(self.cache_key, self.cache_data)
-        self.service.clear(force=True)
-        self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
+    def test_upsert_uses_config_timeout(self):
+        """Test that upsert reads timeout from Config model."""
+        from smplfrm.models import Config
 
-    def test_clear_cache_protected(self):
-        """
-        Neither SMPL_FRM_CLEAR_CACHE_ON_BOOT or force
-        is set to true so cache is not cleared
-        :return:
-        """
+        Config.objects.create(image_cache_timeout=600)
+        service = CacheService()
+        service.upsert(self.cache_key, self.cache_data)
+        # Data should still be present (600s timeout)
+        self.assertEqual(service.read(self.cache_key), self.cache_data)
+
+    def test_clear_cache(self):
         self.service.upsert(self.cache_key, self.cache_data)
         self.service.clear()
-        self.assertIsNotNone(self.service.read(self.cache_key), self.cache_data)
-
-    @override_settings(SMPL_FRM_CLEAR_CACHE_ON_BOOT=True)
-    def test_clear_cache_env_var(self):
-        self.service.upsert(self.cache_key, self.cache_data)
-        self.service.clear(force=True)
-        self.assertIsNone(self.service.read(self.cache_key), self.cache_data)
+        self.assertIsNone(self.service.read(self.cache_key))
 
     def test_image_cache_key(self):
         ext_id = "foo"
@@ -74,3 +71,9 @@ class TestImageService(TestCase):
 
         cache_key = self.service.get_image_cache_key(ext_id, height, width)
         self.assertEqual(f"{ext_id}:zoom_to_fill:{height}:{width}", cache_key)
+
+    def test_clear_cache_accepts_progress_callback(self):
+        """Test that clear works with on_progress callback."""
+        self.service.upsert(self.cache_key, self.cache_data)
+        self.service.clear(on_progress=lambda pct: None)
+        self.assertIsNone(self.service.read(self.cache_key))

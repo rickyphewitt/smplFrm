@@ -9,4 +9,12 @@ class ImageSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Image
-        fields = ["id", "name", "file_path", "file_name", "created", "updated"]
+        fields = [
+            "id",
+            "name",
+            "file_path",
+            "file_name",
+            "created",
+            "updated",
+            "view_count",
+        ]
