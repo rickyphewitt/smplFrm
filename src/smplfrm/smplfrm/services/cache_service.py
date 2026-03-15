@@ -10,8 +10,11 @@ logger = logging.getLogger(__name__)
 class CacheService:
     """Service for managing cache operations."""
 
+    from smplfrm.services import ConfigService
+
     def __init__(self) -> None:
         self.cache = cache
+        self.config = ConfigService().load_config()
 
     def upsert(
         self, cache_key: str, cache_data: Any, expires: Optional[int] = None
@@ -24,7 +27,7 @@ class CacheService:
             expires: Expiration time in seconds, defaults to SMPL_FRM_IMAGE_CACHE_TIMEOUT
         """
         if expires is None:
-            expires = settings.SMPL_FRM_IMAGE_CACHE_TIMEOUT
+            expires = self.config.image_cache_timeout
         self.cache.set(key=cache_key, value=cache_data, timeout=expires)
 
     def read(self, cache_key: str) -> Any:

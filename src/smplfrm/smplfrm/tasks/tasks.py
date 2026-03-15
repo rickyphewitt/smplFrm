@@ -43,7 +43,7 @@ def _run_with_task_tracking(task_id: str, fn):
 
 
 @signals.worker_ready.connect
-@app.task
+@app.task(name="scan_library")
 def scan_library(task_id=None, **kwargs):
     _run_with_task_tracking(task_id, LibraryService().scan)
 

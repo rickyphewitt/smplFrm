@@ -11,7 +11,7 @@ from smplfrm.views.serializers.v1.task_serializer import TaskSerializer
 logger = logging.getLogger(__name__)
 
 TASK_DISPATCH = {
-    Task.TaskType.RESCAN_LIBRARY: "smplfrm.tasks.tasks.scan_library",
+    Task.TaskType.RESCAN_LIBRARY: "scan_library",
     Task.TaskType.RESET_IMAGE_COUNT: "reset_image_count",
     Task.TaskType.CLEAR_CACHE: "clear_cache",
 }
