@@ -40,11 +40,11 @@ inclusion: always
 - Include setup and deployment instructions
 
 ## Wiki Maintenance
-- The project wiki lives in the sibling `smplFrm.wiki` repository (GitHub wiki)
-- When user-facing functionality is added or changed, update the relevant wiki page
+- The project wiki lives in the `docs/` folder and is synced to the GitHub wiki on push to main
+- When user-facing functionality is added or changed, update the relevant wiki page in `docs/`
 - Wiki pages to keep in sync:
   - `Settings.md` — documents the settings modal tabs (Display, Images, Library, About)
-- Add screenshots to `images/` when UI changes are significant
+- Add screenshots to `docs/images/` when UI changes are significant
 - Update `Home.md` links when new pages are added
 
 ## Version Control Integration
