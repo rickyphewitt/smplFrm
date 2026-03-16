@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.db.models import ObjectDoesNotExist
 
+from smplfrm.models import Image
 from smplfrm.services import ImageService
 
 
@@ -111,28 +112,61 @@ class TestImageService(TestCase):
         self.assertEqual(image1.view_count, 0)
         self.assertEqual(image2.view_count, 0)
 
-    def test_reset_all_view_count_reports_progress(self):
-        """Test that reset_all_view_count calls on_progress per image."""
+    def test_reset_all_view_count_calls_reporting_methods(self):
+        """Test that reset calls initiate_task, report_task, and complete_task."""
+        from unittest.mock import patch, call
+
         self.image_service.create(self.full_image_data)
         self.image_service.create(
             {"name": "bar", "file_path": "/other/", "file_name": "bar.jpg"}
         )
 
-        progress_values = []
-        self.image_service.reset_all_view_count(
-            on_progress=lambda pct: progress_values.append(pct)
-        )
+        with patch.object(
+            self.image_service, "initiate_task"
+        ) as mock_init, patch.object(
+            self.image_service, "report_task"
+        ) as mock_report, patch.object(
+            self.image_service, "complete_task"
+        ) as mock_complete:
+            self.image_service.reset_all_view_count(task_id="test-id")
 
-        self.assertEqual(len(progress_values), 2)
-        self.assertEqual(progress_values[0], 50)
-        self.assertEqual(progress_values[1], 100)
+            mock_init.assert_called_once_with("test-id", 2)
+            self.assertEqual(mock_report.call_count, 2)
+            mock_report.assert_has_calls([call(1), call(2)])
+            mock_complete.assert_called_once()
 
-    def test_reset_all_view_count_works_without_callback(self):
-        """Test that reset_all_view_count works when on_progress is None."""
-        image = self.image_service.create(self.full_image_data)
-        self.image_service.increment_view_count(image)
+    def test_reset_all_view_count_starts_task(self):
+        """Test that task status is running during reset execution."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
 
-        self.image_service.reset_all_view_count()
+        task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
+        self.image_service.create(self.full_image_data)
 
-        image.refresh_from_db()
-        self.assertEqual(image.view_count, 0)
+        statuses = []
+        with patch.object(
+            self.image_service,
+            "report_task",
+            side_effect=lambda p: statuses.append(
+                Task.objects.get(external_id=task.external_id).status
+            ),
+        ):
+            self.image_service.reset_all_view_count(task_id=task.external_id)
+
+        self.assertTrue(all(s == "running" for s in statuses))
+
+    def test_reset_all_view_count_marks_failed_on_error(self):
+        """Test that task is marked failed when reset encounters an error."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
+        self.image_service.create(self.full_image_data)
+
+        with patch.object(Image, "save", side_effect=RuntimeError("save failed")):
+            with self.assertRaises(RuntimeError):
+                self.image_service.reset_all_view_count(task_id=task.external_id)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, "failed")
+        self.assertEqual(task.error, "save failed")

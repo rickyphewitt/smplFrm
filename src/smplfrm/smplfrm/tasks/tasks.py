@@ -45,13 +45,13 @@ def _run_with_task_tracking(task_id: str, fn):
 @signals.worker_ready.connect
 @app.task(name="scan_library")
 def scan_library(task_id=None, **kwargs):
-    _run_with_task_tracking(task_id, LibraryService().scan)
+    LibraryService().scan(task_id=task_id)
 
 
 @signals.worker_ready.connect
 @app.task(name="reset_image_count")
 def reset_image_counts(task_id=None, **kwargs):
-    _run_with_task_tracking(task_id, ImageService().reset_all_view_count)
+    ImageService().reset_all_view_count(task_id=task_id)
 
 
 @signals.worker_ready.connect
@@ -63,7 +63,7 @@ def refresh_weather(**kwargs):
 @signals.worker_ready.connect
 @app.task(name="clear_cache")
 def clear_cache(task_id=None, **kwargs):
-    _run_with_task_tracking(task_id, CacheService().clear)
+    CacheService().clear(task_id=task_id)
 
 
 def cache_images(images_ext_ids: list, height: str, width: str):

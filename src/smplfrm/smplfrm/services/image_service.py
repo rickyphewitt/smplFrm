@@ -6,11 +6,17 @@ from smplfrm.models import Image
 
 from .base_service import BaseService
 
+from smplfrm.services.task_reporting_service import TaskReportingService
+from smplfrm.models.task import TaskType
+
 logger = logging.getLogger(__name__)
 
 
-class ImageService(BaseService):
+class ImageService(BaseService, TaskReportingService):
     """Service for managing image records and view tracking."""
+
+    def __init__(self):
+        TaskReportingService.__init__(self, task_type=TaskType.RESET_IMAGE_COUNT)
 
     def create(self, data: Dict[str, Any]) -> Image:
         """Create a new image record.
@@ -130,14 +136,18 @@ class ImageService(BaseService):
             logger.error(f"Failed to load next image: {e}")
             return None
 
-    def reset_all_view_count(self, on_progress=None) -> None:
+    def reset_all_view_count(self, task_id=None) -> None:
         """Reset view count for all images."""
         logger.info("Resetting All Image Counts")
         images = list(Image.objects.all())
-        total = len(images)
-        for i, image in enumerate(images):
-            image.view_count = 0
-            image.save()
-            if on_progress and total:
-                on_progress(int((i + 1) / total * 100))
+        self.initiate_task(task_id, len(images))
+        try:
+            for i, image in enumerate(images):
+                image.view_count = 0
+                image.save()
+                self.report_task(i + 1)
+            self.complete_task()
+        except Exception as e:
+            self.fail_task(str(e))
+            raise
         logger.info("Image Count Reset")

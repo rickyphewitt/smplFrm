@@ -72,8 +72,53 @@ class TestImageService(TestCase):
         cache_key = self.service.get_image_cache_key(ext_id, height, width)
         self.assertEqual(f"{ext_id}:zoom_to_fill:{height}:{width}", cache_key)
 
-    def test_clear_cache_accepts_progress_callback(self):
-        """Test that clear works with on_progress callback."""
+    def test_clear_calls_reporting_methods(self):
+        """Test that clear calls initiate_task, report_task, and complete_task."""
+        from unittest.mock import patch, call
+
         self.service.upsert(self.cache_key, self.cache_data)
-        self.service.clear(on_progress=lambda pct: None)
-        self.assertIsNone(self.service.read(self.cache_key))
+
+        with patch.object(self.service, "initiate_task") as mock_init, patch.object(
+            self.service, "report_task"
+        ) as mock_report, patch.object(self.service, "complete_task") as mock_complete:
+            self.service.clear(task_id="test-id")
+
+            mock_init.assert_called_once_with("test-id", 1)
+            mock_report.assert_called_once_with(1)
+            mock_complete.assert_called_once()
+
+    def test_clear_starts_task(self):
+        """Test that task status is running during clear execution."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.CLEAR_CACHE)
+
+        statuses = []
+        with patch.object(
+            self.service,
+            "report_task",
+            side_effect=lambda p: statuses.append(
+                Task.objects.get(external_id=task.external_id).status
+            ),
+        ):
+            self.service.clear(task_id=task.external_id)
+
+        self.assertTrue(all(s == "running" for s in statuses))
+
+    def test_clear_marks_failed_on_error(self):
+        """Test that task is marked failed when clear encounters an error."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.CLEAR_CACHE)
+
+        with patch.object(
+            self.service.cache, "clear", side_effect=RuntimeError("cache error")
+        ):
+            with self.assertRaises(RuntimeError):
+                self.service.clear(task_id=task.external_id)
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, "failed")
+        self.assertEqual(task.error, "cache error")

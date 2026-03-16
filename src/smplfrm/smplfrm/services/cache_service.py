@@ -4,13 +4,17 @@ from typing import Any, Optional
 from django.core.cache import cache
 from django.conf import settings
 
+from smplfrm.services.task_reporting_service import TaskReportingService
+from smplfrm.models.task import TaskType
+
 logger = logging.getLogger(__name__)
 
 
-class CacheService:
+class CacheService(TaskReportingService):
     """Service for managing cache operations."""
 
     def __init__(self) -> None:
+        super().__init__(task_type=TaskType.CLEAR_CACHE)
         self.cache = cache
 
     def _get_cache_timeout(self) -> int:
@@ -51,9 +55,16 @@ class CacheService:
         """
         self.cache.delete(cache_key)
 
-    def clear(self, on_progress=None) -> None:
+    def clear(self, task_id=None) -> None:
         """Clear all cached data."""
-        self.cache.clear()
+        self.initiate_task(task_id, 1)
+        try:
+            self.cache.clear()
+            self.report_task(1)
+            self.complete_task()
+        except Exception as e:
+            self.fail_task(str(e))
+            raise
         logger.info("Cache Cleared")
 
     def get_image_cache_key(self, external_id: str, height: int, width: int) -> str:
