@@ -1,6 +1,7 @@
 import logging
 
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 
@@ -32,7 +33,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         task_type = serializer.validated_data["task_type"]
-        task = self.service.create({"task_type": task_type})
+        try:
+            task = self.service.create({"task_type": task_type})
+        except IntegrityError:
+            return Response(
+                {"detail": f"A {task_type} task is already pending or running."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         from smplfrm.celery import app
 

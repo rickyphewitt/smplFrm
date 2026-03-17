@@ -80,11 +80,61 @@ class TestTaskAPI(TestCase):
         with patch("smplfrm.celery.app") as mock_app:
             self.client.post(
                 "/api/v1/tasks",
-                {"task_type": "rescan_library"},
+                {"task_type": "clear_cache"},
                 format="json",
             )
             mock_app.send_task.assert_called_once()
-            self.assertEqual(mock_app.send_task.call_args[0][0], "scan_library")
+            self.assertEqual(mock_app.send_task.call_args[0][0], "clear_cache")
+
+    def test_create_task_conflict_when_pending(self):
+        """Test that creating a task with same type already pending returns 409."""
+        Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE, status=Task.Status.PENDING
+        )
+        response = self.client.post(
+            "/api/v1/tasks", {"task_type": "clear_cache"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_create_task_conflict_when_running(self):
+        """Test that creating a task with same type already running returns 409."""
+        Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE, status=Task.Status.RUNNING
+        )
+        response = self.client.post(
+            "/api/v1/tasks", {"task_type": "clear_cache"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_create_task_allowed_when_previous_completed(self):
+        """Test that a new task is allowed when previous task of same type completed."""
+        Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE, status=Task.Status.COMPLETED
+        )
+        response = self.client.post(
+            "/api/v1/tasks", {"task_type": "clear_cache"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_task_allowed_when_previous_failed(self):
+        """Test that a new task is allowed when previous task of same type failed."""
+        Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE, status=Task.Status.FAILED
+        )
+        response = self.client.post(
+            "/api/v1/tasks", {"task_type": "clear_cache"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_different_task_type_allowed(self):
+        """Test that a different task type can be created while another is active."""
+        Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE, status=Task.Status.RUNNING
+        )
+        response = self.client.post(
+            "/api/v1/tasks", {"task_type": "reset_image_count"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_all_task_types_dispatch_correctly(self):
         """Test that all task types map to correct Celery task names."""
