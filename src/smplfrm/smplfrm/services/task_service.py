@@ -4,6 +4,7 @@ from typing import Any, Dict
 from django.db.models import QuerySet
 
 from smplfrm.models import Task
+from smplfrm.models.task import Status, TaskType
 
 from .base_service import BaseService
 
@@ -21,7 +22,19 @@ class TaskService(BaseService):
 
         Returns:
             Created Task instance
+
+        Raises:
+            IntegrityError: If a task of the same type is already pending or running
         """
+        from django.db import IntegrityError
+
+        task_type = data.get("task_type")
+        if Task.objects.filter(
+            task_type=task_type, status__in=[Status.PENDING, Status.RUNNING]
+        ).exists():
+            raise IntegrityError(
+                f"A {TaskType(task_type).label} task is already pending or running."
+            )
         return Task.objects.create(**data)
 
     def read(self, ext_id: str, deleted: bool = False) -> Task:
