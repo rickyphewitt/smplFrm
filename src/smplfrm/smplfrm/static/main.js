@@ -348,18 +348,33 @@ async function saveConfig() {
 }
 
 export async function startTask(taskType) {
+    const toast = document.getElementById('task-toast');
+    const bar = document.getElementById('task-toast-bar');
+    const text = document.getElementById('task-toast-text');
     try {
         const response = await fetch(buildApiUrl('tasks'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ task_type: taskType })
         });
+        if (response.status === 409) {
+            const data = await response.json();
+            toast.classList.add('show');
+            bar.style.width = '0%';
+            text.textContent = data.detail || 'Task already running';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+            return null;
+        }
         if (!response.ok) throw new Error('Failed to start task');
         const task = await response.json();
         pollTask(task.id);
         return task;
     } catch (error) {
         console.error('Error starting task:', error);
+        toast.classList.add('show');
+        bar.style.width = '0%';
+        text.textContent = 'Failed to start task';
+        setTimeout(() => toast.classList.remove('show'), 3000);
         return null;
     }
 }
