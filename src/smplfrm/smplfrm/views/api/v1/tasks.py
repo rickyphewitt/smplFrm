@@ -35,9 +35,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         task_type = serializer.validated_data["task_type"]
         try:
             task = self.service.create({"task_type": task_type})
-        except IntegrityError:
+        except IntegrityError as e:
             return Response(
-                {"detail": f"A {task_type} task is already pending or running."},
+                {"detail": str(e)},
                 status=status.HTTP_409_CONFLICT,
             )
 
