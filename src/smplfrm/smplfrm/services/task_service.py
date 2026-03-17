@@ -30,7 +30,9 @@ class TaskService(BaseService):
 
         task_type = data.get("task_type")
         if Task.objects.filter(
-            task_type=task_type, status__in=[Status.PENDING, Status.RUNNING]
+            task_type=task_type,
+            status__in=[Status.PENDING, Status.RUNNING],
+            deleted=False,
         ).exists():
             raise IntegrityError(
                 f"A {TaskType(task_type).label} task is already pending or running."

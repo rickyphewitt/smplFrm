@@ -70,6 +70,7 @@
             <button class="tab-btn active" data-tab="display">Display</button>
             <button class="tab-btn" data-tab="images">Images</button>
             <button class="tab-btn" data-tab="library">Library</button>
+            <button class="tab-btn" data-tab="tasks">Tasks</button>
             <button class="tab-btn" data-tab="about">About</button>
         </div>
         
@@ -159,6 +160,29 @@
                 <div class="setting-item">
                     <label>Rescan Library</label>
                     <button class="btn btn-secondary btn-sm" id="task-rescan-library">Rescan</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab-tasks">
+            <div class="settings-section">
+                <h3>Task History</h3>
+                <table class="task-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Created</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-list-body"></tbody>
+                </table>
+                <div class="task-pagination">
+                    <button class="btn btn-secondary btn-sm" id="task-page-prev" disabled>&laquo; Prev</button>
+                    <span id="task-page-info"></span>
+                    <button class="btn btn-secondary btn-sm" id="task-page-next" disabled>Next &raquo;</button>
                 </div>
             </div>
         </div>

@@ -3,6 +3,7 @@ import logging
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from smplfrm.models import Task
@@ -18,10 +19,15 @@ TASK_DISPATCH = {
 }
 
 
+class TaskPagination(PageNumberPagination):
+    page_size = 5
+
+
 class TaskViewSet(viewsets.ModelViewSet):
 
-    queryset = Task.objects.all()
+    queryset = Task.objects.filter(deleted=False).order_by("-created")
     serializer_class = TaskSerializer
+    pagination_class = TaskPagination
     lookup_field = "external_id"
 
     def __init__(self, **kwargs):
@@ -56,9 +62,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         """Poll task status by external_id."""
         return super().retrieve(request, *args, **kwargs)
 
-    def list(self, request, *args, **kwargs):
-        raise PermissionDenied()
-
     def update(self, request, *args, **kwargs):
         raise PermissionDenied()
 
@@ -66,4 +69,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         raise PermissionDenied()
 
     def destroy(self, request, *args, **kwargs):
-        raise PermissionDenied()
+        """Soft-delete a task. Running tasks will self-cancel on next progress check."""
+        task = self.get_object()
+        task.deleted = True
+        task.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -356,7 +356,30 @@ img {
 }
 
 .tab-content.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+.spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.spinner::after {
+    content: '';
+    width: 32px;
+    height: 32px;
+    border: 3px solid #333;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .settings-section {
@@ -510,6 +533,52 @@ input:checked + .slider:before {
 .error-message.show {
     opacity: 1;
     display: block;
+}
+
+/* Task list table */
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+.task-table th,
+.task-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+    font-size: 14px;
+}
+
+.task-table th {
+    color: #888;
+    font-weight: 500;
+}
+
+.task-table td {
+    color: #ccc;
+}
+
+.task-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.task-delete-btn {
+    padding: 2px 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.task-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.task-pagination span {
+    color: #888;
+    font-size: 13px;
 }
 
 /* Task progress toast */
