@@ -16,32 +16,6 @@ from smplfrm.services.task_service import TaskService
 logger = logging.getLogger(__name__)
 
 
-def _run_with_task_tracking(task_id: str, fn):
-    """Run a function with Task model progress tracking.
-
-    Args:
-        task_id: External ID of the Task record, or None
-        fn: Callable that accepts an optional on_progress callback
-    """
-    if not task_id:
-        fn()
-        return
-
-    service = TaskService()
-    task = service.read(task_id)
-    service.start(task)
-    try:
-
-        def on_progress(pct):
-            service.update_progress(task, pct)
-
-        fn(on_progress=on_progress)
-        service.complete(task)
-    except Exception as e:
-        service.fail(task, str(e))
-        raise
-
-
 @signals.worker_ready.connect
 @app.task(name="scan_library")
 def scan_library(task_id=None, **kwargs):
@@ -64,6 +38,11 @@ def refresh_weather(**kwargs):
 @app.task(name="clear_cache")
 def clear_cache(task_id=None, **kwargs):
     CacheService().clear(task_id=task_id)
+
+
+@shared_task(name="clear_old_tasks")
+def clear_old_tasks():
+    TaskService().clear_old_tasks()
 
 
 def cache_images(images_ext_ids: list, height: str, width: str):

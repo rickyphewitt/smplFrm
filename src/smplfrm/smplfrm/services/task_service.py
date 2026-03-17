@@ -136,3 +136,13 @@ class TaskService(BaseService):
         """
         task.progress = min(progress, 100)
         return self.update(task)
+
+    def clear_old_tasks(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        task_age = timezone.now() - timedelta(days=7)
+        tasks_to_delete = Task.objects.filter(created__lt=task_age)
+        logger.info(f"Deleting old: {tasks_to_delete.count()} tasks.")
+        tasks_to_delete.delete()

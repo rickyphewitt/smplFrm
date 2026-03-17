@@ -38,6 +38,8 @@ The Tasks tab displays a history of background tasks. Each row shows the task ty
 | Created  | Date and time the task was created.                    |
 | Delete   | Delete a task.                                         |
 
-Each row includes a delete button (×) that the task. If the task is currently running, it will self-cancel on its next progress check.
+Each row includes a delete button (×) that deletes the task. If the task is currently running, it will self-cancel on its next progress check.
 
 Only one task of each type can be pending or running at a time. Attempting to start a duplicate will show an error in the toast.
+
+Tasks that were created more than 7 days ago will be deleted. 
