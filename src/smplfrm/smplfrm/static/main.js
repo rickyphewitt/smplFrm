@@ -409,6 +409,41 @@ function pollTask(taskId) {
     }, 1000);
 }
 
+let taskPage = 1;
+
+export async function loadTasks(page = 1) {
+    taskPage = page;
+    const body = document.getElementById('task-list-body');
+    const prev = document.getElementById('task-page-prev');
+    const next = document.getElementById('task-page-next');
+    const info = document.getElementById('task-page-info');
+
+    try {
+        const response = await fetch(buildApiUrl(`tasks?page=${page}`));
+        if (!response.ok) throw new Error('Failed to load tasks');
+        const data = await response.json();
+
+        body.innerHTML = data.results.map(t => {
+            const created = new Date(t.created).toLocaleString();
+            return `<tr data-id="${t.id}"><td>${t.task_type_label}</td><td>${t.status}</td><td>${t.progress}%</td><td>${created}</td><td><button class="btn btn-secondary btn-sm task-delete-btn" data-id="${t.id}">&times;</button></td></tr>`;
+        }).join('');
+
+        body.querySelectorAll('.task-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await fetch(buildApiUrl(`tasks/${btn.dataset.id}`), { method: 'DELETE' });
+                loadTasks(taskPage);
+            });
+        });
+
+        const totalPages = Math.ceil(data.count / 5) || 1;
+        info.textContent = `Page ${page} of ${totalPages}`;
+        prev.disabled = !data.previous;
+        next.disabled = !data.next;
+    } catch {
+        body.innerHTML = '<tr><td colspan="5">Failed to load tasks</td></tr>';
+    }
+}
+
 function initSettingsModal() {
     const modal = document.getElementById('settings-modal');
     const logoIcon = document.getElementById('logo-icon');
@@ -417,13 +452,22 @@ function initSettingsModal() {
     const saveBtn = document.getElementById('save-settings');
     const tabBtns = document.querySelectorAll('.tab-btn');
 
-    logoIcon.addEventListener('click', () => {
+    logoIcon.addEventListener('click', async () => {
         modal.classList.add('open');
         modal.dataset.changesSaved = 'false';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.classList.remove('btn-primary');
         cancelBtn.classList.add('btn-secondary');
-        loadConfig();
+
+        const activeTab = document.querySelector('.tab-content.active');
+        const sections = activeTab.querySelectorAll('.settings-section');
+        sections.forEach(s => s.style.display = 'none');
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner';
+        activeTab.appendChild(spinner);
+        await loadConfig();
+        spinner.remove();
+        sections.forEach(s => s.style.display = '');
     });
 
     const closeModal = () => {
@@ -451,7 +495,7 @@ function initSettingsModal() {
     });
 
     tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const tabName = btn.dataset.tab;
             
             tabBtns.forEach(b => b.classList.remove('active'));
@@ -461,12 +505,28 @@ function initSettingsModal() {
                 content.classList.remove('active');
             });
             document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'tasks') {
+                const taskTab = document.getElementById('tab-tasks');
+                const sections = taskTab.querySelectorAll('.settings-section, .task-pagination');
+                sections.forEach(s => s.style.display = 'none');
+                const spinner = document.createElement('div');
+                spinner.className = 'spinner';
+                taskTab.appendChild(spinner);
+                await loadTasks();
+                spinner.remove();
+                sections.forEach(s => s.style.display = '');
+            }
         });
     });
 
     saveBtn.addEventListener('click', async () => {
         await saveConfig();
     });
+
+    // Task pagination buttons
+    document.getElementById('task-page-prev').addEventListener('click', () => loadTasks(taskPage - 1));
+    document.getElementById('task-page-next').addEventListener('click', () => loadTasks(taskPage + 1));
 
     // Library maintenance buttons
     document.getElementById('task-reset-count').addEventListener('click', () => {

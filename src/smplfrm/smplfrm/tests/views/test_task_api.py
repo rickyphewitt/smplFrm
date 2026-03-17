@@ -28,6 +28,7 @@ class TestTaskAPI(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["task_type"], "clear_cache")
+        self.assertEqual(response.data["task_type_label"], "Clear Cache")
         self.assertEqual(response.data["status"], "pending")
         self.assertEqual(response.data["progress"], 0)
 
@@ -51,10 +52,52 @@ class TestTaskAPI(TestCase):
         self.assertEqual(response.data["status"], "running")
         self.assertEqual(response.data["progress"], 50)
 
-    def test_list_tasks_forbidden(self):
-        """Test that listing tasks is forbidden."""
+    def test_list_tasks(self):
+        """Test listing tasks returns non-deleted tasks."""
         response = self.client.get("/api/v1/tasks")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = [t["id"] for t in response.data["results"]]
+        self.assertIn(self.task.external_id, ids)
+
+    def test_list_tasks_excludes_deleted(self):
+        """Test that soft-deleted tasks are excluded from listing."""
+        deleted_task = Task.objects.create(
+            task_type=Task.TaskType.CLEAR_CACHE,
+            status=Task.Status.COMPLETED,
+            deleted=True,
+        )
+        response = self.client.get("/api/v1/tasks")
+        ids = [t["id"] for t in response.data["results"]]
+        self.assertNotIn(deleted_task.external_id, ids)
+        self.assertIn(self.task.external_id, ids)
+
+    def test_list_tasks_pagination_forward_and_backward(self):
+        """Test pagination navigates forward and backward."""
+        # Page size is 5; setUp already created 1 task, add 5 more for 6 total
+        for i in range(5):
+            Task.objects.create(
+                task_type=Task.TaskType.CLEAR_CACHE,
+                status=Task.Status.COMPLETED,
+            )
+
+        # Page 1
+        response = self.client.get("/api/v1/tasks")
+        self.assertEqual(response.data["count"], 6)
+        self.assertEqual(len(response.data["results"]), 5)
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+
+        # Page 2 (forward)
+        response = self.client.get("/api/v1/tasks?page=2")
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNotNone(response.data["previous"])
+
+        # Back to page 1 (backward)
+        response = self.client.get("/api/v1/tasks?page=1")
+        self.assertEqual(len(response.data["results"]), 5)
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
 
     def test_put_task_forbidden(self):
         """Test that PUT is forbidden."""
@@ -68,10 +111,25 @@ class TestTaskAPI(TestCase):
         response = self.client.patch(self.url, {"progress": 75}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_delete_task_forbidden(self):
-        """Test that DELETE is forbidden."""
+    def test_delete_task_soft_deletes(self):
+        """Test that DELETE soft-deletes the task."""
         response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.task.refresh_from_db()
+        self.assertTrue(self.task.deleted)
+
+    def test_delete_task_excluded_from_list(self):
+        """Test that a deleted task no longer appears in list."""
+        self.client.delete(self.url)
+        response = self.client.get("/api/v1/tasks")
+        ids = [t["id"] for t in response.data["results"]]
+        self.assertNotIn(self.task.external_id, ids)
+
+    def test_delete_task_not_found_after_delete(self):
+        """Test that GET returns 404 after soft-delete."""
+        self.client.delete(self.url)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_create_task_dispatches_correct_celery_name(self):
         """Test that task creation sends the correct Celery task name."""

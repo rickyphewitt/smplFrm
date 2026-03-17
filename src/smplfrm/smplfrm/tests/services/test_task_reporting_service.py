@@ -66,3 +66,14 @@ class TestTaskReportingService(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.progress, 100)
         self.assertEqual(task.status, Status.COMPLETED)
+
+    def test_report_task_raises_when_task_deleted(self):
+        """Test report_task raises DoesNotExist when task is soft-deleted."""
+        task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
+        self.service.initiate_task(task.external_id, 10)
+
+        task.deleted = True
+        task.save()
+
+        with self.assertRaises(Task.DoesNotExist):
+            self.service.report_task(5)
