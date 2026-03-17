@@ -14,6 +14,8 @@ import logging
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -198,6 +200,13 @@ CACHES = {
 CELERY_BROKER_URL = f"redis://{REDIS_HOST}:6379/0"
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:6379/0"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers.DatabaseScheduler"
+CELERY_BEAT_SCHEDULE = {
+    "clear-old-tasks": {
+        "task": "clear_old_tasks",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
+
 
 # Logging configuration
 LOGGING = {

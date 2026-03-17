@@ -86,3 +86,46 @@ class TestTaskService(TestCase):
         """Test that destroy raises NotImplementedError."""
         with self.assertRaises(NotImplementedError):
             self.service.destroy(self.task.external_id)
+
+    def test_clear_old_tasks_deletes_tasks_older_than_7_days(self):
+        """Test that tasks older than 7 days are deleted."""
+        from unittest.mock import patch
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        old_time = timezone.now() - timedelta(days=8)
+        with patch("django.utils.timezone.now", return_value=old_time):
+            old_task = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
+
+        self.service.clear_old_tasks()
+
+        self.assertFalse(Task.objects.filter(pk=old_task.pk).exists())
+
+    def test_clear_old_tasks_keeps_recent_tasks(self):
+        """Test that tasks newer than 7 days are kept."""
+        recent_task = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
+
+        self.service.clear_old_tasks()
+
+        self.assertTrue(Task.objects.filter(pk=recent_task.pk).exists())
+        # setUp task should also still exist
+        self.assertTrue(Task.objects.filter(pk=self.task.pk).exists())
+
+    def test_clear_old_tasks_deletes_only_old(self):
+        """Test that only old tasks are deleted, recent ones remain."""
+        from unittest.mock import patch
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        old_time = timezone.now() - timedelta(days=8)
+        with patch("django.utils.timezone.now", return_value=old_time):
+            old_task = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
+
+        recent_task = Task.objects.create(task_type=Task.TaskType.RESET_IMAGE_COUNT)
+
+        self.service.clear_old_tasks()
+
+        self.assertFalse(Task.objects.filter(pk=old_task.pk).exists())
+        self.assertTrue(Task.objects.filter(pk=recent_task.pk).exists())
