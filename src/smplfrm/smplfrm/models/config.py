@@ -6,6 +6,9 @@ from smplfrm.models.base import ModelBase
 class Config(ModelBase):
     """User configuration settings for smplFrm."""
 
+    name = models.CharField(max_length=100, unique=True)
+    is_active = models.BooleanField(default=False)
+
     # Display Elements
     display_date = models.BooleanField(default=True)
     display_clock = models.BooleanField(default=True)
@@ -32,3 +35,10 @@ class Config(ModelBase):
 
     class Meta:
         db_table = "config"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_active"],
+                condition=models.Q(is_active=True),
+                name="unique_active_config",
+            ),
+        ]

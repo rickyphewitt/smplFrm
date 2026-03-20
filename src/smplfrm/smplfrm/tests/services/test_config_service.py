@@ -11,19 +11,35 @@ class TestConfigService(TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
             display_date=True,
             display_clock=True,
             image_refresh_interval=30000,
         )
 
-    def test_get_active_returns_first_config(self):
-        """Test get_active returns the first non-deleted config."""
+    def test_get_active_returns_active_config(self):
+        """Test get_active returns the active config."""
         service = ConfigService()
         active, created = service.get_active()
 
         self.assertEqual(active.external_id, self.config.external_id)
-        self.assertTrue(active.display_date)
+        self.assertTrue(active.is_active)
         self.assertFalse(created)
+
+    def test_get_active_ignores_inactive(self):
+        """Test get_active ignores inactive configs."""
+        self.config.is_active = False
+        self.config.name = "inactive config"
+        self.config.save()
+
+        service = ConfigService()
+        active, created = service.get_active()
+
+        self.assertNotEqual(active.external_id, self.config.external_id)
+        self.assertTrue(active.is_active)
+        self.assertEqual(active.name, "smplFrm Default")
+        self.assertTrue(created)
 
     def test_get_active_creates_if_none_exist(self):
         """Test get_active creates a config if none exist."""
@@ -33,20 +49,9 @@ class TestConfigService(TestCase):
         active, created = service.get_active()
 
         self.assertIsNotNone(active)
+        self.assertTrue(active.is_active)
+        self.assertEqual(active.name, "smplFrm Default")
         self.assertEqual(Config.objects.count(), 1)
-        self.assertTrue(created)
-
-    def test_get_active_ignores_deleted(self):
-        """Test get_active ignores soft-deleted configs."""
-        self.config.deleted = True
-        self.config.save()
-
-        service = ConfigService()
-        active, created = service.get_active()
-
-        # Should create a new one since existing is deleted
-        self.assertNotEqual(active.external_id, self.config.external_id)
-        self.assertFalse(active.deleted)
         self.assertTrue(created)
 
     @patch("smplfrm.services.config_service.SMPL_FRM_DISPLAY_DATE", False)
@@ -60,7 +65,6 @@ class TestConfigService(TestCase):
         service = ConfigService()
         config = service.load_config()
 
-        # Should use environment variable values, not defaults
         self.assertFalse(config.display_date)
         self.assertFalse(config.display_clock)
         self.assertEqual(config.image_refresh_interval, 60000)
@@ -68,7 +72,6 @@ class TestConfigService(TestCase):
 
     def test_load_config_preserves_existing_config(self):
         """Test that existing config is not overridden by environment variables."""
-        # Set config to non-default values
         self.config.display_date = False
         self.config.image_refresh_interval = 45000
         self.config.save()
@@ -76,7 +79,6 @@ class TestConfigService(TestCase):
         service = ConfigService()
         config = service.load_config()
 
-        # Should preserve existing values
         self.assertFalse(config.display_date)
         self.assertEqual(config.image_refresh_interval, 45000)
 
@@ -99,7 +101,6 @@ class TestConfigService(TestCase):
         self.assertFalse(updated.display_date)
         self.assertEqual(updated.image_refresh_interval, 60000)
 
-        # Verify persistence
         retrieved = Config.objects.get(external_id=self.config.external_id)
         self.assertFalse(retrieved.display_date)
         self.assertEqual(retrieved.image_refresh_interval, 60000)
