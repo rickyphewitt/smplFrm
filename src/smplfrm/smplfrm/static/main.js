@@ -367,7 +367,7 @@ export async function startTask(taskType) {
         }
         if (!response.ok) throw new Error('Failed to start task');
         const task = await response.json();
-        pollTask(task.id);
+        pollTask(task.id, task.task_type_label);
         return task;
     } catch (error) {
         console.error('Error starting task:', error);
@@ -379,13 +379,13 @@ export async function startTask(taskType) {
     }
 }
 
-function pollTask(taskId) {
+function pollTask(taskId, label) {
     const toast = document.getElementById('task-toast');
     const bar = document.getElementById('task-toast-bar');
     const text = document.getElementById('task-toast-text');
 
     toast.classList.add('show');
-    text.textContent = 'Running...';
+    text.textContent = `${label} 0%`;
     bar.style.width = '0%';
 
     const interval = setInterval(async () => {
@@ -395,11 +395,11 @@ function pollTask(taskId) {
             const task = await response.json();
 
             bar.style.width = `${task.progress}%`;
-            text.textContent = `${task.status === 'running' ? 'Running' : task.status}... ${task.progress}%`;
+            text.textContent = `${label} ${task.progress}%`;
 
             if (task.status === 'completed' || task.status === 'failed') {
                 clearInterval(interval);
-                text.textContent = task.status === 'completed' ? 'Done!' : `Failed: ${task.error}`;
+                text.textContent = task.status === 'completed' ? `${label} Done!` : `${label} Failed: ${task.error}`;
                 setTimeout(() => toast.classList.remove('show'), 3000);
             }
         } catch {
