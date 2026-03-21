@@ -65,6 +65,7 @@ class TestConfig(TestCase):
 
     def test_multiple_inactive_configs_allowed(self):
         """Test that multiple inactive configs are allowed."""
+        before = Config.objects.filter(is_active=False).count()
         Config.objects.create(name="inactive 1", is_active=False)
         Config.objects.create(name="inactive 2", is_active=False)
-        self.assertEqual(Config.objects.filter(is_active=False).count(), 2)
+        self.assertEqual(Config.objects.filter(is_active=False).count(), before + 2)
