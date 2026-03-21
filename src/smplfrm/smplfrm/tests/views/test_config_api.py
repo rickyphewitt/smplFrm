@@ -11,6 +11,7 @@ class TestConfigAPI(TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.client = APIClient()
+        Config.objects.all().delete()
         self.config = Config.objects.create(
             name="smplFrm Default",
             is_active=True,

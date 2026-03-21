@@ -2,7 +2,7 @@ from django.test import TestCase
 from unittest.mock import patch
 
 from smplfrm.models import Config
-from smplfrm.services.config_service import ConfigService
+from smplfrm.services.config_service import ConfigService, PRESET_PREFIX
 
 
 class TestConfigService(TestCase):
@@ -10,6 +10,7 @@ class TestConfigService(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        Config.objects.all().delete()
         self.config = Config.objects.create(
             name="smplFrm Default",
             is_active=True,
@@ -104,3 +105,70 @@ class TestConfigService(TestCase):
         retrieved = Config.objects.get(external_id=self.config.external_id)
         self.assertFalse(retrieved.display_date)
         self.assertEqual(retrieved.image_refresh_interval, 60000)
+
+
+class TestSyncPresets(TestCase):
+    """Test suite for ConfigService.sync_presets()."""
+
+    def setUp(self):
+        self.service = ConfigService()
+
+    def test_sync_presets_creates_all_presets(self):
+        """Test that sync_presets creates all preset configs."""
+        self.service.sync_presets()
+
+        expected = [
+            "smplFrm Default",
+            "smplFrm Info",
+            "smplFrm Media",
+            "smplFrm Minimal",
+        ]
+        names = list(
+            Config.objects.filter(name__startswith=PRESET_PREFIX)
+            .order_by("name")
+            .values_list("name", flat=True)
+        )
+        self.assertEqual(names, expected)
+
+    def test_sync_presets_sets_correct_values(self):
+        """Test that preset field values match JSON definitions."""
+        self.service.sync_presets()
+
+        minimal = Config.objects.get(name="smplFrm Minimal")
+        self.assertFalse(minimal.display_date)
+        self.assertFalse(minimal.display_clock)
+        self.assertFalse(minimal.is_active)
+
+        info = Config.objects.get(name="smplFrm Info")
+        self.assertTrue(info.display_date)
+        self.assertTrue(info.display_clock)
+        self.assertFalse(info.is_active)
+
+    def test_sync_presets_idempotent(self):
+        """Test that running sync_presets twice does not create duplicates."""
+        self.service.sync_presets()
+        count_after_first = Config.objects.filter(
+            name__startswith=PRESET_PREFIX
+        ).count()
+
+        self.service.sync_presets()
+        count_after_second = Config.objects.filter(
+            name__startswith=PRESET_PREFIX
+        ).count()
+
+        self.assertEqual(count_after_first, count_after_second)
+
+    def test_sync_presets_updates_changed_values(self):
+        """Test that sync_presets updates a preset when its DB value differs from JSON."""
+        self.service.sync_presets()
+
+        # Simulate a manual DB change that diverges from the JSON
+        minimal = Config.objects.get(name="smplFrm Minimal")
+        minimal.display_date = True
+        minimal.save()
+
+        # Re-sync should restore the JSON value
+        self.service.sync_presets()
+
+        minimal.refresh_from_db()
+        self.assertFalse(minimal.display_date)

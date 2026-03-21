@@ -1,4 +1,6 @@
+import json
 import logging
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from django.db.models import QuerySet
@@ -17,6 +19,9 @@ from smplfrm.settings import (
 from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
+
+PRESETS_DIR = Path(__file__).resolve().parent.parent / "presets"
+PRESET_PREFIX = "smplFrm "
 
 
 class ConfigService(BaseService):
@@ -74,8 +79,12 @@ class ConfigService(BaseService):
         config = Config.objects.filter(is_active=True).first()
         created = False
         if not config:
-            config = Config.objects.create(name="smplFrm Default", is_active=True)
-            created = True
+            config, created = Config.objects.get_or_create(
+                name="smplFrm Default", defaults={"is_active": True}
+            )
+            if not created:
+                config.is_active = True
+                config.save()
         logger.debug(f"Active config: {config.external_id}")
         return config, created
 
@@ -101,3 +110,28 @@ class ConfigService(BaseService):
             config = self.update(config)
 
         return config
+
+    def sync_presets(self) -> None:
+        """Sync preset JSON files to the database.
+
+        Reads all JSON files from the presets directory, creates or updates
+        Config rows with the smplFrm prefix. Idempotent — safe to call on
+        every startup.
+        """
+        for path in sorted(PRESETS_DIR.glob("*.json")):
+            data = json.loads(path.read_text())
+            name = f"{PRESET_PREFIX}{data.pop('name')}"
+            config, created = Config.objects.get_or_create(
+                name=name, defaults={**data, "is_active": False}
+            )
+            if not created:
+                updated = False
+                for field, value in data.items():
+                    if getattr(config, field) != value:
+                        setattr(config, field, value)
+                        updated = True
+                if updated:
+                    config.save()
+                    logger.info(f"Updated preset: {name}")
+            else:
+                logger.info(f"Created preset: {name}")
