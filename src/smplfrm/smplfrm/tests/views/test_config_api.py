@@ -12,6 +12,8 @@ class TestConfigAPI(TestCase):
         """Set up test fixtures."""
         self.client = APIClient()
         self.config = Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
             display_date=True,
             display_clock=True,
             image_refresh_interval=30000,
@@ -25,6 +27,8 @@ class TestConfigAPI(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.config.external_id)
+        self.assertEqual(response.data["name"], "smplFrm Default")
+        self.assertTrue(response.data["is_active"])
         self.assertTrue(response.data["display_date"])
         self.assertTrue(response.data["display_clock"])
         self.assertEqual(response.data["image_refresh_interval"], 30000)
@@ -33,6 +37,7 @@ class TestConfigAPI(TestCase):
     def test_update_config_with_put(self):
         """Test updating a config via API with PUT."""
         update_data = {
+            "name": "smplFrm Default",
             "display_date": False,
             "display_clock": False,
             "image_refresh_interval": 60000,
@@ -55,7 +60,6 @@ class TestConfigAPI(TestCase):
         self.assertEqual(response.data["image_transition_type"], "zoom")
         self.assertEqual(response.data["image_cache_timeout"], 600)
 
-        # Verify persistence
         self.config.refresh_from_db()
         self.assertFalse(self.config.display_date)
         self.assertEqual(self.config.image_refresh_interval, 60000)
@@ -84,9 +88,10 @@ class TestConfigAPI(TestCase):
     def test_update_config_with_invalid_data(self):
         """Test that invalid data returns error."""
         update_data = {
+            "name": "smplFrm Default",
             "display_date": False,
             "display_clock": False,
-            "image_refresh_interval": -1,  # Invalid: negative value
+            "image_refresh_interval": -1,
             "image_transition_interval": 5000,
             "image_zoom_effect": False,
             "image_transition_type": "zoom",
@@ -97,7 +102,6 @@ class TestConfigAPI(TestCase):
             self.url, update_data, content_type="application/json"
         )
 
-        # Should return 400 for invalid data
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
 
     def test_delete_config_forbidden(self):

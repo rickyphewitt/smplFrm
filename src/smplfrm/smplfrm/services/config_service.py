@@ -71,10 +71,10 @@ class ConfigService(BaseService):
         Returns:
             Tuple of (Config instance, created flag)
         """
-        config = Config.objects.filter(deleted=False).first()
+        config = Config.objects.filter(is_active=True).first()
         created = False
         if not config:
-            config = Config.objects.create()
+            config = Config.objects.create(name="smplFrm Default", is_active=True)
             created = True
         logger.debug(f"Active config: {config.external_id}")
         return config, created

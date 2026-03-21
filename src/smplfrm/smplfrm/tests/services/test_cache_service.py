@@ -20,7 +20,16 @@ class TestImageService(TestCase):
     def test_configurable_cache_timeout(self):
         from smplfrm.models import Config
 
-        config = Config.objects.create(image_cache_timeout=1)
+        config = None
+        # get or create an active config
+        configs = Config.objects.filter(is_active=True)
+        if len(configs) > 0:
+            config = configs[0]
+            config.image_cache_timeout = 1
+            config.save()
+        else:
+            config = Config.objects.create(image_cache_timeout=1, is_active=True)
+
         service = CacheService()
         service.upsert(self.cache_key, self.cache_data)
         from time import sleep
