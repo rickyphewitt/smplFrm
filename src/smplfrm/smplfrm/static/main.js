@@ -282,6 +282,7 @@ async function loadConfig() {
         
         const config = await response.json();
         
+        modal.dataset.configName = config.name;
         document.getElementById('setting-date').checked = config.display_date;
         document.getElementById('setting-clock').checked = config.display_clock;
         document.getElementById('setting-refresh').value = config.image_refresh_interval;
@@ -301,6 +302,7 @@ async function saveConfig() {
     const cancelBtn = document.getElementById('cancel-settings');
     
     const configData = {
+        name: modal.dataset.configName,
         display_date: document.getElementById('setting-date').checked,
         display_clock: document.getElementById('setting-clock').checked,
         image_refresh_interval: parseInt(document.getElementById('setting-refresh').value),
