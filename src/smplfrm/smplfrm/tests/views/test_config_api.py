@@ -81,10 +81,18 @@ class TestConfigAPI(TestCase):
         response = self.client.post("/api/v1/configs", {}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_list_config_forbidden(self):
-        """Test that listing configs via API is forbidden."""
+    def test_list_configs(self):
+        """Test listing configs returns paginated results, system-managed first."""
+        Config.objects.create(name="custom-20260101", is_active=False)
+        Config.objects.create(name="smplFrm Minimal", is_active=False)
+
         response = self.client.get("/api/v1/configs")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data["results"]]
+        # system-managed should come first
+        smpl_names = [n for n in names if n.startswith("smplFrm")]
+        custom_names = [n for n in names if not n.startswith("smplFrm")]
+        self.assertEqual(names, smpl_names + custom_names)
 
     def test_update_config_with_invalid_data(self):
         """Test that invalid data returns error."""
@@ -109,3 +117,59 @@ class TestConfigAPI(TestCase):
         """Test that deleting config via API is forbidden."""
         response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_apply_preset_creates_custom_copy(self):
+        """Test applying a preset when active config is system-managed."""
+        preset = Config.objects.create(
+            name="smplFrm Minimal",
+            is_active=False,
+            display_date=False,
+            display_clock=False,
+        )
+
+        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["name"].startswith("custom-"))
+        self.assertTrue(response.data["is_active"])
+        self.assertFalse(response.data["display_date"])
+        self.assertFalse(response.data["display_clock"])
+
+        # Original preset should be untouched
+        preset.refresh_from_db()
+        self.assertFalse(preset.is_active)
+
+        # Old active config should be deactivated
+        self.config.refresh_from_db()
+        self.assertFalse(self.config.is_active)
+
+    def test_apply_preset_returns_400_when_active_is_custom(self):
+        """Test that apply returns 400 when active config is already custom."""
+        self.config.name = "custom-20260101"
+        self.config.save()
+
+        preset = Config.objects.create(
+            name="smplFrm Minimal",
+            is_active=False,
+            display_date=False,
+            display_clock=False,
+        )
+
+        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_apply_preset_config_limit(self):
+        """Test that applying returns 400 when config limit is exceeded."""
+        from smplfrm.services.config_service import CONFIG_LIMIT
+
+        # Create configs up to the limit (self.config is 1 already)
+        for i in range(CONFIG_LIMIT - 1):
+            Config.objects.create(name=f"config-{i}", is_active=False)
+
+        preset = Config.objects.create(
+            name="smplFrm Minimal",
+            is_active=False,
+        )
+        # Now at CONFIG_LIMIT + 1 (including preset), but non-deleted count matters
+        # self.config (active, system-managed) + CONFIG_LIMIT-1 + preset = CONFIG_LIMIT + 1
+        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

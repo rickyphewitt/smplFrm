@@ -1,9 +1,10 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from django.db.models import QuerySet
+from django.db.models import Case, When, Value, IntegerField, QuerySet
 
 from smplfrm.models import Config
 from smplfrm.settings import (
@@ -22,6 +23,18 @@ logger = logging.getLogger(__name__)
 
 PRESETS_DIR = Path(__file__).resolve().parent.parent / "presets"
 PRESET_PREFIX = "smplFrm "
+CONFIG_LIMIT = 10
+
+# Fields to copy when applying a preset
+_PRESET_FIELDS = [
+    "display_date",
+    "display_clock",
+    "image_refresh_interval",
+    "image_transition_interval",
+    "image_zoom_effect",
+    "image_transition_type",
+    "image_cache_timeout",
+]
 
 
 class ConfigService(BaseService):
@@ -44,8 +57,18 @@ class ConfigService(BaseService):
         return Config.objects.get(external_id=ext_id, deleted=deleted)
 
     def list(self, **kwargs) -> QuerySet:
-        """Not supported for Config."""
-        raise NotImplementedError("Config listing not supported")
+        """Return all non-deleted configs, system-managed first."""
+        return (
+            Config.objects.filter(deleted=False)
+            .annotate(
+                sort_order=Case(
+                    When(name__startswith=PRESET_PREFIX, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("sort_order", "name")
+        )
 
     def update(self, config: Config) -> Config:
         """Update an existing Config record.
@@ -135,3 +158,41 @@ class ConfigService(BaseService):
                     logger.info(f"Updated preset: {name}")
             else:
                 logger.info(f"Created preset: {name}")
+
+    def apply_preset(self, ext_id: str) -> Config:
+        """Apply a preset by creating a custom copy.
+
+        Only valid when the active config is system-managed. Creates a new
+        custom config with the preset's field values.
+
+        Args:
+            ext_id: External ID of the preset to apply
+
+        Returns:
+            The new active Config instance
+
+        Raises:
+            ValueError: If applying would exceed CONFIG_LIMIT or active config
+                        is not system-managed
+        """
+        active, _ = self.get_active()
+
+        if not active.name.startswith(PRESET_PREFIX):
+            raise ValueError("Active config is already custom. Use PUT to update it.")
+
+        if Config.objects.filter(deleted=False).count() >= CONFIG_LIMIT:
+            raise ValueError(
+                f"Config limit of {CONFIG_LIMIT} reached. "
+                "Delete an existing config or select a custom one."
+            )
+
+        source = self.read(ext_id)
+        active.is_active = False
+        active.save()
+
+        name = f"custom-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        new_config = Config(name=name, is_active=True)
+        for field in _PRESET_FIELDS:
+            setattr(new_config, field, getattr(source, field))
+        new_config.save()
+        return new_config

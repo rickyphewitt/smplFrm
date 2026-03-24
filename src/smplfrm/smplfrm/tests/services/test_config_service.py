@@ -2,7 +2,7 @@ from django.test import TestCase
 from unittest.mock import patch
 
 from smplfrm.models import Config
-from smplfrm.services.config_service import ConfigService, PRESET_PREFIX
+from smplfrm.services.config_service import ConfigService, PRESET_PREFIX, CONFIG_LIMIT
 
 
 class TestConfigService(TestCase):
@@ -172,3 +172,79 @@ class TestSyncPresets(TestCase):
 
         minimal.refresh_from_db()
         self.assertFalse(minimal.display_date)
+
+
+class TestConfigList(TestCase):
+    """Test suite for ConfigService.list()."""
+
+    def test_list_returns_system_managed_first(self):
+        """Test that list returns system-managed configs before custom ones."""
+        Config.objects.all().delete()
+        Config.objects.create(name="custom-20260101", is_active=False)
+        Config.objects.create(name="smplFrm Default", is_active=True)
+        Config.objects.create(name="smplFrm Minimal", is_active=False)
+
+        service = ConfigService()
+        configs = list(service.list())
+        names = [c.name for c in configs]
+
+        self.assertEqual(names[0], "smplFrm Default")
+        self.assertEqual(names[1], "smplFrm Minimal")
+        self.assertEqual(names[2], "custom-20260101")
+
+    def test_list_excludes_deleted(self):
+        """Test that list excludes soft-deleted configs."""
+        Config.objects.all().delete()
+        Config.objects.create(name="active", is_active=True)
+        Config.objects.create(name="deleted", is_active=False, deleted=True)
+
+        service = ConfigService()
+        self.assertEqual(service.list().count(), 1)
+
+
+class TestApplyPreset(TestCase):
+    """Test suite for ConfigService.apply_preset()."""
+
+    def setUp(self):
+        Config.objects.all().delete()
+        self.service = ConfigService()
+        self.active = Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
+            display_date=True,
+            display_clock=True,
+        )
+        self.preset = Config.objects.create(
+            name="smplFrm Minimal",
+            is_active=False,
+            display_date=False,
+            display_clock=False,
+        )
+
+    def test_apply_creates_copy_when_active_is_system_managed(self):
+        """Test that applying creates a custom copy when active is system-managed."""
+        result = self.service.apply_preset(self.preset.external_id)
+
+        self.assertTrue(result.name.startswith("custom-"))
+        self.assertTrue(result.is_active)
+        self.assertFalse(result.display_date)
+        self.assertFalse(result.display_clock)
+
+        self.active.refresh_from_db()
+        self.assertFalse(self.active.is_active)
+
+    def test_apply_raises_when_active_is_custom(self):
+        """Test that apply raises ValueError when active config is custom."""
+        self.active.name = "custom-existing"
+        self.active.save()
+
+        with self.assertRaises(ValueError):
+            self.service.apply_preset(self.preset.external_id)
+
+    def test_apply_raises_when_limit_exceeded(self):
+        """Test that apply raises ValueError when config limit is reached."""
+        for i in range(CONFIG_LIMIT - 2):  # -2 for active + preset already created
+            Config.objects.create(name=f"filler-{i}", is_active=False)
+
+        with self.assertRaises(ValueError):
+            self.service.apply_preset(self.preset.external_id)
