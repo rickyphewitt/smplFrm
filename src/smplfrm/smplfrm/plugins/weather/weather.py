@@ -12,6 +12,7 @@ from open_meteo.models import (
     WindSpeedUnit,
 )
 
+from smplfrm.plugins.base import BasePlugin
 from smplfrm.settings import (
     SMPL_FRM_WEATHER_COORDS,
     SMPL_FRM_TIMEZONE,
@@ -23,8 +24,19 @@ from smplfrm.settings import (
 logger = logging.getLogger(__name__)
 
 
-class WeatherService:
-    """Service for collecting and managing weather data."""
+class WeatherPlugin(BasePlugin):
+    """Weather plugin for collecting and displaying weather data."""
+
+    name = "weather"
+    description = "Weather data"
+
+    def get_tasks(self):
+        from smplfrm.plugins.weather.tasks import refresh_weather
+
+        return {"refresh_weather": refresh_weather}
+
+    def get_beat_schedule(self):
+        return {"hourly-weather": {"task": "refresh_weather", "schedule": 1800}}
 
     def __init__(self) -> None:
         self.redis_key = "weather"
@@ -59,11 +71,7 @@ class WeatherService:
             self.create(forecast)
 
     def create(self, data: Any) -> None:
-        """Store weather data in cache.
-
-        Args:
-            data: Weather forecast data to cache
-        """
+        """Store weather data in cache."""
         expires = timedelta(days=6).total_seconds()
         cache.set(key=self.redis_key, value=data, timeout=expires)
         logger.debug(f"Persisted Weather Data: {data}")
@@ -74,22 +82,11 @@ class WeatherService:
         cache.delete(self.redis_key)
 
     def read(self) -> Any:
-        """Retrieve cached weather data.
-
-        Returns:
-            Cached weather forecast data or None
-        """
+        """Retrieve cached weather data."""
         return cache.get(self.redis_key)
 
     def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
-        """Get formatted weather data for display.
-
-        Args:
-            now: Current datetime, defaults to UTC now
-
-        Returns:
-            Dictionary with current, low, and high temperatures
-        """
+        """Get formatted weather data for display."""
         if not now:
             now = datetime.now(tz=timezone.utc)
 
@@ -125,15 +122,6 @@ class WeatherService:
         }
 
     def _get_current_temp(self, raw_data: Any, index: int) -> Any:
-        """Get current temperature from hourly data.
-
-        Args:
-            raw_data: Weather forecast data
-            index: Index of current hour
-
-        Returns:
-            Temperature value or "N/A"
-        """
         try:
             return raw_data.hourly.temperature_2m[index]
         except Exception as e:
@@ -141,15 +129,6 @@ class WeatherService:
             return "N/A"
 
     def _get_current_daily_index(self, raw_data: Any, now: datetime) -> Optional[int]:
-        """Find index of current day in daily forecast data.
-
-        Args:
-            raw_data: Weather forecast data
-            now: Current datetime
-
-        Returns:
-            Index of current day or None
-        """
         try:
             daily_time = raw_data.daily.time
             for i in range(len(daily_time)):
@@ -164,15 +143,6 @@ class WeatherService:
         return None
 
     def _get_current_temp_index(self, raw_data: Any, now: datetime) -> Optional[int]:
-        """Find index of current hour in hourly forecast data.
-
-        Args:
-            raw_data: Weather forecast data
-            now: Current datetime
-
-        Returns:
-            Index of current hour or None
-        """
         try:
             time = raw_data.hourly.time
         except Exception as e:
@@ -191,7 +161,6 @@ class WeatherService:
         return None
 
     def _determine_temp_unit(self) -> None:
-        """Set temperature unit based on configuration."""
         self.temp_unit = TemperatureUnit.FAHRENHEIT
         self.temp_unit_display = "°F"
         if SMPL_FRM_WEATHER_TEMP_UNIT == "C":
@@ -199,22 +168,12 @@ class WeatherService:
             self.temp_unit_display = "°C"
 
     def _determine_precip_unit(self) -> PrecipitationUnit:
-        """Determine precipitation unit based on configuration.
-
-        Returns:
-            PrecipitationUnit enum value
-        """
         unit = PrecipitationUnit.INCHES
         if SMPL_FRM_WEATHER_PRECIP_UNIT == "mm":
             unit = PrecipitationUnit.MILLIMETERS
         return unit
 
     def _determine_windspeed_unit(self) -> WindSpeedUnit:
-        """Determine wind speed unit based on configuration.
-
-        Returns:
-            WindSpeedUnit enum value
-        """
         unit = WindSpeedUnit.MILES_PER_HOUR
         if SMPL_FRM_WEATHER_WINDSPEED_UNIT == "kmh":
             unit = WindSpeedUnit.KILOMETERS_PER_HOUR

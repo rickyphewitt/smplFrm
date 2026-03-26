@@ -9,7 +9,7 @@ from open_meteo import (
     HourlyForecastUnits,
     HourlyForecast,
 )
-from smplfrm.services import WeatherService
+from smplfrm.plugins.weather.weather import WeatherPlugin as WeatherService
 import datetime
 
 

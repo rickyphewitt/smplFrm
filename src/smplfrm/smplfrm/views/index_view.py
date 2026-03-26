@@ -1,6 +1,6 @@
 from django.views.generic import TemplateView
 from django.conf import settings
-from smplfrm.services.weather_service import WeatherService
+from smplfrm.plugins.weather.weather import WeatherPlugin
 from smplfrm.services.config_service import ConfigService
 
 from smplfrm.settings import (
@@ -22,7 +22,7 @@ class IndexView(TemplateView):
         :return:
         """
 
-        weather_data = WeatherService().get_for_display()
+        weather_data = WeatherPlugin().get_for_display()
 
         # Initialize config from environment on first page load
         config = ConfigService().load_config()
