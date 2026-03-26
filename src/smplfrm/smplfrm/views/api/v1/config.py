@@ -7,7 +7,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from smplfrm.models import Config
-from smplfrm.services.config_service import ConfigService
+from smplfrm.services.config_service import ConfigService, PRESET_PREFIX
 from smplfrm.views.serializers.v1.config_serializer import (
     ConfigSerializer,
 )
@@ -30,9 +30,20 @@ class ConfigViewSet(viewsets.ModelViewSet):
         super().__init__(**kwargs)
         self.service = ConfigService()
 
-    # Only allow retrieve, update (PUT), list, and apply
+    def _get_config(self):
+        return Config.objects.get(external_id=self.kwargs["external_id"], deleted=False)
+
     def create(self, request, *args, **kwargs):
         raise PermissionDenied()
+
+    def update(self, request, *args, **kwargs):
+        config = self._get_config()
+        if config.name.startswith(PRESET_PREFIX):
+            return Response(
+                {"detail": "System-managed configs cannot be modified."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().update(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
         queryset = self.service.list()
@@ -47,13 +58,26 @@ class ConfigViewSet(viewsets.ModelViewSet):
         raise PermissionDenied()
 
     def destroy(self, request, *args, **kwargs):
-        raise PermissionDenied()
+        config = self._get_config()
+        if config.name.startswith(PRESET_PREFIX):
+            return Response(
+                {"detail": "System-managed configs cannot be deleted."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        config.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["post"])
-    def apply(self, request, external_id=None):
+    @action(detail=False, methods=["post"])
+    def apply(self, request):
         try:
-            config = self.service.apply_preset(external_id)
+            config = self.service.apply_preset()
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(config)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
+    def activate(self, request, external_id=None):
+        config = self.service.activate(external_id)
         serializer = self.get_serializer(config)
         return Response(serializer.data)

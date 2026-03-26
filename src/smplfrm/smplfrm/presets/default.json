@@ -1,1 +1,1 @@
-{"name": "Default", "display_date": true, "display_clock": true}
+{"name": "Default", "description": "All display elements enabled", "display_date": true, "display_clock": true, "image_refresh_interval": 30000, "image_transition_interval": 10000, "image_zoom_effect": true, "image_transition_type": "random", "image_cache_timeout": 300}

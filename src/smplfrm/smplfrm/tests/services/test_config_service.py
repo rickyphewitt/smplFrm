@@ -178,19 +178,20 @@ class TestConfigList(TestCase):
     """Test suite for ConfigService.list()."""
 
     def test_list_returns_system_managed_first(self):
-        """Test that list returns system-managed configs before custom ones."""
+        """Test that list returns active first, then managed, then custom."""
         Config.objects.all().delete()
-        Config.objects.create(name="custom-20260101", is_active=False)
-        Config.objects.create(name="smplFrm Default", is_active=True)
+        Config.objects.create(name="custom-20260101", is_active=True)
+        Config.objects.create(name="smplFrm Default", is_active=False)
         Config.objects.create(name="smplFrm Minimal", is_active=False)
+        Config.objects.create(name="custom-20260202", is_active=False)
 
         service = ConfigService()
-        configs = list(service.list())
-        names = [c.name for c in configs]
+        names = [c.name for c in service.list()]
 
-        self.assertEqual(names[0], "smplFrm Default")
-        self.assertEqual(names[1], "smplFrm Minimal")
-        self.assertEqual(names[2], "custom-20260101")
+        self.assertEqual(names[0], "custom-20260101")  # active first
+        self.assertEqual(names[1], "smplFrm Default")  # managed
+        self.assertEqual(names[2], "smplFrm Minimal")  # managed
+        self.assertEqual(names[3], "custom-20260202")  # custom last
 
     def test_list_excludes_deleted(self):
         """Test that list excludes soft-deleted configs."""
@@ -214,21 +215,15 @@ class TestApplyPreset(TestCase):
             display_date=True,
             display_clock=True,
         )
-        self.preset = Config.objects.create(
-            name="smplFrm Minimal",
-            is_active=False,
-            display_date=False,
-            display_clock=False,
-        )
 
-    def test_apply_creates_copy_when_active_is_system_managed(self):
-        """Test that applying creates a custom copy when active is system-managed."""
-        result = self.service.apply_preset(self.preset.external_id)
+    def test_apply_creates_copy_of_active_config(self):
+        """Test that apply creates a custom copy of the active system-managed config."""
+        result = self.service.apply_preset()
 
         self.assertTrue(result.name.startswith("custom-"))
         self.assertTrue(result.is_active)
-        self.assertFalse(result.display_date)
-        self.assertFalse(result.display_clock)
+        self.assertTrue(result.display_date)
+        self.assertTrue(result.display_clock)
 
         self.active.refresh_from_db()
         self.assertFalse(self.active.is_active)
@@ -239,12 +234,45 @@ class TestApplyPreset(TestCase):
         self.active.save()
 
         with self.assertRaises(ValueError):
-            self.service.apply_preset(self.preset.external_id)
+            self.service.apply_preset()
 
     def test_apply_raises_when_limit_exceeded(self):
         """Test that apply raises ValueError when config limit is reached."""
-        for i in range(CONFIG_LIMIT - 2):  # -2 for active + preset already created
+        for i in range(CONFIG_LIMIT - 1):
             Config.objects.create(name=f"filler-{i}", is_active=False)
 
         with self.assertRaises(ValueError):
-            self.service.apply_preset(self.preset.external_id)
+            self.service.apply_preset()
+
+
+class TestActivate(TestCase):
+    """Test suite for ConfigService.activate()."""
+
+    def setUp(self):
+        Config.objects.all().delete()
+        self.service = ConfigService()
+        self.active = Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
+        )
+        self.other = Config.objects.create(
+            name="smplFrm Minimal",
+            is_active=False,
+        )
+
+    def test_activate_swaps_active_config(self):
+        """Test that activate deactivates current and activates target."""
+        result = self.service.activate(self.other.external_id)
+
+        self.assertTrue(result.is_active)
+        self.assertEqual(result.external_id, self.other.external_id)
+
+        self.active.refresh_from_db()
+        self.assertFalse(self.active.is_active)
+
+    def test_activate_same_config(self):
+        """Test that activating the already-active config is a no-op."""
+        result = self.service.activate(self.active.external_id)
+
+        self.assertTrue(result.is_active)
+        self.assertEqual(Config.objects.filter(is_active=True).count(), 1)

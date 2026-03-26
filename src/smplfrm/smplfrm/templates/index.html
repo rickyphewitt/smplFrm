@@ -59,7 +59,7 @@
  </div>
 <div id="image-container"></div>
 
-<div class="settings-modal" id="settings-modal" data-config-id="{{ config_id }}">
+<div class="settings-modal" id="settings-modal" data-config-id="{{ config_id }}" data-config-name="{{ config_name }}">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Settings</h2>
@@ -70,6 +70,7 @@
             <button class="tab-btn active" data-tab="display">Display</button>
             <button class="tab-btn" data-tab="images">Images</button>
             <button class="tab-btn" data-tab="library">Library</button>
+            <button class="tab-btn" data-tab="presets">Presets</button>
             <button class="tab-btn" data-tab="tasks">Tasks</button>
             <button class="tab-btn" data-tab="about">About</button>
         </div>
@@ -160,6 +161,28 @@
                 <div class="setting-item">
                     <label>Rescan Library</label>
                     <button class="btn btn-secondary btn-sm" id="task-rescan-library">Rescan</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab-presets">
+            <div class="settings-section">
+                <h3>Config Presets</h3>
+                <table class="task-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preset-list-body"></tbody>
+                </table>
+                <div class="task-pagination preset-pagination">
+                    <button class="btn btn-secondary btn-sm" id="preset-page-prev" disabled>&laquo; Prev</button>
+                    <span id="preset-page-info"></span>
+                    <button class="btn btn-secondary btn-sm" id="preset-page-next" disabled>Next &raquo;</button>
                 </div>
             </div>
         </div>
