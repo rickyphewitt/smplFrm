@@ -54,6 +54,17 @@ inclusion: always
 - Tag releases appropriately
 - Use .gitignore to exclude generated files and secrets
 
+## API Standards
+- Never implement PATCH endpoints — always use PUT for updates
+- All update operations must send the full resource representation
+- Partial updates are not supported by design
+
+## Preset Configs
+- Preset JSON files live in `src/smplfrm/smplfrm/presets/`
+- When fields are added or removed from the `Config` model, update all preset JSON files to include the new fields
+- Each preset JSON must define every configurable field on the `Config` model (excluding `name`, `description`, and `is_active`)
+- Presets are synced to the database on startup via `ConfigService.sync_presets()`
+
 ## Quality Assurance
 - Write tests for new functionality
 - Run tests before committing changes

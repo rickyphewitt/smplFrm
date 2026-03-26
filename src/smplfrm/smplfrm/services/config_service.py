@@ -57,7 +57,7 @@ class ConfigService(BaseService):
         return Config.objects.get(external_id=ext_id, deleted=deleted)
 
     def list(self, **kwargs) -> QuerySet:
-        """Return all non-deleted configs, system-managed first."""
+        """Return all non-deleted configs: active first, then managed, then custom."""
         return (
             Config.objects.filter(deleted=False)
             .annotate(
@@ -67,7 +67,7 @@ class ConfigService(BaseService):
                     output_field=IntegerField(),
                 )
             )
-            .order_by("sort_order", "name")
+            .order_by("-is_active", "sort_order", "name")
         )
 
     def update(self, config: Config) -> Config:
@@ -159,21 +159,17 @@ class ConfigService(BaseService):
             else:
                 logger.info(f"Created preset: {name}")
 
-    def apply_preset(self, ext_id: str) -> Config:
-        """Apply a preset by creating a custom copy.
+    def apply_preset(self) -> Config:
+        """Create a custom copy of the current active config.
 
-        Only valid when the active config is system-managed. Creates a new
-        custom config with the preset's field values.
-
-        Args:
-            ext_id: External ID of the preset to apply
+        Called by the save flow when the active config is system-managed.
+        Creates a new custom config with the same field values and activates it.
 
         Returns:
-            The new active Config instance
+            The new custom Config instance
 
         Raises:
-            ValueError: If applying would exceed CONFIG_LIMIT or active config
-                        is not system-managed
+            ValueError: If active config is already custom or limit exceeded
         """
         active, _ = self.get_active()
 
@@ -186,13 +182,33 @@ class ConfigService(BaseService):
                 "Delete an existing config or select a custom one."
             )
 
-        source = self.read(ext_id)
         active.is_active = False
         active.save()
 
         name = f"custom-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         new_config = Config(name=name, is_active=True)
         for field in _PRESET_FIELDS:
-            setattr(new_config, field, getattr(source, field))
+            setattr(new_config, field, getattr(active, field))
         new_config.save()
         return new_config
+
+    def activate(self, ext_id: str) -> Config:
+        """Activate a config by external ID.
+
+        Deactivates the current active config and activates the target.
+
+        Args:
+            ext_id: External ID of the config to activate
+
+        Returns:
+            The newly activated Config instance
+        """
+        active = Config.objects.filter(is_active=True).first()
+        if active:
+            active.is_active = False
+            active.save()
+
+        target = self.read(ext_id)
+        target.is_active = True
+        target.save()
+        return target

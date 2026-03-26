@@ -1,1 +1,1 @@
-{"name": "Media", "display_date": false, "display_clock": false}
+{"name": "Media", "description": "Minimal with now playing", "display_date": false, "display_clock": false, "image_refresh_interval": 30000, "image_transition_interval": 10000, "image_zoom_effect": true, "image_transition_type": "random", "image_cache_timeout": 300}

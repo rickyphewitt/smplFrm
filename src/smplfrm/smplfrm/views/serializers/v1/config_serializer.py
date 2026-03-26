@@ -12,6 +12,7 @@ class ConfigSerializer(serializers.HyperlinkedModelSerializer):
         fields = [
             "id",
             "name",
+            "description",
             "is_active",
             "display_date",
             "display_clock",

@@ -297,12 +297,12 @@ async function loadConfig() {
 
 async function saveConfig() {
     const modal = document.getElementById('settings-modal');
-    const configId = modal.dataset.configId;
+    let configId = modal.dataset.configId;
+    const configName = modal.dataset.configName;
     const errorMessage = document.getElementById('error-message');
     const cancelBtn = document.getElementById('cancel-settings');
     
     const configData = {
-        name: modal.dataset.configName,
         display_date: document.getElementById('setting-date').checked,
         display_clock: document.getElementById('setting-clock').checked,
         image_refresh_interval: parseInt(document.getElementById('setting-refresh').value),
@@ -313,6 +313,24 @@ async function saveConfig() {
     };
     
     try {
+        // If active config is system-managed, create a custom copy first
+        if (configName && configName.startsWith('smplFrm ')) {
+            const applyResponse = await fetch(buildApiUrl('configs/apply'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!applyResponse.ok) {
+                const err = await applyResponse.json();
+                throw new Error(err.detail || 'Failed to create custom config');
+            }
+            const newConfig = await applyResponse.json();
+            configId = newConfig.id;
+            modal.dataset.configId = configId;
+            modal.dataset.configName = newConfig.name;
+        }
+
+        configData.name = modal.dataset.configName;
+
         const response = await fetch(buildApiUrl(`configs/${configId}`), {
             method: 'PUT',
             headers: {
@@ -412,6 +430,101 @@ function pollTask(taskId, label) {
 }
 
 let taskPage = 1;
+let presetPage = 1;
+
+export async function loadPresets(page = 1) {
+    presetPage = page;
+    const body = document.getElementById('preset-list-body');
+    const prev = document.getElementById('preset-page-prev');
+    const next = document.getElementById('preset-page-next');
+    const info = document.getElementById('preset-page-info');
+    const modal = document.getElementById('settings-modal');
+    const activeConfigId = modal.dataset.configId;
+
+    try {
+        const response = await fetch(buildApiUrl(`configs?page=${page}`));
+        if (!response.ok) throw new Error('Failed to load presets');
+        const data = await response.json();
+
+        body.innerHTML = data.results.map(c => {
+            const isManaged = c.name.startsWith('smplFrm ');
+            const nameCell = isManaged
+                ? `<td>${c.name}</td>`
+                : `<td class="editable" contenteditable="true" data-id="${c.id}" data-field="name">${c.name}</td>`;
+            const descCell = isManaged
+                ? `<td>${c.description || ''}</td>`
+                : `<td class="editable" contenteditable="true" data-id="${c.id}" data-field="description">${c.description || ''}</td>`;
+            const status = c.is_active
+                ? '<span class="badge-active">Active</span>'
+                : `<button class="btn btn-secondary btn-sm preset-activate-btn" data-id="${c.id}">Activate</button>`;
+            const deleteBtn = (!isManaged && !c.is_active)
+                ? `<button class="btn btn-secondary btn-sm task-delete-btn preset-delete-btn" data-id="${c.id}">&times;</button>`
+                : isManaged
+                    ? `<span class="delete-disabled" title="System-managed configs cannot be deleted">🔒</span>`
+                    : `<span class="delete-disabled" title="Active config cannot be deleted">🔒</span>`;
+            return `<tr>${nameCell}${descCell}<td>${status}</td><td>${deleteBtn}</td></tr>`;
+        }).join('');
+
+        body.querySelectorAll('.editable').forEach(cell => {
+            cell.dataset.original = cell.textContent.trim();
+            const save = async () => {
+                const value = cell.textContent.trim();
+                if (value === cell.dataset.original) return;
+                const id = cell.dataset.id;
+                const field = cell.dataset.field;
+                try {
+                    const getResp = await fetch(buildApiUrl(`configs/${id}`));
+                    if (!getResp.ok) return;
+                    const config = await getResp.json();
+                    config[field] = value;
+                    delete config.id;
+                    delete config.is_active;
+                    await fetch(buildApiUrl(`configs/${id}`), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    cell.dataset.original = value;
+                } catch (e) {
+                    console.error('Failed to save:', e);
+                }
+            };
+            cell.addEventListener('blur', save);
+            cell.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); cell.blur(); }
+            });
+        });
+
+        body.querySelectorAll('.preset-activate-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-inline"></span>';
+                try {
+                    const resp = await fetch(buildApiUrl(`configs/${btn.dataset.id}/activate`), { method: 'POST' });
+                    if (!resp.ok) throw new Error('Failed to activate');
+                    location.reload();
+                } catch {
+                    btn.disabled = false;
+                    btn.textContent = 'Activate';
+                }
+            });
+        });
+
+        body.querySelectorAll('.preset-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await fetch(buildApiUrl(`configs/${btn.dataset.id}`), { method: 'DELETE' });
+                loadPresets(presetPage);
+            });
+        });
+
+        const totalPages = Math.ceil(data.count / 5) || 1;
+        info.textContent = `Page ${page} of ${totalPages}`;
+        prev.disabled = !data.previous;
+        next.disabled = !data.next;
+    } catch {
+        body.innerHTML = '<tr><td colspan="4">Failed to load presets</td></tr>';
+    }
+}
 
 export async function loadTasks(page = 1) {
     taskPage = page;
@@ -519,6 +632,18 @@ function initSettingsModal() {
                 spinner.remove();
                 sections.forEach(s => s.style.display = '');
             }
+
+            if (tabName === 'presets') {
+                const presetsTab = document.getElementById('tab-presets');
+                const sections = presetsTab.querySelectorAll('.settings-section, .preset-pagination');
+                sections.forEach(s => s.style.display = 'none');
+                const spinner = document.createElement('div');
+                spinner.className = 'spinner';
+                presetsTab.appendChild(spinner);
+                await loadPresets();
+                spinner.remove();
+                sections.forEach(s => s.style.display = '');
+            }
         });
     });
 
@@ -529,6 +654,10 @@ function initSettingsModal() {
     // Task pagination buttons
     document.getElementById('task-page-prev').addEventListener('click', () => loadTasks(taskPage - 1));
     document.getElementById('task-page-next').addEventListener('click', () => loadTasks(taskPage + 1));
+
+    // Preset pagination buttons
+    document.getElementById('preset-page-prev').addEventListener('click', () => loadPresets(presetPage - 1));
+    document.getElementById('preset-page-next').addEventListener('click', () => loadPresets(presetPage + 1));
 
     // Library maintenance buttons
     document.getElementById('task-reset-count').addEventListener('click', () => {

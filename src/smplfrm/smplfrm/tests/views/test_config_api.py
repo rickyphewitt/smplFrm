@@ -36,9 +36,17 @@ class TestConfigAPI(TestCase):
         self.assertEqual(response.data["image_transition_type"], "fade")
 
     def test_update_config_with_put(self):
-        """Test updating a config via API with PUT."""
+        """Test updating a custom config via API with PUT."""
+        custom = Config.objects.create(
+            name="custom-20260101",
+            is_active=False,
+            display_date=True,
+            display_clock=True,
+            image_refresh_interval=30000,
+        )
+        url = f"/api/v1/configs/{custom.external_id}"
         update_data = {
-            "name": "smplFrm Default",
+            "name": "custom-20260101",
             "display_date": False,
             "display_clock": False,
             "image_refresh_interval": 60000,
@@ -48,9 +56,7 @@ class TestConfigAPI(TestCase):
             "image_cache_timeout": 600,
         }
 
-        response = self.client.put(
-            self.url, update_data, content_type="application/json"
-        )
+        response = self.client.put(url, update_data, content_type="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["display_date"])
@@ -61,9 +67,9 @@ class TestConfigAPI(TestCase):
         self.assertEqual(response.data["image_transition_type"], "zoom")
         self.assertEqual(response.data["image_cache_timeout"], 600)
 
-        self.config.refresh_from_db()
-        self.assertFalse(self.config.display_date)
-        self.assertEqual(self.config.image_refresh_interval, 60000)
+        custom.refresh_from_db()
+        self.assertFalse(custom.display_date)
+        self.assertEqual(custom.image_refresh_interval, 60000)
 
     def test_patch_config_forbidden(self):
         """Test that PATCH is not allowed."""
@@ -96,8 +102,9 @@ class TestConfigAPI(TestCase):
 
     def test_update_config_with_invalid_data(self):
         """Test that invalid data returns error."""
+        custom = Config.objects.create(name="custom-20260101", is_active=False)
         update_data = {
-            "name": "smplFrm Default",
+            "name": "custom-20260101",
             "display_date": False,
             "display_clock": False,
             "image_refresh_interval": -1,
@@ -108,35 +115,19 @@ class TestConfigAPI(TestCase):
         }
 
         response = self.client.put(
-            self.url, update_data, content_type="application/json"
+            f"/api/v1/configs/{custom.external_id}",
+            update_data,
+            content_type="application/json",
         )
 
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_delete_config_forbidden(self):
-        """Test that deleting config via API is forbidden."""
-        response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     def test_apply_preset_creates_custom_copy(self):
-        """Test applying a preset when active config is system-managed."""
-        preset = Config.objects.create(
-            name="smplFrm Minimal",
-            is_active=False,
-            display_date=False,
-            display_clock=False,
-        )
-
-        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
+        """Test applying creates a custom copy of the active system-managed config."""
+        response = self.client.post("/api/v1/configs/apply")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["name"].startswith("custom-"))
         self.assertTrue(response.data["is_active"])
-        self.assertFalse(response.data["display_date"])
-        self.assertFalse(response.data["display_clock"])
-
-        # Original preset should be untouched
-        preset.refresh_from_db()
-        self.assertFalse(preset.is_active)
 
         # Old active config should be deactivated
         self.config.refresh_from_db()
@@ -147,29 +138,63 @@ class TestConfigAPI(TestCase):
         self.config.name = "custom-20260101"
         self.config.save()
 
-        preset = Config.objects.create(
-            name="smplFrm Minimal",
-            is_active=False,
-            display_date=False,
-            display_clock=False,
-        )
-
-        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
+        response = self.client.post("/api/v1/configs/apply")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_apply_preset_config_limit(self):
         """Test that applying returns 400 when config limit is exceeded."""
         from smplfrm.services.config_service import CONFIG_LIMIT
 
-        # Create configs up to the limit (self.config is 1 already)
         for i in range(CONFIG_LIMIT - 1):
             Config.objects.create(name=f"config-{i}", is_active=False)
 
-        preset = Config.objects.create(
+        response = self.client.post("/api/v1/configs/apply")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_activate_config(self):
+        """Test activating a different config."""
+        other = Config.objects.create(
             name="smplFrm Minimal",
             is_active=False,
         )
-        # Now at CONFIG_LIMIT + 1 (including preset), but non-deleted count matters
-        # self.config (active, system-managed) + CONFIG_LIMIT-1 + preset = CONFIG_LIMIT + 1
-        response = self.client.post(f"/api/v1/configs/{preset.external_id}/apply")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(f"/api/v1/configs/{other.external_id}/activate")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_active"])
+        self.assertEqual(response.data["id"], other.external_id)
+
+        self.config.refresh_from_db()
+        self.assertFalse(self.config.is_active)
+
+    def test_delete_custom_config(self):
+        """Test that deleting a custom config hard-deletes it."""
+        custom = Config.objects.create(name="custom-20260101", is_active=False)
+        ext_id = custom.external_id
+
+        response = self.client.delete(f"/api/v1/configs/{ext_id}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(Config.objects.filter(external_id=ext_id).exists())
+
+    def test_delete_managed_config_forbidden(self):
+        """Test that deleting a managed config is forbidden."""
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_managed_config_forbidden(self):
+        """Test that updating a managed config via PUT is forbidden."""
+        update_data = {
+            "name": "smplFrm Default",
+            "display_date": False,
+            "display_clock": False,
+            "image_refresh_interval": 60000,
+            "image_transition_interval": 5000,
+            "image_zoom_effect": False,
+            "image_transition_type": "zoom",
+            "image_cache_timeout": 600,
+        }
+
+        response = self.client.put(
+            self.url, update_data, content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

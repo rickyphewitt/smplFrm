@@ -7,6 +7,7 @@ class Config(ModelBase):
     """User configuration settings for smplFrm."""
 
     name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, default="", blank=True)
     is_active = models.BooleanField(default=False)
 
     # Display Elements

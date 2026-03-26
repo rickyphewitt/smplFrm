@@ -1,1 +1,1 @@
-{"name": "Minimal", "display_date": false, "display_clock": false}
+{"name": "Minimal", "description": "Logo only, no overlays", "display_date": false, "display_clock": false, "image_refresh_interval": 30000, "image_transition_interval": 10000, "image_zoom_effect": false, "image_transition_type": "fade", "image_cache_timeout": 300}
