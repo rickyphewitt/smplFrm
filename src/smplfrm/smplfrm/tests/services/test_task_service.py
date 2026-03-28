@@ -77,10 +77,11 @@ class TestTaskService(TestCase):
         updated = self.service.update_progress(self.task, 150)
         self.assertEqual(updated.progress, 100)
 
-    def test_delete_not_supported(self):
-        """Test that delete raises NotImplementedError."""
-        with self.assertRaises(NotImplementedError):
-            self.service.delete(self.task.external_id)
+    def test_delete_soft_deletes_task(self):
+        """Test that delete soft-deletes a task."""
+        self.service.delete(self.task.external_id)
+        self.task.refresh_from_db()
+        self.assertTrue(self.task.deleted)
 
     def test_destroy_not_supported(self):
         """Test that destroy raises NotImplementedError."""

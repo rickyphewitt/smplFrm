@@ -15,3 +15,4 @@ class PluginSerializer(serializers.HyperlinkedModelSerializer):
             "description",
             "settings",
         ]
+        read_only_fields = ["name", "description"]

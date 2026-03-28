@@ -93,8 +93,9 @@ class ConfigService(BaseService):
         return config
 
     def delete(self, ext_id: str) -> None:
-        """Not supported for Config."""
-        raise NotImplementedError("Config deletion not supported")
+        """Hard-delete a config by external ID."""
+        config = Config.objects.get(external_id=ext_id)
+        config.delete()
 
     def destroy(self, ext_id: str) -> None:
         """Not supported for Config."""

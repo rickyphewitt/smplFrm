@@ -64,6 +64,7 @@ inclusion: always
 - Never implement PATCH endpoints — always use PUT for updates
 - All update operations must send the full resource representation
 - Partial updates are not supported by design
+- Views must always call into service layer methods — never perform model operations directly in views
 
 ## Preset Configs
 - Preset JSON files live in `src/smplfrm/smplfrm/presets/`

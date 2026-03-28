@@ -84,33 +84,37 @@ class TestPluginAPI(TestCase):
         self.plugin.refresh_from_db()
         self.assertEqual(self.plugin.settings["coords"], "40.71,-74.00")
 
-    def test_update_plugin_name_rejected(self):
+    def test_update_plugin_name_ignored(self):
+        """PUT with different name silently ignores it."""
         response = self.client.put(
             self.url,
             {
                 "name": "renamed",
                 "description": "Weather data",
-                "settings": {"coords": "63.17,-147.46"},
+                "settings": {"coords": "40.71,-74.00"},
             },
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.plugin.refresh_from_db()
         self.assertEqual(self.plugin.name, "weather")
+        self.assertEqual(self.plugin.settings["coords"], "40.71,-74.00")
 
-    def test_update_plugin_description_rejected(self):
+    def test_update_plugin_description_ignored(self):
+        """PUT with different description silently ignores it."""
         response = self.client.put(
             self.url,
             {
                 "name": "weather",
                 "description": "Changed",
-                "settings": {"coords": "63.17,-147.46"},
+                "settings": {"coords": "40.71,-74.00"},
             },
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.plugin.refresh_from_db()
         self.assertEqual(self.plugin.description, "Weather data")
+        self.assertEqual(self.plugin.settings["coords"], "40.71,-74.00")
 
     def test_create_plugin_forbidden(self):
         response = self.client.post("/api/v1/plugins", {}, format="json")

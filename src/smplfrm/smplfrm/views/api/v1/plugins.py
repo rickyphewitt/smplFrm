@@ -1,5 +1,5 @@
 from django.core.exceptions import PermissionDenied
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.response import Response
 
 from smplfrm.models import Plugin
@@ -27,19 +27,11 @@ class PluginViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         plugin = self.get_object()
-        data = request.data
-        if (
-            data.get("name", plugin.name) != plugin.name
-            or data.get("description", plugin.description) != plugin.description
-        ):
-            return Response(
-                {"detail": "Only settings can be updated."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        plugin.settings = data.get("settings", plugin.settings)
-        plugin.save()
-        serializer = self.get_serializer(plugin)
-        return Response(serializer.data)
+        serializer = self.get_serializer(plugin, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        plugin.settings = serializer.validated_data.get("settings", plugin.settings)
+        self.service.update(plugin)
+        return Response(self.get_serializer(plugin).data)
 
     def partial_update(self, request, *args, **kwargs):
         raise PermissionDenied()

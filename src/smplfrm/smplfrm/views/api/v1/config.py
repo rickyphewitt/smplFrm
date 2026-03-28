@@ -30,20 +30,21 @@ class ConfigViewSet(viewsets.ModelViewSet):
         super().__init__(**kwargs)
         self.service = ConfigService()
 
-    def _get_config(self):
-        return Config.objects.get(external_id=self.kwargs["external_id"], deleted=False)
-
     def create(self, request, *args, **kwargs):
         raise PermissionDenied()
 
     def update(self, request, *args, **kwargs):
-        config = self._get_config()
+        config = self.service.read(self.kwargs["external_id"])
         if config.name.startswith(PRESET_PREFIX):
             return Response(
                 {"detail": "System-managed configs cannot be modified."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        return super().update(request, *args, **kwargs)
+        serializer = self.get_serializer(config, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        self.service.update(config)
+        return Response(self.get_serializer(config).data)
 
     def list(self, request, *args, **kwargs):
         queryset = self.service.list()
@@ -58,13 +59,13 @@ class ConfigViewSet(viewsets.ModelViewSet):
         raise PermissionDenied()
 
     def destroy(self, request, *args, **kwargs):
-        config = self._get_config()
+        config = self.service.read(self.kwargs["external_id"])
         if config.name.startswith(PRESET_PREFIX):
             return Response(
                 {"detail": "System-managed configs cannot be deleted."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        config.delete()
+        self.service.delete(config.external_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["post"])
