@@ -71,6 +71,5 @@ class TaskViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """Soft-delete a task. Running tasks will self-cancel on next progress check."""
         task = self.get_object()
-        task.deleted = True
-        task.save()
+        self.service.delete(task.external_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

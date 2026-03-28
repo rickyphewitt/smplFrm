@@ -537,13 +537,13 @@ input:checked + .slider:before {
     margin-top: 15px;
     text-align: center;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.3s ease;
-    display: none;
 }
 
 .error-message.show {
     opacity: 1;
-    display: block;
+    pointer-events: auto;
 }
 
 /* Task list table */

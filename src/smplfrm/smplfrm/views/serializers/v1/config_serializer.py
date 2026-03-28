@@ -21,4 +21,8 @@ class ConfigSerializer(serializers.HyperlinkedModelSerializer):
             "image_zoom_effect",
             "image_transition_type",
             "image_cache_timeout",
+            "image_fill_mode",
+            "force_date_from_path",
+            "timezone",
+            "plugins",
         ]

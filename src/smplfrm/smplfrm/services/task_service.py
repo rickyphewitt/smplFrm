@@ -77,8 +77,10 @@ class TaskService(BaseService):
         return task
 
     def delete(self, ext_id: str) -> None:
-        """Not supported for Task."""
-        raise NotImplementedError("Task deletion not supported")
+        """Soft-delete a task. Running tasks will self-cancel on next progress check."""
+        task = Task.objects.get(external_id=ext_id)
+        task.deleted = True
+        task.save()
 
     def destroy(self, ext_id: str) -> None:
         """Not supported for Task."""

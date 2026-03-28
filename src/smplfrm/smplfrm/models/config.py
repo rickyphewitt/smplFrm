@@ -34,6 +34,22 @@ class Config(ModelBase):
     # Cache
     image_cache_timeout = models.PositiveIntegerField(default=300)
 
+    # Image Processing
+    image_fill_mode = models.CharField(
+        max_length=20,
+        default="blur",
+        choices=[
+            ("blur", "Blur"),
+            ("border", "Border"),
+            ("zoom_to_fill", "Zoom to Fill"),
+        ],
+    )
+    force_date_from_path = models.BooleanField(default=True)
+
+    # General
+    timezone = models.CharField(max_length=50, default="America/Los_Angeles")
+    plugins = models.JSONField(default=list, blank=True)
+
     class Meta:
         db_table = "config"
         constraints = [

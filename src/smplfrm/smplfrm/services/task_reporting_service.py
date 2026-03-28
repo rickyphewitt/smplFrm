@@ -17,11 +17,17 @@ class TaskReportingService:
 
     def initiate_task(self, task_id: str, total: int):
         task = None
-        if task_id is None:
+
+        if task_id is not None:
+            try:
+                task = self.task_service.read(task_id)
+            except Exception as e:
+                logger.error(e)
+                logger.warning(f"Unable to find task with id: {task_id}")
+
+        if not task:
             task = self.task_service.create({"task_type": self.task_type})
             logger.info(f"Task Created: {task.external_id} for Task: {self.task_type}")
-        else:
-            task = self.task_service.read(task_id)
 
         self.task_id = task.external_id
         self.total = total

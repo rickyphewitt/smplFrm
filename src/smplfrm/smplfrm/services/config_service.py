@@ -11,10 +11,13 @@ from smplfrm.settings import (
     SMPL_FRM_DISPLAY_CLOCK,
     SMPL_FRM_DISPLAY_DATE,
     SMPL_FRM_IMAGE_CACHE_TIMEOUT,
+    SMPL_FRM_IMAGE_FILL_MODE,
     SMPL_FRM_IMAGE_REFRESH_INTERVAL,
     SMPL_FRM_IMAGE_TRANSITION_INTERVAL,
     SMPL_FRM_IMAGE_TRANSITION_TYPE,
     SMPL_FRM_IMAGE_ZOOM_EFFECT,
+    SMPL_FRM_FORCE_DATE_FROM_PATH,
+    SMPL_FRM_TIMEZONE,
 )
 
 from .base_service import BaseService
@@ -34,6 +37,10 @@ _PRESET_FIELDS = [
     "image_zoom_effect",
     "image_transition_type",
     "image_cache_timeout",
+    "image_fill_mode",
+    "force_date_from_path",
+    "timezone",
+    "plugins",
 ]
 
 
@@ -86,8 +93,9 @@ class ConfigService(BaseService):
         return config
 
     def delete(self, ext_id: str) -> None:
-        """Not supported for Config."""
-        raise NotImplementedError("Config deletion not supported")
+        """Hard-delete a config by external ID."""
+        config = Config.objects.get(external_id=ext_id)
+        config.delete()
 
     def destroy(self, ext_id: str) -> None:
         """Not supported for Config."""
@@ -130,6 +138,9 @@ class ConfigService(BaseService):
             config.image_zoom_effect = SMPL_FRM_IMAGE_ZOOM_EFFECT
             config.image_transition_type = SMPL_FRM_IMAGE_TRANSITION_TYPE
             config.image_cache_timeout = SMPL_FRM_IMAGE_CACHE_TIMEOUT
+            config.image_fill_mode = SMPL_FRM_IMAGE_FILL_MODE
+            config.force_date_from_path = SMPL_FRM_FORCE_DATE_FROM_PATH
+            config.timezone = SMPL_FRM_TIMEZONE
             config = self.update(config)
 
         return config

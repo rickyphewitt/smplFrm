@@ -23,10 +23,8 @@ class SpotifyCacheHandler(CacheFileHandler):
 class SpotifyPlugin(BasePlugin):
     """Spotify integration plugin for displaying now playing information."""
 
-    name = "spotify"
-    description = "Now playing display"
-
     def __init__(self):
+        super().__init__(name="spotify", description="Now playing display")
         self.enabled = settings.SMPL_FRM_PLUGINS_SPOTIFY_ENABLED
         if not self.enabled:
             return

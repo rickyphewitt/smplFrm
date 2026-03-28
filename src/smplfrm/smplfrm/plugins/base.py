@@ -1,8 +1,10 @@
 class BasePlugin:
     """Base class for all smplFrm plugins."""
 
-    name: str
-    description: str
+    def __init__(self, name: str, description: str, settings: dict = None):
+        self.name = name
+        self.description = description
+        self.settings = settings if settings is not None else {}
 
     def get_tasks(self) -> dict:
         """Return {task_name: task_function} for this plugin."""
