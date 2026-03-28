@@ -340,7 +340,8 @@ async function saveConfig() {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to save settings');
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Failed to save settings');
         }
         
         console.log('Settings saved successfully');
@@ -356,7 +357,7 @@ async function saveConfig() {
         return true;
     } catch (error) {
         console.error('Error saving config:', error);
-        errorMessage.textContent = 'Failed to save settings. Please try again.';
+        errorMessage.textContent = error.message;
         errorMessage.classList.add('show');
         
         setTimeout(() => {
