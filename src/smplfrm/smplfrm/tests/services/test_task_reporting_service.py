@@ -26,6 +26,15 @@ class TestTaskReportingService(TestCase):
         task = Task.objects.get(external_id=self.service.task_id)
         self.assertEqual(task.task_type, TaskType.RESCAN_LIBRARY)
 
+    def test_initiate_task_creates_task_when_id_not_found(self):
+        """Test initiate_task creates a new task when task_id doesn't exist."""
+        self.service.initiate_task("nonexistent_id", 5)
+
+        self.assertIsNotNone(self.service.task_id)
+        self.assertNotEqual(self.service.task_id, "nonexistent_id")
+        task = Task.objects.get(external_id=self.service.task_id)
+        self.assertEqual(task.task_type, TaskType.RESCAN_LIBRARY)
+
     def test_report_task_updates_progress_every_5th(self):
         """Test report_task updates progress on every 5th item."""
         task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
