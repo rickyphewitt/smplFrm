@@ -27,9 +27,6 @@ logger = logging.getLogger(__name__)
 class WeatherPlugin(BasePlugin):
     """Weather plugin for collecting and displaying weather data."""
 
-    name = "weather"
-    description = "Weather data"
-
     def get_tasks(self):
         from smplfrm.plugins.weather.tasks import refresh_weather
 
@@ -39,6 +36,7 @@ class WeatherPlugin(BasePlugin):
         return {"hourly-weather": {"task": "refresh_weather", "schedule": 1800}}
 
     def __init__(self) -> None:
+        super().__init__(name="weather", description="Weather data")
         self.redis_key = "weather"
         coords = SMPL_FRM_WEATHER_COORDS.split(",")
         self.lat = coords[0].strip()
