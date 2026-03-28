@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from celery import shared_task, signals
@@ -9,7 +8,6 @@ from smplfrm.services import (
     ImageManipulationService,
     ImageService,
     LibraryService,
-    WeatherService,
 )
 from smplfrm.services.task_service import TaskService
 
@@ -26,12 +24,6 @@ def scan_library(task_id=None, **kwargs):
 @app.task(name="reset_image_count")
 def reset_image_counts(task_id=None, **kwargs):
     ImageService().reset_all_view_count(task_id=task_id)
-
-
-@signals.worker_ready.connect
-@app.task(name="refresh_weather")
-def refresh_weather(**kwargs):
-    asyncio.run(WeatherService().collect_weather())
 
 
 @signals.worker_ready.connect

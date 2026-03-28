@@ -49,10 +49,16 @@ inclusion: always
 
 ## Version Control Integration
 - Commit frequently with meaningful messages
-- Use feature branches for development
+- Use feature branches for development — one branch per subtask (e.g. `feature/133-plugin-architecture`)
 - Keep main branch deployable at all times
 - Tag releases appropriately
 - Use .gitignore to exclude generated files and secrets
+
+## Feature Docs
+- Local feature docs live in `docs/features/` and serve as the source of truth during development
+- Feature docs are **not committed** to the repo. A parent issue will serve as the history instead of cluttering up the codebase with feature docs
+- Update the local feature doc when GitHub issue statuses change (closed, merged, etc.)
+- The corresponding parent GitHub issue should be updated to reflect changes in the feature doc
 
 ## API Standards
 - Never implement PATCH endpoints — always use PUT for updates

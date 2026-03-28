@@ -3,6 +3,8 @@ from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify, CacheFileHandler
 from django.conf import settings
 
+from smplfrm.plugins.base import BasePlugin
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,8 +20,11 @@ class SpotifyCacheHandler(CacheFileHandler):
         super().__init__(cache_path=None, username=None, encoder_cls=None)
 
 
-class SpotifyPlugin:
+class SpotifyPlugin(BasePlugin):
     """Spotify integration plugin for displaying now playing information."""
+
+    name = "spotify"
+    description = "Now playing display"
 
     def __init__(self):
         self.enabled = settings.SMPL_FRM_PLUGINS_SPOTIFY_ENABLED
