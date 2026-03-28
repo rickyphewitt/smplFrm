@@ -359,9 +359,13 @@ async function saveConfig() {
         console.error('Error saving config:', error);
         errorMessage.textContent = error.message;
         errorMessage.classList.add('show');
-        
+
+        const saveBtn = document.getElementById('save-settings');
+        saveBtn.disabled = true;
+
         setTimeout(() => {
             errorMessage.classList.remove('show');
+            saveBtn.disabled = false;
         }, 3000);
         
         return false;
