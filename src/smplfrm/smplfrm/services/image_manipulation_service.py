@@ -72,16 +72,19 @@ class ImageManipulationService:
         image_ext = image.file_path.rsplit(".", 1)[1]
         img = cv2.imread(image.file_path)
 
-        if settings.SMPL_FRM_IMAGE_FILL_MODE == "blur":
+        from smplfrm.services.config_service import ConfigService
+
+        fill_mode = ConfigService().load_config().image_fill_mode
+
+        if fill_mode == "blur":
             resized_img = self._scale_with_blur_background(
                 img, window_width, window_height
             )
-        elif settings.SMPL_FRM_IMAGE_FILL_MODE == "zoom_to_fill":
+        elif fill_mode == "zoom_to_fill":
             resized_img = self._scale_with_zoom_to_fill(
                 img, window_width, window_height
             )
         else:
-            logger.warning("Invalid SMPL_FRM_IMAGE_FILL_MODE, using border fill")
             resized_img = self._scale_with_border(img, window_width, window_height)
 
         logger.info(f"Resized Image: {image.name}")

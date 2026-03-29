@@ -63,23 +63,25 @@ class TestImageService(TestCase):
             self.service.get_image_cache_key(ext_id, height, width),
         )
 
-    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="border")
     def test_image_cache_key_with_different_fill_mode(self):
-        ext_id = "foo"
-        height = "10"
-        width = "20"
+        from smplfrm.services.config_service import ConfigService
 
-        cache_key = self.service.get_image_cache_key(ext_id, height, width)
-        self.assertEqual(f"{ext_id}:border:{height}:{width}", cache_key)
+        config = ConfigService().load_config()
+        config.image_fill_mode = "border"
+        config.save()
 
-    @override_settings(SMPL_FRM_IMAGE_FILL_MODE="zoom_to_fill")
-    def test_image_cache_key_dynamically_uses_setting(self):
-        ext_id = "bar"
-        height = "100"
-        width = "200"
+        cache_key = self.service.get_image_cache_key("foo", "10", "20")
+        self.assertEqual("foo:border:10:20", cache_key)
 
-        cache_key = self.service.get_image_cache_key(ext_id, height, width)
-        self.assertEqual(f"{ext_id}:zoom_to_fill:{height}:{width}", cache_key)
+    def test_image_cache_key_dynamically_uses_config(self):
+        from smplfrm.services.config_service import ConfigService
+
+        config = ConfigService().load_config()
+        config.image_fill_mode = "zoom_to_fill"
+        config.save()
+
+        cache_key = self.service.get_image_cache_key("bar", "100", "200")
+        self.assertEqual("bar:zoom_to_fill:100:200", cache_key)
 
     def test_clear_calls_reporting_methods(self):
         """Test that clear calls initiate_task, report_task, and complete_task."""

@@ -21,3 +21,10 @@ def get_plugin_task_modules():
         if plugin.get_tasks():
             modules.append(f"smplfrm.plugins.{plugin.name}")
     return modules
+
+
+def get_startup_tasks():
+    tasks = {}
+    for plugin in get_all_plugins():
+        tasks.update(plugin.get_startup_tasks())
+    return tasks

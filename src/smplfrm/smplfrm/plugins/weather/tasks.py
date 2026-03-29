@@ -7,4 +7,6 @@ from celery import shared_task
 def refresh_weather(**kwargs):
     from smplfrm.plugins.weather.weather import WeatherPlugin
 
-    asyncio.run(WeatherPlugin().collect_weather())
+    plugin = WeatherPlugin()
+    plugin.configure()
+    asyncio.run(plugin.collect_weather())

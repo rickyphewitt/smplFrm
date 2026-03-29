@@ -37,12 +37,26 @@ class PluginService(BaseService):
         raise NotImplementedError("Plugin destruction not supported")
 
     def sync_plugins(self) -> None:
-        """Sync plugin rows from PLUGIN_REGISTRY to the database."""
+        """Sync plugin rows from PLUGIN_REGISTRY to the database.
+
+        Environment variables take priority over DB values when explicitly set.
+        Uses plugin.get_env_overrides() which scans for SMPL_FRM_PLUGINS_{NAME}_ prefix.
+        Existing DB settings for keys without an env var are preserved.
+        """
         from smplfrm.plugins import get_all_plugins
 
         for plugin in get_all_plugins():
-            Plugin.objects.get_or_create(
+            obj, created = Plugin.objects.get_or_create(
                 name=plugin.name,
-                defaults={"description": plugin.description},
+                defaults={"description": plugin.description, "settings": {}},
             )
+
+            env_overrides = plugin.get_env_overrides()
+            if env_overrides:
+                obj.settings = {**obj.settings, **env_overrides}
+                obj.save()
+                logger.info(
+                    f"Updated plugin {plugin.name} with env overrides: {list(env_overrides.keys())}"
+                )
+
             logger.info(f"Synced plugin: {plugin.name}")

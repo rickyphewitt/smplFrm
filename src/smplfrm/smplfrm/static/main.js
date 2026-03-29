@@ -240,7 +240,7 @@ export function init() {
     }
 
     displayWeather();
-    if (!config.weatherCurrentTemp) {
+    if (!config.displayWeather) {
         document.getElementById('weather-group').style.display = 'none';
     }
 
