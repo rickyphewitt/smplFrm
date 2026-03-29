@@ -37,12 +37,43 @@ class PluginService(BaseService):
         raise NotImplementedError("Plugin destruction not supported")
 
     def sync_plugins(self) -> None:
-        """Sync plugin rows from PLUGIN_REGISTRY to the database."""
+        """Sync plugin rows from PLUGIN_REGISTRY to the database.
+
+        On first creation, seeds settings from environment variables.
+        Existing rows are not modified.
+        """
         from smplfrm.plugins import get_all_plugins
+        from smplfrm.settings import (
+            SMPL_FRM_WEATHER_COORDS,
+            SMPL_FRM_WEATHER_TEMP_UNIT,
+            SMPL_FRM_WEATHER_PRECIP_UNIT,
+            SMPL_FRM_WEATHER_WINDSPEED_UNIT,
+            SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID,
+            SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET,
+        )
+
+        env_defaults = {
+            "weather": {
+                "coords": SMPL_FRM_WEATHER_COORDS,
+                "temp_unit": SMPL_FRM_WEATHER_TEMP_UNIT,
+                "precip_unit": SMPL_FRM_WEATHER_PRECIP_UNIT,
+                "windspeed_unit": SMPL_FRM_WEATHER_WINDSPEED_UNIT,
+            },
+            "spotify": {
+                "client_id": SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID,
+                "client_secret": SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET,
+            },
+        }
 
         for plugin in get_all_plugins():
-            Plugin.objects.get_or_create(
-                name=plugin.name,
-                defaults={"description": plugin.description},
+            defaults = {
+                "description": plugin.description,
+                "settings": env_defaults.get(plugin.name, {}),
+            }
+            _, created = Plugin.objects.get_or_create(
+                name=plugin.name, defaults=defaults
             )
-            logger.info(f"Synced plugin: {plugin.name}")
+            if created:
+                logger.info(f"Created plugin: {plugin.name} (seeded from env vars)")
+            else:
+                logger.info(f"Synced plugin: {plugin.name}")
