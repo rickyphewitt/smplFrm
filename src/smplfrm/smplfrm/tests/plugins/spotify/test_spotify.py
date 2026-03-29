@@ -1,17 +1,24 @@
 from django.test import TestCase
 from unittest.mock import patch, Mock
-from django.test.utils import override_settings
 
+from smplfrm.models import Config, Plugin
 from smplfrm.plugins.spotify import SpotifyPlugin
 
 
 class TestSpotifyService(TestCase):
 
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID="foo")
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET="bar")
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED=True)
     @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
     def setUp(self, mock_spotify_oauth):
+        from smplfrm.services.config_service import ConfigService
+
+        config = ConfigService().load_config()
+        config.plugins = ["spotify"]
+        config.save()
+
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "foo", "client_secret": "bar"}
+        plugin.save()
+
         mock_spotify_oauth.return_value = Mock()
         self.mock_oauth = mock_spotify_oauth
         self.service = SpotifyPlugin()
@@ -23,85 +30,67 @@ class TestSpotifyService(TestCase):
             },
         }
 
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID="")
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET="")
-    @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
-    def test_spotify_missing_config(self, mock_spotify_oauth):
-
+    def test_spotify_missing_config(self):
+        Plugin.objects.filter(name="spotify").update(
+            settings={"client_id": "", "client_secret": ""}
+        )
         missing_conf_service = SpotifyPlugin()
-
-        # assert we disabled the service
         self.assertFalse(getattr(missing_conf_service, "enabled"))
-        mock_spotify_oauth.assert_not_called()
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success(self, mock_spotify):
         mock_spotify_instance = Mock()
         mock_spotify.return_value = mock_spotify_instance
-
         mock_spotify_instance.current_user_playing_track.return_value = (
             self.spotify_now_playing
         )
 
         ret_value = self.service.get_now_playing()
-        self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertTrue(ret_value["success"])
-        self.assertEqual(ret_value.get("artist"), "artist1", "Artist Should be set")
-        self.assertEqual(ret_value.get("song"), "songName", "Song should be set")
+        self.assertEqual(ret_value.get("artist"), "artist1")
+        self.assertEqual(ret_value.get("song"), "songName")
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success_unsupported_type(self, mock_spotify):
         mock_spotify_instance = Mock()
         mock_spotify.return_value = mock_spotify_instance
-
         mock_spotify_instance.current_user_playing_track.return_value = {
             "currently_playing_type": "not_supported"
         }
 
         ret_value = self.service.get_now_playing()
-        self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertTrue(ret_value["success"])
-        self.assertEqual(
-            ret_value.get("artist"), "Unsupported Type", "Artist Should be set"
-        )
-        self.assertEqual(ret_value.get("song"), "not_supported", "Song should be set")
+        self.assertEqual(ret_value.get("artist"), "Unsupported Type")
+        self.assertEqual(ret_value.get("song"), "not_supported")
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success_unsupported_type_episode(self, mock_spotify):
         mock_spotify_instance = Mock()
         mock_spotify.return_value = mock_spotify_instance
-
         mock_spotify_instance.current_user_playing_track.return_value = {
             "currently_playing_type": "episode"
         }
 
         ret_value = self.service.get_now_playing()
-        self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertTrue(ret_value["success"])
-        self.assertEqual(ret_value.get("artist"), "Awesome", "Artist Should be set")
-        self.assertEqual(ret_value.get("song"), "Podcast", "Song should be set")
+        self.assertEqual(ret_value.get("artist"), "Awesome")
+        self.assertEqual(ret_value.get("song"), "Podcast")
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_exception(self, mock_spotify):
-        mock_spotify_instance = Mock(side_effect=Exception)
-        mock_spotify.side_effect = mock_spotify_instance
-
+        mock_spotify.side_effect = Exception
         ret_value = self.service.get_now_playing()
-        self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertFalse(ret_value["success"])
 
     def test_spotify_callback(self):
-
         ret_value = self.service.callback("foo")
-        self.assertIsNotNone(ret_value, "spotify should have returned data")
         self.assertTrue(ret_value["success"])
 
-    @override_settings(SMPL_FRM_PLUGINS_SPOTIFY_ENABLED=False)
-    @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
-    def test_spotify_disabled(self, mock_spotify_oauth):
+    def test_spotify_disabled_when_not_in_plugins(self):
+        from smplfrm.services.config_service import ConfigService
 
+        config = ConfigService().load_config()
+        config.plugins = []
+        config.save()
         disabled_service = SpotifyPlugin()
-
-        # assert we disabled the service
         self.assertFalse(getattr(disabled_service, "enabled"))
-        mock_spotify_oauth.assert_not_called()

@@ -25,12 +25,27 @@ class SpotifyPlugin(BasePlugin):
 
     def __init__(self):
         super().__init__(name="spotify", description="Now playing display")
-        self.enabled = settings.SMPL_FRM_PLUGINS_SPOTIFY_ENABLED
-        if not self.enabled:
+        self.enabled = False
+        self.sp = None
+
+        try:
+            from smplfrm.services.plugin_service import PluginService
+            from smplfrm.services.config_service import ConfigService
+
+            config = ConfigService().load_config()
+            if self.name not in config.plugins:
+                return
+
+            plugin_settings = PluginService().read_by_name(self.name).settings
+        except Exception:
             return
-        self.client_id = settings.SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID
-        self.client_secret = settings.SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET
-        self.redirect_uri = settings.SMPL_FRM_PLUGINS_SPOTIFY_REDIRECT_URI
+
+        self.client_id = plugin_settings.get("client_id", "")
+        self.client_secret = plugin_settings.get("client_secret", "")
+        self.redirect_uri = (
+            f"Http://{settings.SMPL_FRM_HOST}:{settings.SMPL_FRM_EXTERNAL_PORT}"
+            f"/api/v1/plugins/spotify/callback"
+        )
 
         # if we don't have the required config, set as disabled
         if not self.client_id or not self.client_secret or not self.redirect_uri:
@@ -48,6 +63,7 @@ class SpotifyPlugin(BasePlugin):
             scope="user-read-currently-playing",
             cache_handler=self.cache_manager,
         )
+        self.enabled = True
         self.sp = None
 
     @property

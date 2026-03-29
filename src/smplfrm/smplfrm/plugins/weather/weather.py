@@ -13,13 +13,6 @@ from open_meteo.models import (
 )
 
 from smplfrm.plugins.base import BasePlugin
-from smplfrm.settings import (
-    SMPL_FRM_WEATHER_COORDS,
-    SMPL_FRM_TIMEZONE,
-    SMPL_FRM_WEATHER_TEMP_UNIT,
-    SMPL_FRM_WEATHER_PRECIP_UNIT,
-    SMPL_FRM_WEATHER_WINDSPEED_UNIT,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +28,30 @@ class WeatherPlugin(BasePlugin):
     def get_beat_schedule(self):
         return {"hourly-weather": {"task": "refresh_weather", "schedule": 1800}}
 
+    def _load_settings(self):
+        from smplfrm.services.plugin_service import PluginService
+
+        return PluginService().read_by_name(self.name).settings
+
     def __init__(self) -> None:
         super().__init__(name="weather", description="Weather data")
         self.redis_key = "weather"
-        coords = SMPL_FRM_WEATHER_COORDS.split(",")
+
+    def _init_from_settings(self):
+        s = self._load_settings()
+        coords = s.get("coords", "63.1786,-147.4661").split(",")
         self.lat = coords[0].strip()
         self.long = coords[1].strip()
-        self.tz = SMPL_FRM_TIMEZONE
-        self._determine_temp_unit()
-        self.precip_unit = self._determine_precip_unit()
-        self.windspeed_unit = self._determine_windspeed_unit()
+        self.tz = s.get("timezone", "America/Los_Angeles")
+        self._determine_temp_unit(s.get("temp_unit", "F"))
+        self.precip_unit = self._determine_precip_unit(s.get("precip_unit", "in"))
+        self.windspeed_unit = self._determine_windspeed_unit(
+            s.get("windspeed_unit", "mph")
+        )
 
     async def collect_weather(self) -> None:
         """Collect weather forecast and persist in cache."""
+        self._init_from_settings()
         async with OpenMeteo() as open_meteo:
             forecast = await open_meteo.forecast(
                 latitude=self.lat,
@@ -85,6 +89,7 @@ class WeatherPlugin(BasePlugin):
 
     def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
         """Get formatted weather data for display."""
+        self._init_from_settings()
         if not now:
             now = datetime.now(tz=timezone.utc)
 
@@ -158,25 +163,25 @@ class WeatherPlugin(BasePlugin):
                     return i
         return None
 
-    def _determine_temp_unit(self) -> None:
+    def _determine_temp_unit(self, unit_str: str) -> None:
         self.temp_unit = TemperatureUnit.FAHRENHEIT
         self.temp_unit_display = "°F"
-        if SMPL_FRM_WEATHER_TEMP_UNIT == "C":
+        if unit_str == "C":
             self.temp_unit = TemperatureUnit.CELSIUS
             self.temp_unit_display = "°C"
 
-    def _determine_precip_unit(self) -> PrecipitationUnit:
+    def _determine_precip_unit(self, unit_str: str) -> PrecipitationUnit:
         unit = PrecipitationUnit.INCHES
-        if SMPL_FRM_WEATHER_PRECIP_UNIT == "mm":
+        if unit_str == "mm":
             unit = PrecipitationUnit.MILLIMETERS
         return unit
 
-    def _determine_windspeed_unit(self) -> WindSpeedUnit:
+    def _determine_windspeed_unit(self, unit_str: str) -> WindSpeedUnit:
         unit = WindSpeedUnit.MILES_PER_HOUR
-        if SMPL_FRM_WEATHER_WINDSPEED_UNIT == "kmh":
+        if unit_str == "kmh":
             unit = WindSpeedUnit.KILOMETERS_PER_HOUR
-        elif SMPL_FRM_WEATHER_WINDSPEED_UNIT == "kn":
+        elif unit_str == "kn":
             unit = WindSpeedUnit.KNOTS
-        elif SMPL_FRM_WEATHER_WINDSPEED_UNIT == "ms":
+        elif unit_str == "ms":
             unit = WindSpeedUnit.METERS_PER_SECOND
         return unit

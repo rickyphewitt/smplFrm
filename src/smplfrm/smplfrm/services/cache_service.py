@@ -78,4 +78,7 @@ class CacheService(TaskReportingService):
         Returns:
             Formatted cache key string
         """
-        return f"{external_id}:{settings.SMPL_FRM_IMAGE_FILL_MODE}:{height}:{width}"
+        from smplfrm.services.config_service import ConfigService
+
+        fill_mode = ConfigService().load_config().image_fill_mode
+        return f"{external_id}:{fill_mode}:{height}:{width}"

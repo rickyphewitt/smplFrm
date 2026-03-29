@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional, Union
 from datetime import datetime, timedelta
 from django.db.models import QuerySet
 
-from smplfrm.settings import SMPL_FRM_FORCE_DATE_FROM_PATH
 from smplfrm.models import ImageMetadata
 
 from .base_service import BaseService
@@ -119,7 +118,9 @@ class ImageMetadataService(BaseService):
         Returns:
             Parsed datetime object, date string, or None
         """
-        if SMPL_FRM_FORCE_DATE_FROM_PATH:
+        from smplfrm.services.config_service import ConfigService
+
+        if ConfigService().load_config().force_date_from_path:
             date_str = self.parse_date_from_path(image_path)
             logger.info(f"Found Date String {date_str} from path.")
             return date_str

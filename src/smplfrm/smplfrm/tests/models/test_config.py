@@ -59,6 +59,7 @@ class TestConfig(TestCase):
 
     def test_only_one_active_config_allowed(self):
         """Test that only one config can be active at a time."""
+        Config.objects.filter(is_active=True).update(is_active=False)
         Config.objects.create(name="active", is_active=True)
         with self.assertRaises(IntegrityError):
             Config.objects.create(name="also active", is_active=True)
