@@ -1,7 +1,11 @@
 import os
-from celery import Celery
+from celery import Celery, signals
 
-from smplfrm.plugins import get_beat_schedules, get_plugin_task_modules
+from smplfrm.plugins import (
+    get_beat_schedules,
+    get_plugin_task_modules,
+    get_startup_tasks,
+)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "smplfrm.settings")
 app = Celery("smplfrm")
@@ -12,3 +16,9 @@ app.conf.beat_schedule = {
     **get_beat_schedules(),
 }
 app.autodiscover_tasks(["smplfrm.tasks"] + get_plugin_task_modules())
+
+
+@signals.worker_ready.connect
+def run_startup_tasks(sender, **kwargs):
+    for task_name in get_startup_tasks():
+        app.send_task(task_name)
