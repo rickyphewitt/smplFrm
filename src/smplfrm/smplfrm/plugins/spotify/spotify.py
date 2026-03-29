@@ -34,10 +34,10 @@ class SpotifyPlugin(BasePlugin):
             return
         self._initialized = True
 
-        if not self.enabled:
+        if not self.enabled():
             return
 
-        s = self.plugin_settings
+        s = self.get_plugin_settings()
         self.client_id = s.get("client_id", "")
         self.client_secret = s.get("client_secret", "")
         self.redirect_uri = (
@@ -62,7 +62,7 @@ class SpotifyPlugin(BasePlugin):
     def is_enabled(self):
         """Check if Spotify plugin is enabled and configured."""
         self._ensure_initialized()
-        if not self.enabled or not hasattr(self, "auth_manager"):
+        if not self.enabled() or not hasattr(self, "auth_manager"):
             logger.warning("Spotify Plugin Not Enabled")
             return False
         return True

@@ -31,9 +31,10 @@ class WeatherPlugin(BasePlugin):
     def __init__(self) -> None:
         super().__init__(name="weather", description="Weather data")
         self.redis_key = "weather"
+        self._init_from_settings()
 
     def _init_from_settings(self):
-        s = self.plugin_settings
+        s = self.get_plugin_settings()
         coords = s.get("coords", "63.1786,-147.4661").split(",")
         self.lat = coords[0].strip()
         self.long = coords[1].strip()
@@ -46,7 +47,6 @@ class WeatherPlugin(BasePlugin):
 
     async def collect_weather(self) -> None:
         """Collect weather forecast and persist in cache."""
-        self._init_from_settings()
         async with OpenMeteo() as open_meteo:
             forecast = await open_meteo.forecast(
                 latitude=self.lat,
@@ -84,7 +84,6 @@ class WeatherPlugin(BasePlugin):
 
     def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
         """Get formatted weather data for display."""
-        self._init_from_settings()
         if not now:
             now = datetime.now(tz=timezone.utc)
 
