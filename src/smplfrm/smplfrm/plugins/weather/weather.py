@@ -25,6 +25,11 @@ class WeatherPlugin(BasePlugin):
 
         return {"refresh_weather": refresh_weather}
 
+    def get_startup_tasks(self):
+        from smplfrm.plugins.weather.tasks import refresh_weather
+
+        return {"refresh_weather": refresh_weather}
+
     def get_beat_schedule(self):
         return {"hourly-weather": {"task": "refresh_weather", "schedule": 1800}}
 
@@ -86,10 +91,21 @@ class WeatherPlugin(BasePlugin):
     def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
         """Get formatted weather data for display."""
         self._ensure_configured()
+
+        weather_data = {
+            "current_temp": f"N/A {self.temp_unit_display}",
+            "current_low_temp": f"N/A {self.temp_unit_display}",
+            "current_high_temp": f"N/A{self.temp_unit_display}",
+        }
+
         if not now:
             now = datetime.now(tz=timezone.utc)
 
         raw_data = self.read()
+        if not raw_data:
+            logger.error("Failed to read weather data")
+            return weather_data
+
         current_temp_index = self._get_current_temp_index(raw_data, now)
         logger.debug(f"Current Temp Index: {current_temp_index}")
 
