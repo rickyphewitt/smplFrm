@@ -39,47 +39,50 @@ class PluginService(BaseService):
     def sync_plugins(self) -> None:
         """Sync plugin rows from PLUGIN_REGISTRY to the database.
 
-        Environment variables always take priority over DB values for
-        plugin settings. On every startup, settings are overwritten
-        with env var values.
+        Environment variables take priority over DB values when explicitly set.
+        Only env vars that are actually set (not defaults) overwrite DB values.
+        Existing DB settings for keys without an env var are preserved.
         """
-        from smplfrm.plugins import get_all_plugins
-        from smplfrm.settings import (
-            SMPL_FRM_WEATHER_COORDS,
-            SMPL_FRM_WEATHER_TEMP_UNIT,
-            SMPL_FRM_WEATHER_PRECIP_UNIT,
-            SMPL_FRM_WEATHER_WINDSPEED_UNIT,
-            SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID,
-            SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET,
-        )
+        import os
 
-        env_settings = {
+        from smplfrm.plugins import get_all_plugins
+
+        env_map = {
             "weather": {
-                "coords": SMPL_FRM_WEATHER_COORDS,
-                "temp_unit": SMPL_FRM_WEATHER_TEMP_UNIT,
-                "precip_unit": SMPL_FRM_WEATHER_PRECIP_UNIT,
-                "windspeed_unit": SMPL_FRM_WEATHER_WINDSPEED_UNIT,
+                "coords": "SMPL_FRM_WEATHER_COORDS",
+                "temp_unit": "SMPL_FRM_WEATHER_TEMP_UNIT",
+                "precip_unit": "SMPL_FRM_WEATHER_PRECIP_UNIT",
+                "windspeed_unit": "SMPL_FRM_WEATHER_WINDSPEED_UNIT",
             },
             "spotify": {
-                "client_id": SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID,
-                "client_secret": SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET,
+                "enabled": "SMPL_FRM_PLUGINS_SPOTIFY_ENABLED",
+                "client_id": "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID",
+                "client_secret": "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET",
             },
         }
 
         for plugin in get_all_plugins():
-            settings_from_env = env_settings.get(plugin.name, {})
+            # Build dict of only explicitly set env vars
+            env_overrides = {}
+            for key, env_var in env_map.get(plugin.name, {}).items():
+                val = os.getenv(env_var)
+                if val is not None:
+                    env_overrides[key] = val
+
             obj, created = Plugin.objects.get_or_create(
                 name=plugin.name,
                 defaults={
                     "description": plugin.description,
-                    "settings": settings_from_env,
+                    "settings": env_overrides,
                 },
             )
-            if not created:
-                obj.settings = settings_from_env
+
+            env_overrides = plugin.get_env_overrides()
+            if env_overrides:
+                obj.settings = {**obj.settings, **env_overrides}
                 obj.save()
+                logger.info(
+                    f"Updated plugin {plugin.name} with env overrides: {env_overrides.keys()}"
+                )
+
             logger.info(f"Synced plugin: {plugin.name}")
-            if created:
-                logger.info(f"Created plugin: {plugin.name} (seeded from env vars)")
-            else:
-                logger.info(f"Synced plugin: {plugin.name}")

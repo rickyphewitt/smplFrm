@@ -1,3 +1,6 @@
+import os
+
+
 class BasePlugin:
     """Base class for all smplFrm plugins."""
 
@@ -16,6 +19,30 @@ class BasePlugin:
         """Ensure configure() has been called."""
         if not self._configured:
             self.configure()
+
+    def get_env_overrides(self):
+        """Return dict of environment variables that override plugin settings."""
+        plugin_env_prefix = "SMPL_FRM_PLUGINS_"
+        plugin_env_prefix += self.name.upper() + "_"
+        overrides = {}
+        for key, value in os.environ.items():
+            if key.startswith(plugin_env_prefix):
+                clean_key = key[len(plugin_env_prefix) :].lower()
+                overrides[clean_key] = value
+
+        # SMPL_FRM_PLUGINS_SPOTIFY_ENABLED = bool(
+        #     os.getenv("SMPL_FRM_PLUGINS_SPOTIFY_ENABLED", True)
+        # )
+        # SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID = os.getenv("SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID",
+        #                                                "da62d3abfdbe483f88623a9551fdb58b")
+        # SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET = os.getenv(
+        #     "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET", "db33255b3d204558b8a1ae7a6ab0a313"
+        # )
+        # SMPL_FRM_PLUGINS_SPOTIFY_REDIRECT_URI = (
+        #     f"Http://{SMPL_FRM_HOST}:{SMPL_FRM_EXTERNAL_PORT}/api/v1/plugins/spotify/callback"
+        # )
+
+        return overrides
 
     def is_enabled(self) -> bool:
         """Check if this plugin is enabled in the active config."""
