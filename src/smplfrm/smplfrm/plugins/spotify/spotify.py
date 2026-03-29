@@ -25,16 +25,14 @@ class SpotifyPlugin(BasePlugin):
 
     def __init__(self):
         super().__init__(name="spotify", description="Now playing display")
-        self._initialized = False
         self.sp = None
+        self._ready = False
 
-    def _ensure_initialized(self):
-        """Lazy init: read settings from DB and set up auth on first use."""
-        if self._initialized:
-            return
-        self._initialized = True
+    def configure(self):
+        """Load settings from DB and set up Spotify auth."""
+        super().configure()
 
-        if not self.enabled():
+        if not self.is_enabled():
             return
 
         s = self.get_plugin_settings()
@@ -57,30 +55,26 @@ class SpotifyPlugin(BasePlugin):
             scope="user-read-currently-playing",
             cache_handler=self.cache_manager,
         )
+        self._ready = True
 
     @property
-    def is_enabled(self):
+    def is_ready(self):
         """Check if Spotify plugin is enabled and configured."""
-        self._ensure_initialized()
-        if not self.enabled() or not hasattr(self, "auth_manager"):
+        self._ensure_configured()
+        if not self._ready:
             logger.warning("Spotify Plugin Not Enabled")
-            return False
-        return True
+        return self._ready
 
     def auth(self):
         """Get Spotify authorization URL."""
-        auth_url = {"auth_url": "http://not.enabled"}
-        if not self.is_enabled:
-            return auth_url
-
-        auth_url = self.auth_manager.get_authorize_url()
-        return {"auth_url": auth_url}
+        if not self.is_ready:
+            return {"auth_url": "http://not.enabled"}
+        return {"auth_url": self.auth_manager.get_authorize_url()}
 
     def get_now_playing(self):
         """Get currently playing track information."""
         now_playing = {"success": False}
-
-        if not self.is_enabled:
+        if not self.is_ready:
             return now_playing
 
         try:
@@ -107,8 +101,7 @@ class SpotifyPlugin(BasePlugin):
     def callback(self, code):
         """Exchange authorization code for access token."""
         callback_response = {"success": False}
-
-        if not self.is_enabled:
+        if not self.is_ready:
             return callback_response
 
         try:
@@ -116,5 +109,4 @@ class SpotifyPlugin(BasePlugin):
             callback_response["success"] = True
         except Exception as e:
             logger.error(f"Failed to exchange code: {str(e)}")
-
         return callback_response

@@ -1,12 +1,23 @@
 class BasePlugin:
     """Base class for all smplFrm plugins."""
 
-    def __init__(self, name: str, description: str, settings: dict = None):
+    def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
-        self.settings = settings if settings is not None else {}
+        self._configured = False
 
-    def enabled(self) -> bool:
+    def configure(self):
+        """Load settings from DB. Called lazily on first use."""
+        if self._configured:
+            return
+        self._configured = True
+
+    def _ensure_configured(self):
+        """Ensure configure() has been called."""
+        if not self._configured:
+            self.configure()
+
+    def is_enabled(self) -> bool:
         """Check if this plugin is enabled in the active config."""
         from smplfrm.services.config_service import ConfigService
 

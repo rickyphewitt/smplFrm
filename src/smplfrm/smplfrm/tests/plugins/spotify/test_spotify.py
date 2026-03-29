@@ -21,8 +21,7 @@ class TestSpotifyService(TestCase):
 
         mock_spotify_oauth.return_value = Mock()
         self.service = SpotifyPlugin()
-        # Force initialization so auth_manager is set up with the mock
-        self.service._ensure_initialized()
+        self.service.configure()
         self.spotify_now_playing = {
             "currently_playing_type": "track",
             "item": {
@@ -37,7 +36,7 @@ class TestSpotifyService(TestCase):
         plugin.save()
 
         svc = SpotifyPlugin()
-        self.assertFalse(svc.is_enabled)
+        self.assertFalse(svc.is_ready)
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success(self, mock_spotify):
@@ -96,4 +95,4 @@ class TestSpotifyService(TestCase):
         config.save()
 
         svc = SpotifyPlugin()
-        self.assertFalse(svc.is_enabled)
+        self.assertFalse(svc.is_ready)
