@@ -96,3 +96,92 @@ class TestSpotifyService(TestCase):
 
         svc = SpotifyPlugin()
         self.assertFalse(svc.is_ready)
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "env_id",
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET": "env_secret",
+        },
+    )
+    def test_env_overrides_db_settings(self):
+        """Test that env vars override DB plugin settings on sync."""
+        from smplfrm.services.plugin_service import PluginService
+
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "db_id", "client_secret": "db_secret"}
+        plugin.save()
+
+        PluginService().sync_plugins()
+
+        plugin.refresh_from_db()
+        self.assertEqual(plugin.settings["client_id"], "env_id")
+        self.assertEqual(plugin.settings["client_secret"], "env_secret")
+
+    def test_db_settings_preserved_when_no_env_vars(self):
+        """Test that DB settings are preserved when no env vars are set."""
+        from smplfrm.services.plugin_service import PluginService
+
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "db_id", "client_secret": "db_secret"}
+        plugin.save()
+
+        PluginService().sync_plugins()
+
+        plugin.refresh_from_db()
+        self.assertEqual(plugin.settings["client_id"], "db_id")
+        self.assertEqual(plugin.settings["client_secret"], "db_secret")
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "env_id",
+        },
+    )
+    def test_env_overrides_merge_with_db(self):
+        """Test that env vars merge with existing DB settings."""
+        from smplfrm.services.plugin_service import PluginService
+
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "db_id", "client_secret": "db_secret"}
+        plugin.save()
+
+        PluginService().sync_plugins()
+
+        plugin.refresh_from_db()
+        self.assertEqual(plugin.settings["client_id"], "env_id")
+        self.assertEqual(plugin.settings["client_secret"], "db_secret")
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "",
+        },
+    )
+    def test_empty_env_var_skipped(self):
+        """Test that empty env vars are skipped and DB value preserved."""
+        from smplfrm.services.plugin_service import PluginService
+
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "db_id", "client_secret": "db_secret"}
+        plugin.save()
+
+        PluginService().sync_plugins()
+
+        plugin.refresh_from_db()
+        self.assertEqual(plugin.settings["client_id"], "db_id")
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "",
+        },
+    )
+    def test_empty_env_var_logs_warning(self):
+        """Test that empty env var logs a warning."""
+        svc = SpotifyPlugin()
+        with self.assertLogs("smplfrm.plugins.base", level="WARNING") as cm:
+            svc.get_env_overrides()
+        self.assertTrue(
+            any("SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID" in msg for msg in cm.output)
+        )
