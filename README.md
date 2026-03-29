@@ -118,15 +118,29 @@ However, there are some additional guidelines that should be used for AI commits
 | `SMPL_FRM_FORCE_DATE_FROM_PATH`         | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12                                                             |
 | `SMPL_FRM_DISPLAY_CLOCK`                | True                               | Display the Clock                                                                                                         |
 | `SMPL_FRM_DISPLAY_WEATHER`              | True                               | Display the Weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                                             |
-| `SMPL_FRM_WEATHER_COORDS`               | "63.1786,-147.4661"                | Lat,Long for weather                                                                                                      |
-| `SMPL_FRM_WEATHER_TEMP_UNIT`            | "F"                                | `F` for Fahrenheit, `C` for Celsius                                                                                       |
-| `SMPL_FRM_WEATHER_PRECIP_UNIT`          | "in"                               | `in` for inches, `mm` for millimeters                                                                                     |
-| `SMPL_FRM_WEATHER_WINDSPEED_UNIT`       | "mph"                              | `kmh` kilos per hour, `kn` knots, `ms` meters per second, `mph` miles per hour                                            |
 | `SMPL_FRM_TIMEZONE`                     | "America/Los_Angeles"              | TZ Identified from [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)                              |
 | `SMPL_FRM_IMAGE_CACHE_TIMEOUT`          | "300"                              | Seconds until the image should be removed from the cache                                                                  |
 | `SMPL_FRM_IMAGE_FILL_MODE`              | "blur"                             | How to fill aspect ratio gaps: `border` (replicate edges), `blur` (blurred background), or `zoom_to_fill` (zoom to fill)  |
 | `SMPL_FRM_IMAGE_ZOOM_EFFECT`            | True                               | Enables slow zoom animation on images from center (1.0x to 1.2x scale over display duration)                              |
 | `SMPL_FRM_IMAGE_TRANSITION_TYPE`        | "random"                           | Image transition effect: `fade`, `slide-left`, `slide-right`, `zoom`, `none`, or `random`                                 |
-| `SMPL_FRM_PLUGINS_SPOTIFY_ENABLED`      | False                              | Enables Spotify Now Playing Plugin                                                                                        |
-| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID`    | None                               | See: https://spotipy.readthedocs.io/en/latest/#getting-started                                                            |
-| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET` | None                               | See ^ - Ensure your Redirect URI matches  Http://`SMPL_FRM_HOST`:`SMPL_FRM_EXTERNAL_PORT`/api/v1/plugins/spotify/callback |
+
+### Plugin Environment Variables
+
+Plugin env vars use the prefix `SMPL_FRM_PLUGINS_{PLUGIN_NAME}_`. These override plugin DB settings on every startup. Configure in `.env` or your environment.
+
+#### Spotify
+
+| Name                                     | Default | Description                                                                                                               |
+|------------------------------------------|---------|---------------------------------------------------------------------------------------------------------------------------|
+| `SMPL_FRM_PLUGINS_SPOTIFY_ENABLED`       | False   | Enables Spotify Now Playing Plugin                                                                                        |
+| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID`     | None    | See: https://spotipy.readthedocs.io/en/latest/#getting-started                                                            |
+| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET` | None    | See ^ - Ensure your Redirect URI matches Http://`SMPL_FRM_HOST`:`SMPL_FRM_EXTERNAL_PORT`/api/v1/plugins/spotify/callback  |
+
+#### Weather
+
+| Name                                      | Default              | Description                                                                                          |
+|-------------------------------------------|----------------------|------------------------------------------------------------------------------------------------------|
+| `SMPL_FRM_PLUGINS_WEATHER_COORDS`         | "63.1786,-147.4661"  | Lat,Long for weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                       |
+| `SMPL_FRM_PLUGINS_WEATHER_TEMP_UNIT`      | "F"                  | `F` for Fahrenheit, `C` for Celsius                                                                  |
+| `SMPL_FRM_PLUGINS_WEATHER_PRECIP_UNIT`    | "in"                 | `in` for inches, `mm` for millimeters                                                                |
+| `SMPL_FRM_PLUGINS_WEATHER_WINDSPEED_UNIT` | "mph"                | `kmh` kilos per hour, `kn` knots, `ms` meters per second, `mph` miles per hour                       |

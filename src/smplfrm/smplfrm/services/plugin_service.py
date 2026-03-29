@@ -40,41 +40,15 @@ class PluginService(BaseService):
         """Sync plugin rows from PLUGIN_REGISTRY to the database.
 
         Environment variables take priority over DB values when explicitly set.
-        Only env vars that are actually set (not defaults) overwrite DB values.
+        Uses plugin.get_env_overrides() which scans for SMPL_FRM_PLUGINS_{NAME}_ prefix.
         Existing DB settings for keys without an env var are preserved.
         """
-        import os
-
         from smplfrm.plugins import get_all_plugins
 
-        env_map = {
-            "weather": {
-                "coords": "SMPL_FRM_WEATHER_COORDS",
-                "temp_unit": "SMPL_FRM_WEATHER_TEMP_UNIT",
-                "precip_unit": "SMPL_FRM_WEATHER_PRECIP_UNIT",
-                "windspeed_unit": "SMPL_FRM_WEATHER_WINDSPEED_UNIT",
-            },
-            "spotify": {
-                "enabled": "SMPL_FRM_PLUGINS_SPOTIFY_ENABLED",
-                "client_id": "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID",
-                "client_secret": "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET",
-            },
-        }
-
         for plugin in get_all_plugins():
-            # Build dict of only explicitly set env vars
-            env_overrides = {}
-            for key, env_var in env_map.get(plugin.name, {}).items():
-                val = os.getenv(env_var)
-                if val is not None:
-                    env_overrides[key] = val
-
             obj, created = Plugin.objects.get_or_create(
                 name=plugin.name,
-                defaults={
-                    "description": plugin.description,
-                    "settings": env_overrides,
-                },
+                defaults={"description": plugin.description, "settings": {}},
             )
 
             env_overrides = plugin.get_env_overrides()
@@ -82,7 +56,7 @@ class PluginService(BaseService):
                 obj.settings = {**obj.settings, **env_overrides}
                 obj.save()
                 logger.info(
-                    f"Updated plugin {plugin.name} with env overrides: {env_overrides.keys()}"
+                    f"Updated plugin {plugin.name} with env overrides: {list(env_overrides.keys())}"
                 )
 
             logger.info(f"Synced plugin: {plugin.name}")
