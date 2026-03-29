@@ -39,8 +39,9 @@ class PluginService(BaseService):
     def sync_plugins(self) -> None:
         """Sync plugin rows from PLUGIN_REGISTRY to the database.
 
-        On first creation, seeds settings from environment variables.
-        Existing rows are not modified.
+        Environment variables always take priority over DB values for
+        plugin settings. On every startup, settings are overwritten
+        with env var values.
         """
         from smplfrm.plugins import get_all_plugins
         from smplfrm.settings import (
@@ -52,7 +53,7 @@ class PluginService(BaseService):
             SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET,
         )
 
-        env_defaults = {
+        env_settings = {
             "weather": {
                 "coords": SMPL_FRM_WEATHER_COORDS,
                 "temp_unit": SMPL_FRM_WEATHER_TEMP_UNIT,
@@ -66,13 +67,18 @@ class PluginService(BaseService):
         }
 
         for plugin in get_all_plugins():
-            defaults = {
-                "description": plugin.description,
-                "settings": env_defaults.get(plugin.name, {}),
-            }
-            _, created = Plugin.objects.get_or_create(
-                name=plugin.name, defaults=defaults
+            settings_from_env = env_settings.get(plugin.name, {})
+            obj, created = Plugin.objects.get_or_create(
+                name=plugin.name,
+                defaults={
+                    "description": plugin.description,
+                    "settings": settings_from_env,
+                },
             )
+            if not created:
+                obj.settings = settings_from_env
+                obj.save()
+            logger.info(f"Synced plugin: {plugin.name}")
             if created:
                 logger.info(f"Created plugin: {plugin.name} (seeded from env vars)")
             else:
