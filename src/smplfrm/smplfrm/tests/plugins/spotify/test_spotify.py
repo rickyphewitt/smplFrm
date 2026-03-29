@@ -1,7 +1,7 @@
 from django.test import TestCase
 from unittest.mock import patch, Mock
 
-from smplfrm.models import Config, Plugin
+from smplfrm.models import Plugin
 from smplfrm.plugins.spotify import SpotifyPlugin
 
 
@@ -20,8 +20,9 @@ class TestSpotifyService(TestCase):
         plugin.save()
 
         mock_spotify_oauth.return_value = Mock()
-        self.mock_oauth = mock_spotify_oauth
         self.service = SpotifyPlugin()
+        # Force initialization so auth_manager is set up with the mock
+        self.service._ensure_initialized()
         self.spotify_now_playing = {
             "currently_playing_type": "track",
             "item": {
@@ -31,11 +32,12 @@ class TestSpotifyService(TestCase):
         }
 
     def test_spotify_missing_config(self):
-        Plugin.objects.filter(name="spotify").update(
-            settings={"client_id": "", "client_secret": ""}
-        )
-        missing_conf_service = SpotifyPlugin()
-        self.assertFalse(getattr(missing_conf_service, "enabled"))
+        plugin = Plugin.objects.get(name="spotify")
+        plugin.settings = {"client_id": "", "client_secret": ""}
+        plugin.save()
+
+        svc = SpotifyPlugin()
+        self.assertFalse(svc.is_enabled)
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success(self, mock_spotify):
@@ -92,5 +94,6 @@ class TestSpotifyService(TestCase):
         config = ConfigService().load_config()
         config.plugins = []
         config.save()
-        disabled_service = SpotifyPlugin()
-        self.assertFalse(getattr(disabled_service, "enabled"))
+
+        svc = SpotifyPlugin()
+        self.assertFalse(svc.is_enabled)

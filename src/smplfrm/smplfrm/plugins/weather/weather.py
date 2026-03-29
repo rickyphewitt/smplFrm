@@ -28,17 +28,12 @@ class WeatherPlugin(BasePlugin):
     def get_beat_schedule(self):
         return {"hourly-weather": {"task": "refresh_weather", "schedule": 1800}}
 
-    def _load_settings(self):
-        from smplfrm.services.plugin_service import PluginService
-
-        return PluginService().read_by_name(self.name).settings
-
     def __init__(self) -> None:
         super().__init__(name="weather", description="Weather data")
         self.redis_key = "weather"
 
     def _init_from_settings(self):
-        s = self._load_settings()
+        s = self.plugin_settings
         coords = s.get("coords", "63.1786,-147.4661").split(",")
         self.lat = coords[0].strip()
         self.long = coords[1].strip()
