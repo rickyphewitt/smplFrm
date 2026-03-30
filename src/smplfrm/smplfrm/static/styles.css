@@ -496,6 +496,10 @@ input:checked + .slider:before {
     max-width: 280px;
 }
 
+.plugin-toggle-wrap {
+    display: inline-block;
+}
+
 .modal-actions {
     display: flex;
     gap: 10px;

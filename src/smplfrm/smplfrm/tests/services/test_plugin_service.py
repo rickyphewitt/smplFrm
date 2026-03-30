@@ -61,8 +61,8 @@ class TestPluginAPI(TestCase):
     def test_list_plugins(self):
         response = self.client.get("/api/v1/plugins")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "weather")
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "weather")
 
     def test_retrieve_plugin(self):
         response = self.client.get(self.url)

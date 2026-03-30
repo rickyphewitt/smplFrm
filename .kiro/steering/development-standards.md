@@ -65,6 +65,7 @@ inclusion: always
 - All update operations must send the full resource representation
 - Partial updates are not supported by design
 - Views must always call into service layer methods — never perform model operations directly in views
+- All list endpoints must include pagination (5 per page default)
 
 ## Preset Configs
 - Preset JSON files live in `src/smplfrm/smplfrm/presets/`

@@ -71,6 +71,7 @@
             <button class="tab-btn" data-tab="images">Images</button>
             <button class="tab-btn" data-tab="library">Library</button>
             <button class="tab-btn" data-tab="presets">Presets</button>
+            <button class="tab-btn" data-tab="plugins">Plugins</button>
             <button class="tab-btn" data-tab="tasks">Tasks</button>
             <button class="tab-btn" data-tab="about">About</button>
         </div>
@@ -207,6 +208,27 @@
                     <button class="btn btn-secondary btn-sm" id="preset-page-prev" disabled>&laquo; Prev</button>
                     <span id="preset-page-info"></span>
                     <button class="btn btn-secondary btn-sm" id="preset-page-next" disabled>Next &raquo;</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab-plugins">
+            <div class="settings-section" id="plugin-list-view">
+                <h3>Plugins</h3>
+                <table class="task-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Enabled</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plugin-list-body"></tbody>
+                </table>
+                <div class="task-pagination">
+                    <button class="btn btn-secondary btn-sm" id="plugin-page-prev" disabled>&laquo; Prev</button>
+                    <span id="plugin-page-info"></span>
+                    <button class="btn btn-secondary btn-sm" id="plugin-page-next" disabled>Next &raquo;</button>
                 </div>
             </div>
         </div>
