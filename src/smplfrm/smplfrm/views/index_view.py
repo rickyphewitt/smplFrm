@@ -13,6 +13,8 @@ class IndexView(TemplateView):
     template_name = "index.html"
 
     def get_context_data(self, **kwargs):
+        from zoneinfo import available_timezones
+
         config = ConfigService().load_config()
 
         weather_enabled = "weather" in config.plugins
@@ -40,6 +42,7 @@ class IndexView(TemplateView):
             "plugin_spotify_enabled": str("spotify" in config.plugins).lower(),
             "image_zoom_effect": str(config.image_zoom_effect).lower(),
             "image_transition_type": config.image_transition_type,
+            "timezones": sorted(available_timezones()),
         }
 
         return context

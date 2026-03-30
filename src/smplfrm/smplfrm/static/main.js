@@ -290,6 +290,9 @@ async function loadConfig() {
         document.getElementById('setting-zoom').checked = config.image_zoom_effect;
         document.getElementById('setting-transition-type').value = config.image_transition_type;
         document.getElementById('setting-cache-timeout').value = config.image_cache_timeout;
+        document.getElementById('setting-timezone').value = config.timezone;
+        document.getElementById('setting-fill-mode').value = config.image_fill_mode;
+        document.getElementById('setting-force-date-path').checked = config.force_date_from_path;
     } catch (error) {
         console.error('Error loading config:', error);
     }
@@ -309,7 +312,10 @@ async function saveConfig() {
         image_transition_interval: parseInt(document.getElementById('setting-transition').value),
         image_zoom_effect: document.getElementById('setting-zoom').checked,
         image_transition_type: document.getElementById('setting-transition-type').value,
-        image_cache_timeout: parseInt(document.getElementById('setting-cache-timeout').value)
+        image_cache_timeout: parseInt(document.getElementById('setting-cache-timeout').value),
+        timezone: document.getElementById('setting-timezone').value,
+        image_fill_mode: document.getElementById('setting-fill-mode').value,
+        force_date_from_path: document.getElementById('setting-force-date-path').checked
     };
     
     try {

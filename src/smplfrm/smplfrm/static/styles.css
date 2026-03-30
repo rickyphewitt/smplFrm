@@ -484,13 +484,16 @@ input:checked + .slider:before {
 }
 
 .select-input {
-    width: 100%;
     padding: 8px;
     background: #222;
     border: 1px solid #444;
     border-radius: 6px;
     color: #fff;
     font-size: 14px;
+}
+
+.timezone-input {
+    max-width: 280px;
 }
 
 .modal-actions {
