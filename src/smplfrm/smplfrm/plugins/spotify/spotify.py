@@ -28,6 +28,12 @@ class SpotifyPlugin(BasePlugin):
         self.sp = None
         self._ready = False
 
+    def get_settings_schema(self):
+        return [
+            {"key": "client_id", "label": "Client ID", "type": "password"},
+            {"key": "client_secret", "label": "Client Secret", "type": "password"},
+        ]
+
     def configure(self):
         """Load settings from DB and set up Spotify auth."""
         super().configure()

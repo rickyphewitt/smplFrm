@@ -449,6 +449,10 @@ let pluginPage = 1;
 
 export async function loadPlugins(page = 1) {
     pluginPage = page;
+    document.getElementById('plugin-list-view').style.display = '';
+    document.getElementById('plugin-detail-view').style.display = 'none';
+    document.getElementById('main-actions').style.display = '';
+    document.getElementById('plugin-detail-actions').style.display = 'none';
     const body = document.getElementById('plugin-list-body');
     const modal = document.getElementById('settings-modal');
     const prev = document.getElementById('plugin-page-prev');
@@ -467,6 +471,7 @@ export async function loadPlugins(page = 1) {
             return `<tr>
                 <td>${p.name}</td>
                 <td>${p.description || ''}</td>
+                <td><button class="btn btn-secondary btn-sm plugin-configure-btn" data-id="${p.id}">Configure</button></td>
                 <td><label class="toggle-switch plugin-toggle-wrap"><input type="checkbox" class="plugin-toggle" data-name="${p.name}" ${checked}><span class="slider"></span></label></td>
             </tr>`;
         }).join('');
@@ -485,13 +490,151 @@ export async function loadPlugins(page = 1) {
             });
         });
 
+        // Configure button opens detail view
+        body.querySelectorAll('.plugin-configure-btn').forEach(btn => {
+            btn.addEventListener('click', () => openPluginDetail(btn.dataset.id));
+        });
+
         const totalPages = Math.ceil(data.count / 5) || 1;
         info.textContent = `Page ${page} of ${totalPages}`;
         prev.disabled = !data.previous;
         next.disabled = !data.next;
     } catch {
-        body.innerHTML = '<tr><td colspan="3">Failed to load plugins</td></tr>';
+        body.innerHTML = '<tr><td colspan="4">Failed to load plugins</td></tr>';
     }
+}
+
+const PLUGIN_ACTION_HANDLERS = {
+    geolocation: (input) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'action-btn';
+        btn.textContent = '📍';
+        btn.title = 'Use current location';
+        btn.addEventListener('click', () => {
+            if (!navigator.geolocation) return;
+            btn.textContent = '...';
+            navigator.geolocation.getCurrentPosition(
+                pos => { input.value = `${pos.coords.latitude},${pos.coords.longitude}`; btn.textContent = '📍'; },
+                () => { btn.textContent = '📍'; }
+            );
+        });
+        return btn;
+    }
+};
+
+async function openPluginDetail(pluginId) {
+    const listView = document.getElementById('plugin-list-view');
+    const detailView = document.getElementById('plugin-detail-view');
+    const nameEl = document.getElementById('plugin-detail-name');
+    const formEl = document.getElementById('plugin-detail-form');
+
+    const resp = await fetch(buildApiUrl(`plugins/${pluginId}`));
+    if (!resp.ok) return;
+    const plugin = await resp.json();
+
+    nameEl.textContent = plugin.name;
+    formEl.innerHTML = '';
+
+    (plugin.settings_schema || []).forEach(field => {
+        const div = document.createElement('div');
+        div.className = 'setting-item';
+
+        const label = document.createElement('label');
+        label.textContent = field.label;
+        div.appendChild(label);
+
+        const row = document.createElement('div');
+        row.className = 'field-row';
+
+        let input;
+        if (field.type === 'select') {
+            input = document.createElement('select');
+            input.className = 'select-input';
+            (field.options || []).forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+            input.value = plugin.settings[field.key] || '';
+        } else if (field.type === 'toggle') {
+            const toggleLabel = document.createElement('label');
+            toggleLabel.className = 'toggle-switch';
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = !!plugin.settings[field.key];
+            const slider = document.createElement('span');
+            slider.className = 'slider';
+            toggleLabel.appendChild(input);
+            toggleLabel.appendChild(slider);
+            row.appendChild(toggleLabel);
+        } else {
+            input = document.createElement('input');
+            input.type = field.type === 'password' ? 'password' : 'text';
+            input.className = 'select-input';
+            input.value = plugin.settings[field.key] || '';
+            if (field.type === 'password') {
+                const reveal = document.createElement('button');
+                reveal.type = 'button';
+                reveal.className = 'reveal-btn';
+                reveal.textContent = '👁';
+                reveal.addEventListener('click', () => {
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                });
+                row.appendChild(input);
+                row.appendChild(reveal);
+            }
+        }
+
+        input.dataset.key = field.key;
+        input.classList.add('plugin-setting-input');
+
+        if (field.type !== 'password' && field.type !== 'toggle') row.appendChild(input);
+
+        if (field.action && PLUGIN_ACTION_HANDLERS[field.action]) {
+            row.appendChild(PLUGIN_ACTION_HANDLERS[field.action](input));
+        }
+
+        div.appendChild(row);
+        formEl.appendChild(div);
+    });
+
+    // Save handler
+    const saveBtn = document.getElementById('plugin-detail-save');
+    const newSave = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSave, saveBtn);
+    newSave.addEventListener('click', async () => {
+        const settings = {};
+        formEl.querySelectorAll('.plugin-setting-input').forEach(el => {
+            settings[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        await fetch(buildApiUrl(`plugins/${pluginId}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings })
+        });
+        newSave.textContent = 'Saved!';
+        setTimeout(() => { newSave.textContent = 'Save'; }, 1500);
+
+        const modal = document.getElementById('settings-modal');
+        modal.dataset.changesSaved = 'true';
+        const cancelBtn = document.getElementById('cancel-settings');
+        cancelBtn.textContent = 'Reload Now';
+        cancelBtn.classList.remove('btn-secondary');
+        cancelBtn.classList.add('btn-primary');
+    });
+
+    listView.style.display = 'none';
+    detailView.style.display = '';
+    document.getElementById('main-actions').style.display = 'none';
+    document.getElementById('plugin-detail-actions').style.display = '';
+
+    // Back button
+    const backBtn = document.getElementById('plugin-detail-back');
+    const newBack = backBtn.cloneNode(true);
+    backBtn.parentNode.replaceChild(newBack, backBtn);
+    newBack.addEventListener('click', () => loadPlugins(pluginPage));
 }
 
 export async function loadPresets(page = 1) {
@@ -636,6 +779,11 @@ function initSettingsModal() {
         cancelBtn.classList.remove('btn-primary');
         cancelBtn.classList.add('btn-secondary');
 
+        // Reset plugin detail view
+        document.getElementById('plugin-detail-view').style.display = 'none';
+        document.getElementById('plugin-list-view').style.display = '';
+        document.getElementById('main-actions').style.display = '';
+
         const activeTab = document.querySelector('.tab-content.active');
         const sections = activeTab.querySelectorAll('.settings-section');
         sections.forEach(s => s.style.display = 'none');
@@ -645,6 +793,10 @@ function initSettingsModal() {
         await loadConfig();
         spinner.remove();
         sections.forEach(s => s.style.display = '');
+
+        // Ensure plugin detail stays hidden after section restore
+        document.getElementById('plugin-detail-view').style.display = 'none';
+        document.getElementById('plugin-detail-actions').style.display = 'none';
     });
 
     const closeModal = () => {
@@ -683,6 +835,11 @@ function initSettingsModal() {
             });
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
+            // Always restore main action buttons and hide plugin detail when switching tabs
+            document.getElementById('main-actions').style.display = '';
+            document.getElementById('plugin-detail-actions').style.display = 'none';
+            document.getElementById('plugin-detail-view').style.display = 'none';
+
             if (tabName === 'tasks') {
                 const taskTab = document.getElementById('tab-tasks');
                 const sections = taskTab.querySelectorAll('.settings-section, .task-pagination');
@@ -709,14 +866,14 @@ function initSettingsModal() {
 
             if (tabName === 'plugins') {
                 const pluginsTab = document.getElementById('tab-plugins');
-                const sections = pluginsTab.querySelectorAll('.settings-section');
-                sections.forEach(s => s.style.display = 'none');
+                const listView = document.getElementById('plugin-list-view');
+                listView.style.display = 'none';
+                document.getElementById('plugin-detail-view').style.display = 'none';
                 const spinner = document.createElement('div');
                 spinner.className = 'spinner';
                 pluginsTab.appendChild(spinner);
                 await loadPlugins();
                 spinner.remove();
-                sections.forEach(s => s.style.display = '');
             }
         });
     });
