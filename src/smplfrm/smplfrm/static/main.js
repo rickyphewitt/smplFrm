@@ -283,6 +283,7 @@ async function loadConfig() {
         const config = await response.json();
         
         modal.dataset.configName = config.name;
+        modal.dataset.configPlugins = JSON.stringify(config.plugins || []);
         document.getElementById('setting-date').checked = config.display_date;
         document.getElementById('setting-clock').checked = config.display_clock;
         document.getElementById('setting-refresh').value = config.image_refresh_interval;
@@ -315,7 +316,8 @@ async function saveConfig() {
         image_cache_timeout: parseInt(document.getElementById('setting-cache-timeout').value),
         timezone: document.getElementById('setting-timezone').value,
         image_fill_mode: document.getElementById('setting-fill-mode').value,
-        force_date_from_path: document.getElementById('setting-force-date-path').checked
+        force_date_from_path: document.getElementById('setting-force-date-path').checked,
+        plugins: JSON.parse(modal.dataset.configPlugins || '[]')
     };
     
     try {
@@ -442,6 +444,55 @@ function pollTask(taskId, label) {
 
 let taskPage = 1;
 let presetPage = 1;
+
+let pluginPage = 1;
+
+export async function loadPlugins(page = 1) {
+    pluginPage = page;
+    const body = document.getElementById('plugin-list-body');
+    const modal = document.getElementById('settings-modal');
+    const prev = document.getElementById('plugin-page-prev');
+    const next = document.getElementById('plugin-page-next');
+    const info = document.getElementById('plugin-page-info');
+    const enabledPlugins = JSON.parse(modal.dataset.configPlugins || '[]');
+
+    try {
+        const response = await fetch(buildApiUrl(`plugins?page=${page}`));
+        if (!response.ok) throw new Error('Failed to load plugins');
+        const data = await response.json();
+
+        body.innerHTML = data.results.map(p => {
+            const isEnabled = enabledPlugins.includes(p.name);
+            const checked = isEnabled ? 'checked' : '';
+            return `<tr>
+                <td>${p.name}</td>
+                <td>${p.description || ''}</td>
+                <td><label class="toggle-switch plugin-toggle-wrap"><input type="checkbox" class="plugin-toggle" data-name="${p.name}" ${checked}><span class="slider"></span></label></td>
+            </tr>`;
+        }).join('');
+
+        // Toggles only update local state — Save button does the PUT
+        body.querySelectorAll('.plugin-toggle').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                const name = toggle.dataset.name;
+                if (toggle.checked) {
+                    if (!enabledPlugins.includes(name)) enabledPlugins.push(name);
+                } else {
+                    const idx = enabledPlugins.indexOf(name);
+                    if (idx > -1) enabledPlugins.splice(idx, 1);
+                }
+                modal.dataset.configPlugins = JSON.stringify(enabledPlugins);
+            });
+        });
+
+        const totalPages = Math.ceil(data.count / 5) || 1;
+        info.textContent = `Page ${page} of ${totalPages}`;
+        prev.disabled = !data.previous;
+        next.disabled = !data.next;
+    } catch {
+        body.innerHTML = '<tr><td colspan="3">Failed to load plugins</td></tr>';
+    }
+}
 
 export async function loadPresets(page = 1) {
     presetPage = page;
@@ -655,6 +706,18 @@ function initSettingsModal() {
                 spinner.remove();
                 sections.forEach(s => s.style.display = '');
             }
+
+            if (tabName === 'plugins') {
+                const pluginsTab = document.getElementById('tab-plugins');
+                const sections = pluginsTab.querySelectorAll('.settings-section');
+                sections.forEach(s => s.style.display = 'none');
+                const spinner = document.createElement('div');
+                spinner.className = 'spinner';
+                pluginsTab.appendChild(spinner);
+                await loadPlugins();
+                spinner.remove();
+                sections.forEach(s => s.style.display = '');
+            }
         });
     });
 
@@ -669,6 +732,10 @@ function initSettingsModal() {
     // Preset pagination buttons
     document.getElementById('preset-page-prev').addEventListener('click', () => loadPresets(presetPage - 1));
     document.getElementById('preset-page-next').addEventListener('click', () => loadPresets(presetPage + 1));
+
+    // Plugin pagination buttons
+    document.getElementById('plugin-page-prev').addEventListener('click', () => loadPlugins(pluginPage - 1));
+    document.getElementById('plugin-page-next').addEventListener('click', () => loadPlugins(pluginPage + 1));
 
     // Library maintenance buttons
     document.getElementById('task-reset-count').addEventListener('click', () => {
