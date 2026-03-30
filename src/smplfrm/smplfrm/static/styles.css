@@ -358,7 +358,7 @@ img {
 .tab-content.active {
     display: flex;
     flex-direction: column;
-    min-height: 400px;
+    min-height: 450px;
 }
 
 .spinner {
@@ -498,6 +498,31 @@ input:checked + .slider:before {
 
 .plugin-toggle-wrap {
     display: inline-block;
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reveal-btn {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+}
+
+.action-btn {
+    background: none;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 6px 10px;
 }
 
 .modal-actions {

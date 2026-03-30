@@ -20,6 +20,34 @@ logger = logging.getLogger(__name__)
 class WeatherPlugin(BasePlugin):
     """Weather plugin for collecting and displaying weather data."""
 
+    def get_settings_schema(self):
+        return [
+            {
+                "key": "coords",
+                "label": "Coordinates",
+                "type": "text",
+                "action": "geolocation",
+            },
+            {
+                "key": "temp_unit",
+                "label": "Temperature",
+                "type": "select",
+                "options": ["F", "C"],
+            },
+            {
+                "key": "precip_unit",
+                "label": "Precipitation",
+                "type": "select",
+                "options": ["in", "mm"],
+            },
+            {
+                "key": "windspeed_unit",
+                "label": "Wind Speed",
+                "type": "select",
+                "options": ["mph", "kmh", "kn", "ms"],
+            },
+        ]
+
     def get_tasks(self):
         from smplfrm.plugins.weather.tasks import refresh_weather
 

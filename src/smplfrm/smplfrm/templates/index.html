@@ -220,6 +220,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Description</th>
+                            <th></th>
                             <th>Enabled</th>
                         </tr>
                     </thead>
@@ -231,6 +232,15 @@
                     <button class="btn btn-secondary btn-sm" id="plugin-page-next" disabled>Next &raquo;</button>
                 </div>
             </div>
+            <div class="settings-section" id="plugin-detail-view" style="display: none;">
+                <h3 id="plugin-detail-name"></h3>
+                <div id="plugin-detail-form"></div>
+            </div>
+        </div>
+        
+        <div class="modal-actions" id="plugin-detail-actions" style="display: none;">
+            <button class="btn btn-primary" id="plugin-detail-save">Save Changes</button>
+            <button class="btn btn-secondary" id="plugin-detail-back">Back</button>
         </div>
         
         <div class="tab-content" id="tab-tasks">
@@ -266,7 +276,7 @@
             </div>
         </div>
         
-        <div class="modal-actions">
+        <div class="modal-actions" id="main-actions">
             <button class="btn btn-primary" id="save-settings">Save Changes</button>
             <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
         </div>

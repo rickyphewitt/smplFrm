@@ -73,3 +73,15 @@ class BasePlugin:
     def get_beat_schedule(self) -> dict:
         """Return Celery beat schedule entries for this plugin."""
         return {}
+
+    def get_settings_schema(self) -> list:
+        """Return list of field definitions for the plugin settings form.
+
+        Each field is a dict with:
+            key: settings dict key
+            label: display label
+            type: text, password, select, toggle
+            options: list of values (for select type)
+            action: optional JS action handler name (e.g. geolocation)
+        """
+        return []
