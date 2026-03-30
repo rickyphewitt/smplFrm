@@ -86,11 +86,27 @@
                     </label>
                 </div>
                 <div class="setting-item">
+                    <label for="setting-force-date-path" title="Use the file path (YYYY/MM) to determine the photo date instead of EXIF data">Photo Date From File Path</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-force-date-path">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
                     <label for="setting-clock">Show Date And Time</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="setting-clock">
                         <span class="slider"></span>
                     </label>
+                </div>
+                <div class="setting-item">
+                    <label for="setting-timezone">Timezone</label>
+                    <input type="text" id="setting-timezone" list="timezone-list" class="select-input timezone-input">
+                    <datalist id="timezone-list">
+                        {% for tz in timezones %}
+                        <option value="{{ tz }}">
+                        {% endfor %}
+                    </datalist>
                 </div>
             </div>
         </div>
@@ -132,6 +148,14 @@
                         <option value="slide-right">Slide Right</option>
                         <option value="zoom">Zoom</option>
                         <option value="none">None</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="setting-fill-mode">Fill Mode</label>
+                    <select id="setting-fill-mode" class="select-input">
+                        <option value="blur">Blur</option>
+                        <option value="border">Border</option>
+                        <option value="zoom_to_fill">Zoom to Fill</option>
                     </select>
                 </div>
             </div>
