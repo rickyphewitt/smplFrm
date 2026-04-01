@@ -74,7 +74,10 @@ inclusion: always
 - Presets are synced to the database on startup via `ConfigService.sync_presets()`
 
 ## Quality Assurance
-- Follow Test Driven Development (TDD): write tests before implementing functionality
+> All items below are mandatory requirements, not suggestions.
+
+- **ALWAYS** follow Test Driven Development (TDD): write tests before implementing functionality
+- **NEVER write production code without first writing a failing test** — this applies to new features, bug fixes, and refactors that change behavior
 - Write tests for new functionality
 - Run tests before committing changes
 - When a regression is found, write a failing test for it before fixing the code

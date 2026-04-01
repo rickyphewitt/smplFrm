@@ -182,9 +182,20 @@ function displayClock() {
 }
 
 function displayWeather() {
-    if (config.weatherCurrentTemp) {
-        document.getElementById("weather-temp").innerHTML = `🌡️ ${config.weatherCurrentTemp}`;
+    const weatherGroup = document.getElementById('weather-group');
+    if (!config.plugins || !config.plugins.includes('weather')) {
+        weatherGroup.style.display = 'none';
+        return;
     }
+    // Fetch weather data from plugin API
+    fetch(buildApiUrl('plugins/weather'))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (data && data.current_temp) {
+                document.getElementById("weather-temp").innerHTML = `🌡️ ${data.current_temp}`;
+            }
+        })
+        .catch(() => {});
 }
 
 function updateSpotifyDisplay(content) {
@@ -240,14 +251,11 @@ export function init() {
     }
 
     displayWeather();
-    if (!config.displayWeather) {
-        document.getElementById('weather-group').style.display = 'none';
-    }
 
     // Hide separators between hidden groups
     updateSeparators();
 
-    if (config.pluginSpotifyEnabled) {
+    if (config.plugins && config.plugins.includes('spotify')) {
         refreshSpotify();
     }
 }

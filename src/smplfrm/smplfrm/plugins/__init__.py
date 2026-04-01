@@ -28,3 +28,15 @@ def get_startup_tasks():
     for plugin in get_all_plugins():
         tasks.update(plugin.get_startup_tasks())
     return tasks
+
+
+def get_plugin_router():
+    from rest_framework import routers
+
+    router = routers.DefaultRouter(trailing_slash=False)
+    router.include_root_view = False
+    for plugin in get_all_plugins():
+        viewset = plugin.get_viewset()
+        if viewset:
+            router.register(plugin.get_route_prefix(), viewset, basename=plugin.name)
+    return router
