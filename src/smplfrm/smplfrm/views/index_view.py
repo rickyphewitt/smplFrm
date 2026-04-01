@@ -1,5 +1,4 @@
 from django.views.generic import TemplateView
-from smplfrm.plugins.weather.weather import WeatherPlugin
 from smplfrm.services.config_service import ConfigService
 
 from smplfrm.settings import (
@@ -17,15 +16,6 @@ class IndexView(TemplateView):
 
         config = ConfigService().load_config()
 
-        weather_enabled = "weather" in config.plugins
-        weather_data = {
-            "current_temp": "",
-            "current_low_temp": "",
-            "current_high_temp": "",
-        }
-        if weather_enabled:
-            weather_data = WeatherPlugin().get_for_display()
-
         context = {
             "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
             "port": SMPL_FRM_EXTERNAL_PORT,
@@ -35,13 +25,9 @@ class IndexView(TemplateView):
             "transition_interval": config.image_transition_interval,
             "display_date": str(config.display_date).lower(),
             "display_clock": str(config.display_clock).lower(),
-            "display_weather": str(weather_enabled).lower(),
-            "weather_current_temp": weather_data["current_temp"],
-            "current_low_temp": weather_data["current_low_temp"],
-            "current_high_temp": weather_data["current_high_temp"],
-            "plugin_spotify_enabled": str("spotify" in config.plugins).lower(),
             "image_zoom_effect": str(config.image_zoom_effect).lower(),
             "image_transition_type": config.image_transition_type,
+            "plugins": config.plugins,
             "timezones": sorted(available_timezones()),
         }
 

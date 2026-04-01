@@ -53,6 +53,11 @@ class WeatherPlugin(BasePlugin):
 
         return {"refresh_weather": refresh_weather}
 
+    def get_viewset(self):
+        from smplfrm.plugins.weather.views import WeatherView
+
+        return WeatherView
+
     def get_startup_tasks(self):
         from smplfrm.plugins.weather.tasks import refresh_weather
 

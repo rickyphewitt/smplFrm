@@ -34,6 +34,11 @@ class SpotifyPlugin(BasePlugin):
             {"key": "client_secret", "label": "Client Secret", "type": "password"},
         ]
 
+    def get_viewset(self):
+        from smplfrm.views.api.plugins.v1.spotify.spotify_view import SpotifyView
+
+        return SpotifyView
+
     def configure(self):
         """Load settings from DB and set up Spotify auth."""
         super().configure()

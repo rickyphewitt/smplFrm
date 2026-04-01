@@ -85,3 +85,11 @@ class BasePlugin:
             action: optional JS action handler name (e.g. geolocation)
         """
         return []
+
+    def get_viewset(self):
+        """Return the DRF ViewSet class for this plugin's API, or None."""
+        return None
+
+    def get_route_prefix(self) -> str:
+        """Return the URL route prefix for this plugin. Defaults to plugin name."""
+        return self.name
