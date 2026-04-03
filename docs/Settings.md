@@ -94,7 +94,7 @@ The Plugins tab shows all registered plugins with enable/disable toggles and per
 
 ### Configure
 
-Clicking Configure opens a detail view with plugin-specific settings. The form fields are defined by each plugin's schema — no core code changes are needed when adding a new plugin.
+Clicking Configure opens a detail view with plugin-specific settings. The form fields are defined by each plugin's schema.
 
 ![Plugin Configure](images/settings/pluginConfigure.png)
 

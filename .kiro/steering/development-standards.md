@@ -46,6 +46,7 @@ inclusion: always
   - `Settings.md` — documents the settings modal tabs (Display, Images, Library, Presets, Plugins, Tasks, About)
 - Add screenshots to `docs/images/` when UI changes are significant
 - Update `Home.md` links when new pages are added
+- **Before completing any task**, prompt whether documentation updates are needed — this applies to new features, changes to existing features, bug fixes that alter behavior, and new environment variables or configuration options
 
 ## Version Control Integration
 - Commit frequently with meaningful messages
