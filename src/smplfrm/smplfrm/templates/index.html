@@ -80,7 +80,7 @@
             <div class="settings-section">
                 <h3>Display Options</h3>
                 <div class="setting-item">
-                    <label for="setting-date">Show Photo Date</label>
+                    <label for="setting-date" title="Display the date the photo was taken">Show Photo Date</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="setting-date">
                         <span class="slider"></span>
@@ -94,14 +94,14 @@
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-clock">Show Date And Time</label>
+                    <label for="setting-clock" title="Display the current date and time">Show Date And Time</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="setting-clock">
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-timezone">Timezone</label>
+                    <label for="setting-timezone" title="Timezone used for displaying date and time">Timezone</label>
                     <input type="text" id="setting-timezone" list="timezone-list" class="select-input timezone-input">
                     <datalist id="timezone-list">
                         {% for tz in timezones %}
@@ -116,14 +116,14 @@
             <div class="settings-section">
                 <h3>Timing</h3>
                 <div class="setting-item">
-                    <label for="setting-refresh">Refresh Interval</label>
+                    <label for="setting-refresh" title="How long to display each image (milliseconds)">Refresh Interval</label>
                     <div class="number-input">
                         <input type="number" id="setting-refresh" min="5" max="300">
                         <span>ms</span>
                     </div>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-transition">Transition Time</label>
+                    <label for="setting-transition" title="Duration of the transition between images (milliseconds)">Transition Time</label>
                     <div class="number-input">
                         <input type="number" id="setting-transition" min="1000" max="300000">
                         <span>ms</span>
@@ -134,14 +134,14 @@
             <div class="settings-section">
                 <h3>Effects</h3>
                 <div class="setting-item">
-                    <label for="setting-zoom">Zoom Effect</label>
+                    <label for="setting-zoom" title="Enable slow zoom animation on images">Zoom Effect</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="setting-zoom">
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-transition-type">Transition Type</label>
+                    <label for="setting-transition-type" title="Animation effect used when transitioning between images">Transition Type</label>
                     <select id="setting-transition-type" class="select-input">
                         <option value="random">Random</option>
                         <option value="fade">Fade</option>
@@ -152,7 +152,7 @@
                     </select>
                 </div>
                 <div class="setting-item">
-                    <label for="setting-fill-mode">Fill Mode</label>
+                    <label for="setting-fill-mode" title="How to fill gaps when image doesn't match screen aspect ratio">Fill Mode</label>
                     <select id="setting-fill-mode" class="select-input">
                         <option value="blur">Blur</option>
                         <option value="border">Border</option>
@@ -166,7 +166,7 @@
             <div class="settings-section">
                 <h3>Cache</h3>
                 <div class="setting-item">
-                    <label for="setting-cache-timeout">Cache Timeout</label>
+                    <label for="setting-cache-timeout" title="Seconds until an image is removed from the cache">Cache Timeout</label>
                     <div class="number-input">
                         <input type="number" id="setting-cache-timeout" min="0" max="604800">
                         <span>sec</span>
@@ -176,15 +176,15 @@
             <div class="settings-section">
                 <h3>Maintenance</h3>
                 <div class="setting-item">
-                    <label>Reset Image Count</label>
+                    <label title="Reset the display count for all images">Reset Image Count</label>
                     <button class="btn btn-secondary btn-sm" id="task-reset-count">Reset</button>
                 </div>
                 <div class="setting-item">
-                    <label>Clear Cache</label>
+                    <label title="Remove all cached images">Clear Cache</label>
                     <button class="btn btn-secondary btn-sm" id="task-clear-cache">Clear</button>
                 </div>
                 <div class="setting-item">
-                    <label>Rescan Library</label>
+                    <label title="Rescan library directories for new images">Rescan Library</label>
                     <button class="btn btn-secondary btn-sm" id="task-rescan-library">Rescan</button>
                 </div>
             </div>
@@ -196,10 +196,10 @@
                 <table class="task-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Delete</th>
+                            <th title="Preset configuration name">Name</th>
+                            <th title="Preset configuration description">Description</th>
+                            <th title="Whether this preset is currently active">Status</th>
+                            <th title="Delete this preset configuration">Delete</th>
                         </tr>
                     </thead>
                     <tbody id="preset-list-body"></tbody>
@@ -218,10 +218,10 @@
                 <table class="task-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Description</th>
+                            <th title="Plugin name">Name</th>
+                            <th title="Plugin description">Description</th>
                             <th></th>
-                            <th>Enabled</th>
+                            <th title="Whether this plugin is enabled">Enabled</th>
                         </tr>
                     </thead>
                     <tbody id="plugin-list-body"></tbody>
@@ -249,11 +249,11 @@
                 <table class="task-table">
                     <thead>
                         <tr>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Progress</th>
-                            <th>Created</th>
-                            <th>Delete</th>
+                            <th title="Task type">Type</th>
+                            <th title="Current task status">Status</th>
+                            <th title="Task completion progress">Progress</th>
+                            <th title="When the task was created">Created</th>
+                            <th title="Delete this task">Delete</th>
                         </tr>
                     </thead>
                     <tbody id="task-list-body"></tbody>
