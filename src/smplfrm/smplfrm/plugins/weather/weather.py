@@ -58,6 +58,10 @@ class WeatherPlugin(BasePlugin):
 
         return WeatherView
 
+    def on_settings_changed(self, settings: dict) -> None:
+        """Trigger a weather refresh when settings change."""
+        self.dispatch_task("refresh_weather")
+
     def get_startup_tasks(self):
         from smplfrm.plugins.weather.tasks import refresh_weather
 

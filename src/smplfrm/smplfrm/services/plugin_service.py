@@ -28,6 +28,14 @@ class PluginService(BaseService):
     def update(self, plugin: Plugin) -> Plugin:
         logger.info(f"Updating plugin {plugin.name}")
         plugin.save()
+
+        from smplfrm.plugins import get_all_plugins
+
+        for p in get_all_plugins():
+            if p.name == plugin.name:
+                p.on_settings_changed(plugin.settings)
+                break
+
         return plugin
 
     def delete(self, ext_id: str) -> None:

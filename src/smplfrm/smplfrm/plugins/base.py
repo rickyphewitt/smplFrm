@@ -90,6 +90,25 @@ class BasePlugin:
         """Return the DRF ViewSet class for this plugin's API, or None."""
         return None
 
+    def on_settings_changed(self, settings: dict) -> None:
+        """Called after plugin settings are saved via the API.
+
+        Args:
+            settings: The new settings dict that was saved.
+
+        Override in subclasses to trigger side effects (e.g. refresh cached data).
+        """
+        pass
+
+    def dispatch_task(self, task_name: str) -> None:
+        """Dispatch a Celery task by name.
+
+        Plugins should use this instead of importing the Celery app directly.
+        """
+        from smplfrm.celery import app
+
+        app.send_task(task_name)
+
     def get_route_prefix(self) -> str:
         """Return the URL route prefix for this plugin. Defaults to plugin name."""
         return self.name
