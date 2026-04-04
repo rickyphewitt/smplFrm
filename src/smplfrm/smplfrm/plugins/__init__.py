@@ -8,6 +8,10 @@ def get_all_plugins():
     return [cls() for cls in PLUGIN_REGISTRY]
 
 
+def get_plugin_map():
+    return {plugin.name: plugin for plugin in get_all_plugins()}
+
+
 def get_beat_schedules():
     schedules = {}
     for plugin in get_all_plugins():
