@@ -198,39 +198,39 @@ function displayWeather() {
         .catch(() => {});
 }
 
-function updateSpotifyDisplay(content) {
+function showSpotifyBar(content) {
     const spotifyDiv = document.getElementById("spotify-now-playing");
     spotifyDiv.innerHTML = content;
+    const bar = document.getElementById("spotify-bar");
+    bar.style.display = 'flex';
+    bar.classList.add('bar-fade-in');
 }
 
-async function getNowPlaying() {
+export async function getNowPlaying() {
     try {
         const response = await fetch(buildApiUrl('plugins/spotify/now_playing'));
         
         if (!response.ok) {
             const authResponse = await fetch(buildApiUrl('plugins/spotify/auth'));
             if (!authResponse.ok) {
-                updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i>`);
+                showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
                 return;
             }
             
             const authData = await authResponse.json();
-            updateSpotifyDisplay(`<a href="${authData.auth_url}"><i class="iconoir-spotify spotify-icon"></i></a>`);
+            showSpotifyBar(`<a href="${authData.auth_url}"><i class="iconoir-spotify spotify-icon"></i></a>`);
             return;
         }
         
         const data = await response.json();
-        updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i> ${data.artist} - ${data.song}`);
+        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i> ${data.artist} - ${data.song}`);
     } catch (error) {
         console.error('Spotify error:', error);
-        updateSpotifyDisplay(`<i class="iconoir-spotify spotify-icon"></i>`);
+        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
     }
 }
 
 function refreshSpotify() {
-    const spotifyBar = document.getElementById("spotify-bar");
-    spotifyBar.style.display = 'flex';
-    
     getNowPlaying();
     setTimeout(refreshSpotify, SPOTIFY_REFRESH_MS);
 }
@@ -260,7 +260,7 @@ export function init() {
     }
 }
 
-function updateSeparators() {
+export function updateSeparators() {
     const bottomBar = document.getElementById('bottom-bar');
     const groups = bottomBar.querySelectorAll('.info-group');
     const separators = bottomBar.querySelectorAll('.group-separator');
@@ -278,6 +278,14 @@ function updateSeparators() {
             }
         }
     });
+
+    // Hide bottom bar entirely when no groups are visible
+    if (visibleGroups.length === 0) {
+        bottomBar.style.display = 'none';
+    } else {
+        bottomBar.style.display = 'flex';
+        bottomBar.classList.add('bar-fade-in');
+    }
 }
 
 async function loadConfig() {
