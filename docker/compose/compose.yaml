@@ -10,37 +10,20 @@ services:
         volumes:
             - ../../library:/app/library
             - db:/app/src/smplfrm/db
-        networks:
-          - smpl_frm_net
-    smpl_frm_celery:
-        command: [ "make", "start-celery"]
-        build:
-            context: ../../
-            dockerfile: ./docker/images/Dockerfile
-        env_file:
-          - config.env
-        volumes:
-            - ../../library:/app/library
-            - db:/app/src/smplfrm/db
-        networks:
-          - smpl_frm_net
-    smpl_frm_celery_beat:
-        command: [ "make", "start-celery-beat"]
-        build:
-            context: ../../
-            dockerfile: ./docker/images/Dockerfile
-        env_file:
-          - config.env
-        volumes:
-            - ../../library:/app/library
-            - db:/app/src/smplfrm/db
+        depends_on:
+          - cache
         networks:
           - smpl_frm_net
 
     cache:
-      extends:
-        file: services.yaml
-        service: cache
+        image: redis:7.4.1-alpine
+        restart: always
+        ports:
+          - "6379:6379"
+        volumes:
+          - cache:/data
+        networks:
+          - smpl_frm_net
 
 networks:
   smpl_frm_net:
@@ -50,7 +33,3 @@ volumes:
     driver: local
   db:
     driver: local
-    driver_opts:
-      type: none
-      device: /home/ricky/dev/smplFrm/docker/data
-      o: bind

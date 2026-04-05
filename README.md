@@ -25,30 +25,32 @@ ___
 * Add your own assets to the `assets` folder and re-run the server to display your own photos
 
 ### Docker
-* Build the dockerfile
-  * `docker build -t smplFrm .`
-* Run the docker file exposing ports
-  * `docker run -p 8321:8321`
-* Browse to `http://localhost:8321`
-* To add your own as assets mount a local volume to the `/app/assets` folder in the image
-  * `docker run -p 8321:8321 -v <local/Folder/Path>:/app/assets smpl_frm`
+The recommended way to run smplFrm is with Docker Compose. The image bundles the web server, Celery worker, and Celery beat into a single container — only Redis is needed as a separate service.
+
 ### Docker Compose
-* An example compose file exists at [compose.yaml](docker/compose/compose.yaml)
-* Essentially you just need to update the `SMPL_FRM_ASSET_DIRECTORIES` and mount a local volume like below
-```
+Create a `compose.yaml` with the following (or use the one at [docker/compose/compose.yaml](docker/compose/compose.yaml)):
+```yaml
 services:
     smpl_frm:
         image: dke39vsh3gghs/smplfrm:latest
         ports:
-         - "8321:8321"
+          - "8321:8321"
         environment:
-            - SMPL_FRM_LIBRARY_DIRS=/app/library,/app/assets
+            - SMPL_FRM_LIBRARY_DIRS=/app/library
+            - REDIS_HOST=cache
             - PYTHONUNBUFFERED=1
         volumes:
-            - /example/local/library/here:/app/library
+            - /path/to/your/photos:/app/library
+        depends_on:
+          - cache
 
+    cache:
+        image: redis:7.4.1-alpine
+        restart: always
 ```
-* Then run `docker-compose up -d` and browse to `http://localhost:8321`
+Run `docker compose up -d` and browse to `http://localhost:8321`.
+
+For detailed configuration see the [Docker wiki page](https://github.com/rickyphewitt/smplFrm/wiki/Docker).
 
 ### Docker Hub Labels
 Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
@@ -58,6 +60,9 @@ Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
   * This is the most recent code on `main`. Useful for development and testing.
 * `<commit-hash>`
   * For each commit merged into `main` an image is created with the corresponding git hash. Useful for pinning to a specific version outside the release cycle. 
+
+### Environment variables
+For a full list of environment variables see the [Environment Variable wiki page](https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables)
 
 ## Development
 
@@ -105,41 +110,4 @@ However, there are some additional guidelines that should be used for AI commits
 
 ### Environment Variables
 
-| Name                                    | Default                            | Description                                                                                                               |
-|-----------------------------------------|------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| `SMPL_FRM_LIBRARY_DIRS`                 | "<settings.py-dir>./../../library" | Comma Separated String of directory paths                                                                                 |
-| `SMPL_FRM_IMAGE_FORMATS`                | "jpg,png"                          | Comma Separated String of directory paths                                                                                 |
-| `SMPL_FRM_IMAGE_REFRESH_INTERVAL`       | 30000                              | How long to display an image (millis)                                                                                     |
-| `SMPL_FRM_IMAGE_TRANSITION_INTERVAL`    | 10000                              | How long to transition the image (millis)                                                                                 |
-| `SMPL_FRM_EXTERNAL_PORT`                | 8321                               | Used in Docker when the external port differs from the server port                                                        |
-| `SMPL_FRM_HOST`                         | localhost                          | Used when running the application on a server                                                                             |
-| `SMPL_FRM_PROTOCOL`                     | "http://"                          | Set to "https://" for ssl                                                                                                 |
-| `SMPL_FRM_DISPLAY_DATE`                 | True                               | Display date (Month, Year) of photo. This reads the exif image data                                                       |
-| `SMPL_FRM_FORCE_DATE_FROM_PATH`         | True                               | Use the filepath to determine date supports `YYYY/MM` 2024/12                                                             |
-| `SMPL_FRM_DISPLAY_CLOCK`                | True                               | Display the Clock                                                                                                         |
-| `SMPL_FRM_DISPLAY_WEATHER`              | True                               | Display the Weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                                             |
-| `SMPL_FRM_TIMEZONE`                     | "America/Los_Angeles"              | TZ Identified from [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)                              |
-| `SMPL_FRM_IMAGE_CACHE_TIMEOUT`          | "300"                              | Seconds until the image should be removed from the cache                                                                  |
-| `SMPL_FRM_IMAGE_FILL_MODE`              | "blur"                             | How to fill aspect ratio gaps: `border` (replicate edges), `blur` (blurred background), or `zoom_to_fill` (zoom to fill)  |
-| `SMPL_FRM_IMAGE_ZOOM_EFFECT`            | True                               | Enables slow zoom animation on images from center (1.0x to 1.2x scale over display duration)                              |
-| `SMPL_FRM_IMAGE_TRANSITION_TYPE`        | "random"                           | Image transition effect: `fade`, `slide-left`, `slide-right`, `zoom`, `none`, or `random`                                 |
-
-### Plugin Environment Variables
-
-Plugin env vars use the prefix `SMPL_FRM_PLUGINS_{PLUGIN_NAME}_`. These override plugin DB settings on every startup.
-
-#### Spotify
-
-| Name                                     | Default | Description                                                                                                               |
-|------------------------------------------|---------|---------------------------------------------------------------------------------------------------------------------------|
-| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID`     | None    | See: https://spotipy.readthedocs.io/en/latest/#getting-started                                                            |
-| `SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET` | None    | See ^ - Ensure your Redirect URI matches Http://`SMPL_FRM_HOST`:`SMPL_FRM_EXTERNAL_PORT`/api/v1/plugins/spotify/callback  |
-
-#### Weather
-
-| Name                                      | Default              | Description                                                                                          |
-|-------------------------------------------|----------------------|------------------------------------------------------------------------------------------------------|
-| `SMPL_FRM_PLUGINS_WEATHER_COORDS`         | "63.1786,-147.4661"  | Lat,Long for weather. [Weather data by Open-Meteo.com](https://open-meteo.com)                       |
-| `SMPL_FRM_PLUGINS_WEATHER_TEMP_UNIT`      | "F"                  | `F` for Fahrenheit, `C` for Celsius                                                                  |
-| `SMPL_FRM_PLUGINS_WEATHER_PRECIP_UNIT`    | "in"                 | `in` for inches, `mm` for millimeters                                                                |
-| `SMPL_FRM_PLUGINS_WEATHER_WINDSPEED_UNIT` | "mph"                | `kmh` kilos per hour, `kn` knots, `ms` meters per second, `mph` miles per hour                       |
+See the [Environment Variables](https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables) wiki page for the full reference of all application, infrastructure, and plugin environment variables.

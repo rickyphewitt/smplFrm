@@ -10,9 +10,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-
-COPY ../.. /app
+COPY . /app
 
 RUN make packages
 
-CMD ["make", "run"]
+COPY docker/images/entrypoint.sh /app/entrypoint.sh
+
+EXPOSE 8321
+
+ENTRYPOINT ["/app/entrypoint.sh"]
