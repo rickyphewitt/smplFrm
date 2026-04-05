@@ -1,17 +1,13 @@
 #!/bin/bash
 set -e
 
-cd /app/src/smplfrm
-
-# Run migrations and collect static files
-python3.14 manage.py migrate
-python3.14 manage.py collectstatic --noinput
+cd /app
 
 # Start celery worker in background
-python3.14 -m celery -A smplfrm worker -E -l info &
+make start-celery &
 
 # Start celery beat in background
-python3.14 -m celery -A smplfrm beat -l info &
+make start-celery-beat &
 
-# Start Django server in foreground
-exec python3.14 manage.py runserver 0.0.0.0:8321
+# Start Django server in foreground (runs migrations and collectstatic)
+exec make run
