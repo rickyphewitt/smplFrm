@@ -78,9 +78,14 @@ class WeatherPlugin(BasePlugin):
         """Load weather settings from DB."""
         super().configure()
         s = self.get_plugin_settings()
-        coords = s.get("coords", "63.1786,-147.4661").split(",")
-        self.lat = coords[0].strip()
-        self.long = coords[1].strip()
+        coords = s.get("coords", "63.1786,-147.4661")
+        if not coords:
+            raise ValueError("Coordinates are required")
+        parts = coords.split(",")
+        if len(parts) != 2 or not parts[0].strip() or not parts[1].strip():
+            raise ValueError("Coordinates must be in 'lat,long' format")
+        self.lat = parts[0].strip()
+        self.long = parts[1].strip()
         self.tz = s.get("timezone", "America/Los_Angeles")
         self._determine_temp_unit(s.get("temp_unit", "F"))
         self.precip_unit = self._determine_precip_unit(s.get("precip_unit", "in"))
