@@ -520,21 +520,37 @@ export async function loadPlugins(page = 1) {
     }
 }
 
-const PLUGIN_ACTION_HANDLERS = {
+export function validateCoordinates(value) {
+    const trimmed = value.trim();
+    if (trimmed === '') return true;
+
+    const parts = trimmed.split(',');
+    if (parts.length !== 2) return false;
+
+    const latStr = parts[0].trim();
+    const lonStr = parts[1].trim();
+    if (latStr === '' || lonStr === '') return false;
+
+    const lat = Number(latStr);
+    const lon = Number(lonStr);
+    if (isNaN(lat) || isNaN(lon)) return false;
+
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
+export const PLUGIN_ACTION_HANDLERS = {
     geolocation: (input) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'action-btn';
         btn.textContent = '📍';
-        btn.title = 'Use current location';
+        btn.title = 'Look up coordinates';
         btn.addEventListener('click', () => {
-            if (!navigator.geolocation) return;
-            btn.textContent = '...';
-            navigator.geolocation.getCurrentPosition(
-                pos => { input.value = `${pos.coords.latitude},${pos.coords.longitude}`; btn.textContent = '📍'; },
-                () => { btn.textContent = '📍'; }
-            );
+            window.open('https://www.latlong.net', '_blank');
+            btn.textContent = '🌐';
+            setTimeout(() => { btn.textContent = '📍'; }, 1500);
         });
+
         return btn;
     }
 };
@@ -621,6 +637,23 @@ async function openPluginDetail(pluginId) {
     const newSave = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSave, saveBtn);
     newSave.addEventListener('click', async () => {
+        // Validate coordinates before saving
+        const coordInputs = formEl.querySelectorAll('.plugin-setting-input');
+        for (const el of coordInputs) {
+            if (el.type === 'checkbox' || el.type === 'select-one') continue;
+            if (!validateCoordinates(el.value)) {
+                const errorMessage = document.getElementById('error-message');
+                errorMessage.textContent = 'Invalid coordinates. Use lat,long format (e.g. 40.7128,-74.0060)';
+                errorMessage.classList.add('show');
+                newSave.disabled = true;
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                    newSave.disabled = false;
+                }, 3000);
+                return;
+            }
+        }
+
         const settings = {};
         formEl.querySelectorAll('.plugin-setting-input').forEach(el => {
             settings[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
