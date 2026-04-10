@@ -111,7 +111,7 @@ See [Spotify Developer](https://spotipy.readthedocs.io/en/latest/#getting-starte
 
 | Setting | Description |
 |---------|-------------|
-| Coordinates | Lat,Long for weather location. Use 📍 button for browser geolocation. |
+| Coordinates | Lat,Long for weather location. Use 📍 button to open [latlong.net](https://www.latlong.net) for coordinate lookup. |
 | Temperature | Temperature unit: F (Fahrenheit) or C (Celsius). |
 | Precipitation | Precipitation unit: in (inches) or mm (millimeters). |
 | Wind Speed | Wind speed unit: mph, kmh, kn, or ms. |
