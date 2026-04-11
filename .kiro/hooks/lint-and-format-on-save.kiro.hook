@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "name": "Lint and Format on Save",
   "description": "Automatically lint and format code when files are saved following project standards",
   "version": "1",

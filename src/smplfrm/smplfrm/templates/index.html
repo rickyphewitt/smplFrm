@@ -268,11 +268,35 @@
         
         <div class="tab-content" id="tab-about">
             <div class="settings-section">
-                <h3>About smplFrm</h3>
-                <p style="color: #aaa; line-height: 1.6;">Digital photoframe for displaying photos on any device that has a web browser.</p>
-                <p style="color: #aaa; line-height: 1.6; margin-top: 15px;">
-                    <a href="https://github.com/rickyphewitt/smplFrm" target="_blank" style="color: #667eea; text-decoration: none;">View on GitHub</a>
+                <h3>smplFrm</h3>
+                <p style="color: #aaa; line-height: 1.6; margin-bottom: 20px;">
+                    Digital photo frame for displaying photos on any device with a web browser.
                 </p>
+                <div class="setting-item">
+                    <label>Version</label>
+                    <span>
+                        {% if version and version != "unknown" %}
+                            {% if version|first == "v" %}
+                                <a href="https://github.com/rickyphewitt/smplFrm/releases/tag/{{ version }}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">{{ version }}</a>
+                            {% else %}
+                                <a href="https://github.com/rickyphewitt/smplFrm/commit/{{ version }}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">{{ version }}</a>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #aaa;">unknown</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Links</h3>
+                <div class="setting-item">
+                    <label>GitHub</label>
+                    <a href="https://github.com/rickyphewitt/smplFrm" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">rickyphewitt/smplFrm →</a>
+                </div>
+                <div class="setting-item">
+                    <label>Wiki</label>
+                    <a href="https://github.com/rickyphewitt/smplFrm/wiki" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">smplFrm Wiki →</a>
+                </div>
             </div>
         </div>
         

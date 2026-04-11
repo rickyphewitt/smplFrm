@@ -58,3 +58,6 @@ pre-commit: packages
 
 ignore-format-commit:
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+version:
+	. ./local_venv/bin/activate; ./scripts/generate_version.sh

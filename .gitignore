@@ -171,3 +171,6 @@ coverage/
 
 # kiro
 .kiro/settings/lsp.json
+
+# Build artifacts
+VERSION

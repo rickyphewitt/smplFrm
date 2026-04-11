@@ -137,3 +137,7 @@ Each row includes a delete button (×) that deletes the task. If the task is cur
 Only one task of each type can be pending or running at a time. Attempting to start a duplicate will show an error in the toast.
 
 Tasks that were created more than 7 days ago will be deleted.
+
+## About
+
+The About tab displays general information about smplFrm and the current application version.
