@@ -1,5 +1,6 @@
 from django.views.generic import TemplateView
 from smplfrm.services.config_service import ConfigService
+from smplfrm.services.version_service import VersionService
 
 from smplfrm.settings import (
     SMPL_FRM_EXTERNAL_PORT,
@@ -29,6 +30,7 @@ class IndexView(TemplateView):
             "image_transition_type": config.image_transition_type,
             "plugins": config.plugins,
             "timezones": sorted(available_timezones()),
+            "version": VersionService().get_version(),
         }
 
         return context

@@ -23,6 +23,11 @@ inclusion: always
 - Keep functions small and focused on single responsibilities
 - Implement proper error handling and logging
 
+## Formatting and Linting
+- **DO NOT** run formatters or linters on file save — formatting is handled by a pre-commit git hook
+- **DO NOT** create or enable Kiro hooks that auto-format or auto-lint on save
+- The `.pre-commit-config.yaml` defines all formatting and linting rules; they run automatically at commit time
+
 ## File Management
 - Maintain clean directory structures
 - Use consistent naming conventions across the project
