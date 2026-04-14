@@ -16,6 +16,22 @@ from pathlib import Path
 
 from celery.schedules import crontab
 
+
+def _parse_bool_env(var_name: str, default: bool) -> bool:
+    """Parse a boolean environment variable.
+
+    Only ``"true"`` (case-insensitive) evaluates to ``True``.
+    Every other string value evaluates to ``False``.
+    Returns *default* when the variable is not set.
+    """
+    value = os.getenv(var_name)
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return value.lower() == "true"
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,13 +54,13 @@ SMPL_FRM_IMAGE_REFRESH_INTERVAL = int(
 SMPL_FRM_IMAGE_TRANSITION_INTERVAL = int(
     os.getenv("SMPL_FRM_IMAGE_TRANSITION_INTERVAL", "10000")
 )
-SMPL_FRM_DISPLAY_DATE = bool(os.getenv("SMPL_FRM_DISPLAY_DATE", True))
-SMPL_FRM_FORCE_DATE_FROM_PATH = bool(os.getenv("SMPL_FRM_FORCE_DATE_FROM_PATH", True))
-SMPL_FRM_DISPLAY_CLOCK = bool(os.getenv("SMPL_FRM_DISPLAY_CLOCK", True))
+SMPL_FRM_DISPLAY_DATE = _parse_bool_env("SMPL_FRM_DISPLAY_DATE", True)
+SMPL_FRM_FORCE_DATE_FROM_PATH = _parse_bool_env("SMPL_FRM_FORCE_DATE_FROM_PATH", True)
+SMPL_FRM_DISPLAY_CLOCK = _parse_bool_env("SMPL_FRM_DISPLAY_CLOCK", True)
 SMPL_FRM_IMAGE_CACHE_TIMEOUT = int(os.getenv("SMPL_FRM_IMAGE_CACHE_TIMEOUT", "300"))
 SMPL_FRM_TIMEZONE = os.getenv("SMPL_FRM_TIMEZONE", "America/Los_Angeles")
 SMPL_FRM_IMAGE_FILL_MODE = os.getenv("SMPL_FRM_IMAGE_FILL_MODE", "blur")
-SMPL_FRM_IMAGE_ZOOM_EFFECT = bool(os.getenv("SMPL_FRM_IMAGE_ZOOM_EFFECT", True))
+SMPL_FRM_IMAGE_ZOOM_EFFECT = _parse_bool_env("SMPL_FRM_IMAGE_ZOOM_EFFECT", True)
 SMPL_FRM_IMAGE_TRANSITION_TYPE = os.getenv("SMPL_FRM_IMAGE_TRANSITION_TYPE", "random")
 
 SMPL_FRM_DB_FOLDER = "db"
