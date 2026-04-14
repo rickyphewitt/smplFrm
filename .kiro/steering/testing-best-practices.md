@@ -45,6 +45,7 @@ pytest -k "test_specific"
 - Use test tags/categories for filtering
 - Keep test names descriptive but concise
 - Separate unit, integration, and e2e tests
+- **Never reference spec documents** (requirement IDs, task numbers, property labels, or spec file paths) in test code — specs are not checked in and lose meaning after a feature is complete. Tests should be self-documenting through clear names and docstrings.
 
 ## Performance
 - Run tests in parallel when possible (`--parallel`, `--maxWorkers`)
