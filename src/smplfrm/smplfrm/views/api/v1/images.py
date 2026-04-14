@@ -62,6 +62,15 @@ class Images(viewsets.ModelViewSet):
         width = request.GET.get("width", DEFAULT_WIDTH)
         height = request.GET.get("height", DEFAULT_HEIGHT)
 
+        result = ImageManipulationService.validate_dimensions(width, height)
+        if result[0] is None:
+            return HttpResponse(
+                content_type="application/json",
+                content=f'{{"error": "{result[1]}"}}',
+                status=400,
+            )
+        validated_width, validated_height = result
+
         cache_key = self.cache_service.get_image_cache_key(
             image.external_id, height, width
         )
@@ -70,7 +79,7 @@ class Images(viewsets.ModelViewSet):
         if cached_image is None:
             try:
                 cached_image = self.image_manipulation.display(
-                    image, int(height), int(width)
+                    image, validated_height, validated_width
                 )
             except FileNotFoundError:
                 return HttpResponse(status=404)
@@ -100,6 +109,14 @@ class Images(viewsets.ModelViewSet):
 
         width = request.GET.get("width", DEFAULT_WIDTH)
         height = request.GET.get("height", DEFAULT_HEIGHT)
+
+        result = ImageManipulationService.validate_dimensions(width, height)
+        if result[0] is None:
+            return HttpResponse(
+                content_type="application/json",
+                content=f'{{"error": "{result[1]}"}}',
+                status=400,
+            )
 
         cache_image_list = [img.external_id for img in images]
         cache_images_task.delay(cache_image_list, height, width)

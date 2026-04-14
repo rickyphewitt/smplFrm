@@ -6,6 +6,7 @@ inclusion: always
 # Development Standards
 
 ## Dependency Management
+- **NEVER install packages (pip install, npm install, etc.) without explicit user approval** — always ask first
 - Use latest stable versions of all libraries and dependencies
 - Leverage Context7 MCP server to verify compatibility before adding dependencies
 - Justify each new dependency with clear business or technical value
@@ -15,6 +16,7 @@ inclusion: always
 - Use lock files to ensure consistent installations across environments
 
 ## Code Quality Standards
+- When choosing default values or magic numbers, always document the rationale — don't blindly adopt values from issue descriptions without independent justification
 - Never create duplicate files with suffixes like `_fixed`, `_clean`, `_backup`, etc.
 - Work iteratively on existing files (hooks handle commits automatically)
 - Include relevant documentation links in code comments
@@ -56,6 +58,7 @@ inclusion: always
 ## Version Control Integration
 - Commit frequently with meaningful messages
 - Use feature branches for development — one branch per subtask (e.g. `feature/133-plugin-architecture`)
+- Always checkout a new branch before starting work on a bug or feature (e.g. `fix/174-image-dimension-bounds`)
 - Keep main branch deployable at all times
 - Tag releases appropriately
 - Use .gitignore to exclude generated files and secrets
