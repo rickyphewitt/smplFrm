@@ -15,6 +15,30 @@ logger = logging.getLogger(__name__)
 class ImageManipulationService:
     """Service for image manipulation and display operations."""
 
+    MAX_IMAGE_DIMENSION = 4096
+
+    @staticmethod
+    def validate_dimensions(width_str, height_str):
+        """Validate width and height strings as positive integers within bounds.
+
+        Returns:
+            (width, height) tuple of ints on success.
+            (None, error_message) on failure.
+        """
+        for name, value in [("width", width_str), ("height", height_str)]:
+            try:
+                int_val = int(value)
+            except (ValueError, TypeError):
+                return (None, f"{name} must be a positive integer")
+            if int_val <= 0:
+                return (None, f"{name} must be a positive integer")
+            if int_val > ImageManipulationService.MAX_IMAGE_DIMENSION:
+                return (
+                    None,
+                    f"{name} exceeds maximum allowed value of {ImageManipulationService.MAX_IMAGE_DIMENSION}",
+                )
+        return (int(width_str), int(height_str))
+
     def display(
         self, image: Image, window_height: int = 100, window_width: int = 100
     ) -> np.ndarray:

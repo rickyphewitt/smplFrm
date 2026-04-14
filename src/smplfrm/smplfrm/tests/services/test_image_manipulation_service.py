@@ -323,3 +323,33 @@ class TestImageManipulationService(TestCase):
         # Should fall back to border mode
         self.assertEqual(img.shape[0], window_h)
         self.assertEqual(img.shape[1], window_w)
+
+
+import pytest
+
+VALID_BOUNDARY_VALUES = [1, 2, 100, 2048, 4095, 4096]
+
+
+class TestValidateDimensionsPreservation:
+    """Test suite for validate_dimensions with valid inputs."""
+
+    @pytest.mark.parametrize("width", VALID_BOUNDARY_VALUES)
+    @pytest.mark.parametrize("height", VALID_BOUNDARY_VALUES)
+    def test_valid_dimensions_return_tuple(self, width, height):
+        """Test that valid dimensions return the correct (width, height) tuple."""
+        result = ImageManipulationService.validate_dimensions(str(width), str(height))
+        assert result == (width, height)
+
+    @pytest.mark.parametrize(
+        "width_str,height_str,expected",
+        [
+            ("100", "100", (100, 100)),
+            ("1", "1", (1, 1)),
+            ("4096", "4096", (4096, 4096)),
+            ("800", "600", (800, 600)),
+        ],
+    )
+    def test_common_dimension_pairs(self, width_str, height_str, expected):
+        """Test that common dimension pairs are accepted and returned correctly."""
+        result = ImageManipulationService.validate_dimensions(width_str, height_str)
+        assert result == expected

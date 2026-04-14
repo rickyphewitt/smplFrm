@@ -47,6 +47,11 @@ def cache_images(images_ext_ids: list, height: str, width: str):
     if not images_ext_ids or not height or not width:
         return
 
+    result = ImageManipulationService.validate_dimensions(str(width), str(height))
+    if result[0] is None:
+        logger.warning("cache_images called with invalid dimensions: %s", result[1])
+        return
+
     cache_service = CacheService()
     image_manipulation = ImageManipulationService()
     image_service = ImageService()
