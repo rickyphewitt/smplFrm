@@ -69,7 +69,10 @@ SMPL_FRM_DB_FOLDER = "db"
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-1s5!+gf*u0x34#3+@1w%=np!^1o_ee$@$!_j2c!uh!aidkr3ja"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-1s5!+gf*u0x34#3+@1w%=np!^1o_ee$@$!_j2c!uh!aidkr3ja",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
