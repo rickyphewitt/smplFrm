@@ -27,8 +27,15 @@ Environment variables seed the initial configuration on first startup. After tha
 
 | Name | Default | Description |
 |------|---------|-------------|
+| `DJANGO_SECRET_KEY` | insecure dev key | Django secret key used for cryptographic signing. Falls back to a dev-only insecure default when unset. **Set this in production.** |
 | `REDIS_HOST` | `localhost` | Hostname of the Redis service. In Docker, set to the compose service name (e.g. `cache`). |
 | `PYTHONUNBUFFERED` | — | Set to `1` for real-time log output. Recommended for Docker. |
+
+### Generating a secret key
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
 
 ## Plugins
 

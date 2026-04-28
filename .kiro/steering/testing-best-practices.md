@@ -11,7 +11,31 @@ inclusion: always
 - Filter tests with grep/pattern matching for focused testing
 - Avoid running full test suites in automated contexts unless necessary
 
-## Common Test Commands
+## Project Test Commands
+```bash
+# Python — full suite
+make test
+
+# Python — quiet mode (preferred for AI agents)
+. ./local_venv/bin/activate; cd ./src/smplfrm; pytest -q --tb=short
+
+# Python — single file
+. ./local_venv/bin/activate; cd ./src/smplfrm; pytest smplfrm/tests/test_secret_key.py -q --tb=short
+
+# Python — filter by name
+. ./local_venv/bin/activate; cd ./src/smplfrm; pytest -k "test_specific" -q --tb=short
+
+# JavaScript — full suite
+make test-js
+
+# JavaScript — watch mode
+make test-js-watch
+
+# JavaScript — coverage
+make test-js-coverage
+```
+
+## Generic Test Commands
 ```bash
 # NPM/Yarn - Use silent mode
 npm test -- --silent
