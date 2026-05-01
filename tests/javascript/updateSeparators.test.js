@@ -5,7 +5,8 @@ describe('updateSeparators', () => {
   let document, updateSeparators;
 
   function setupDOM(groupDisplayValues = {}) {
-    const dom = new JSDOM(`
+    const dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html><body>
         <div id="bottom-bar" class="text-box" style="display: none;">
@@ -24,7 +25,9 @@ describe('updateSeparators', () => {
           <div class="task-toast-track"><div class="task-toast-bar" id="task-toast-bar"></div></div>
         </div>
       </body></html>
-    `, { url: 'http://localhost' });
+    `,
+      { url: 'http://localhost' },
+    );
 
     global.window = dom.window;
     global.document = dom.window.document;
@@ -32,11 +35,15 @@ describe('updateSeparators', () => {
     document = dom.window.document;
 
     dom.window.SMPL_CONFIG = {
-      transitionInterval: 1000, refreshInterval: 3000,
-      host: 'http://localhost', port: '8321',
-      displayDate: true, displayClock: true,
-      imageZoomEffect: false, imageTransitionType: 'fade',
-      plugins: []
+      transitionInterval: 1000,
+      refreshInterval: 3000,
+      host: 'http://localhost',
+      port: '8321',
+      displayDate: true,
+      displayClock: true,
+      imageZoomEffect: false,
+      imageTransitionType: 'fade',
+      plugins: [],
     };
 
     // Apply group visibility before importing
@@ -104,7 +111,7 @@ describe('updateSeparators', () => {
     updateSeparators();
 
     const separators = document.querySelectorAll('.group-separator');
-    separators.forEach(sep => {
+    separators.forEach((sep) => {
       expect(sep.style.display).toBe('none');
     });
   });
@@ -127,7 +134,9 @@ describe('updateSeparators', () => {
 
     // Other separators should be hidden
     const allSeps = document.querySelectorAll('.group-separator');
-    const visibleSeps = Array.from(allSeps).filter(s => s.style.display !== 'none');
+    const visibleSeps = Array.from(allSeps).filter(
+      (s) => s.style.display !== 'none',
+    );
     expect(visibleSeps.length).toBe(1);
   });
 });

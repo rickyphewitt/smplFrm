@@ -7,9 +7,14 @@ describe('settings modal tooltips', () => {
   let document;
 
   beforeAll(() => {
-    const templatePath = resolve(__dirname, '../../src/smplfrm/smplfrm/templates/index.html');
+    const templatePath = resolve(
+      __dirname,
+      '../../src/smplfrm/smplfrm/templates/index.html',
+    );
     // Strip Django template tags so JSDOM can parse the HTML
-    const raw = readFileSync(templatePath, 'utf-8').replace(/\{%.*?%\}/g, '').replace(/\{\{.*?\}\}/g, '');
+    const raw = readFileSync(templatePath, 'utf-8')
+      .replace(/\{%.*?%\}/g, '')
+      .replace(/\{\{.*?\}\}/g, '');
     const dom = new JSDOM(raw);
     document = dom.window.document;
   });
@@ -41,10 +46,16 @@ describe('settings modal tooltips', () => {
       it(`${tabId} label "${labelText}" has a title attribute`, () => {
         const tab = document.getElementById(tabId);
         const label = Array.from(tab.querySelectorAll('label')).find(
-          (el) => el.textContent.trim() === labelText
+          (el) => el.textContent.trim() === labelText,
         );
-        expect(label, `label "${labelText}" not found in #${tabId}`).toBeTruthy();
-        expect(label.getAttribute('title'), `label "${labelText}" missing title`).toBeTruthy();
+        expect(
+          label,
+          `label "${labelText}" not found in #${tabId}`,
+        ).toBeTruthy();
+        expect(
+          label.getAttribute('title'),
+          `label "${labelText}" missing title`,
+        ).toBeTruthy();
       });
     });
   });
@@ -60,10 +71,13 @@ describe('settings modal tooltips', () => {
       it(`${tabId} column header "${headerText}" has a title attribute`, () => {
         const tab = document.getElementById(tabId);
         const th = Array.from(tab.querySelectorAll('th')).find(
-          (el) => el.textContent.trim() === headerText
+          (el) => el.textContent.trim() === headerText,
         );
         expect(th, `th "${headerText}" not found in #${tabId}`).toBeTruthy();
-        expect(th.getAttribute('title'), `th "${headerText}" missing title`).toBeTruthy();
+        expect(
+          th.getAttribute('title'),
+          `th "${headerText}" missing title`,
+        ).toBeTruthy();
       });
     });
   });
