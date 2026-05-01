@@ -8,7 +8,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       include: ['src/smplfrm/smplfrm/static/**/*.js'],
-      exclude: ['**/*.test.js']
-    }
-  }
+      exclude: ['**/*.test.js'],
+    },
+  },
 });

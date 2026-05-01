@@ -8,7 +8,8 @@ describe('spotify bar visibility', () => {
   let document, getNowPlaying;
 
   function setupDOM() {
-    const dom = new JSDOM(`
+    const dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html><body>
         <div id="spotify-bar" style="display: none;">
@@ -32,7 +33,9 @@ describe('spotify bar visibility', () => {
           <div class="task-toast-track"><div class="task-toast-bar" id="task-toast-bar"></div></div>
         </div>
       </body></html>
-    `, { url: 'http://localhost' });
+    `,
+      { url: 'http://localhost' },
+    );
 
     global.window = dom.window;
     global.document = dom.window.document;
@@ -40,11 +43,15 @@ describe('spotify bar visibility', () => {
     document = dom.window.document;
 
     dom.window.SMPL_CONFIG = {
-      transitionInterval: 1000, refreshInterval: 3000,
-      host: 'http://localhost', port: '8321',
-      displayDate: false, displayClock: false,
-      imageZoomEffect: false, imageTransitionType: 'fade',
-      plugins: ['spotify']
+      transitionInterval: 1000,
+      refreshInterval: 3000,
+      host: 'http://localhost',
+      port: '8321',
+      displayDate: false,
+      displayClock: false,
+      imageZoomEffect: false,
+      imageTransitionType: 'fade',
+      plugins: ['spotify'],
     };
   }
 
@@ -63,10 +70,12 @@ describe('spotify bar visibility', () => {
 
   it('shows spotify bar with now playing data after fetch', async () => {
     setupDOM();
-    global.fetch = vi.fn(() => Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ artist: 'Artist', song: 'Song' })
-    }));
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ artist: 'Artist', song: 'Song' }),
+      }),
+    );
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     getNowPlaying = module.getNowPlaying;
 
@@ -74,14 +83,23 @@ describe('spotify bar visibility', () => {
 
     const bar = document.getElementById('spotify-bar');
     expect(bar.style.display).toBe('flex');
-    expect(document.getElementById('spotify-now-playing').innerHTML).toContain('Artist');
+    expect(document.getElementById('spotify-now-playing').innerHTML).toContain(
+      'Artist',
+    );
   });
 
   it('shows spotify bar with oauth link when not authenticated', async () => {
     setupDOM();
-    global.fetch = vi.fn()
+    global.fetch = vi
+      .fn()
       .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ auth_url: 'https://accounts.spotify.com/authorize' }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            auth_url: 'https://accounts.spotify.com/authorize',
+          }),
+      });
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     getNowPlaying = module.getNowPlaying;
 
@@ -96,7 +114,8 @@ describe('spotify bar visibility', () => {
 
   it('shows spotify bar with icon on auth error', async () => {
     setupDOM();
-    global.fetch = vi.fn()
+    global.fetch = vi
+      .fn()
       .mockResolvedValueOnce({ ok: false })
       .mockResolvedValueOnce({ ok: false });
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');

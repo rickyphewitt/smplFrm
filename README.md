@@ -66,8 +66,8 @@ For a full list of environment variables see the [Environment Variable wiki page
 
 ## Development
 
-### JavaScript Testing
-This project uses Vitest for JavaScript testing.
+### JavaScript
+This project uses [Vitest](https://vitest.dev/) for testing, [ESLint](https://eslint.org/) for linting, and [Prettier](https://prettier.io/) for formatting JavaScript files.
 
 **Setup:**
 ```bash
@@ -79,6 +79,14 @@ make packages-js
 make test-js              # Run tests once (silent mode)
 make test-js-watch        # Watch mode for development
 make test-js-coverage     # Generate coverage report
+```
+
+**Lint & format:**
+```bash
+npm run lint              # Check for lint errors
+npm run lint:fix          # Auto-fix lint errors
+npm run format            # Format all JS files with Prettier
+npm run format:check      # Check formatting without writing
 ```
 
 **Test location:** Tests are in `tests/javascript/` to avoid Django static bundling.

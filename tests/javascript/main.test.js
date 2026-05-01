@@ -3,10 +3,17 @@ import { JSDOM } from 'jsdom';
 
 describe('main.js', () => {
   let window, document;
-  let buildApiUrl, getWindowDimensions, fadeInImage, getNextImage, applyTransition, getRandomTransition, startTask;
+  let buildApiUrl,
+    getWindowDimensions,
+    fadeInImage,
+    getNextImage,
+    applyTransition,
+    getRandomTransition,
+    startTask;
 
   beforeEach(async () => {
-    const dom = new JSDOM(`
+    const dom = new JSDOM(
+      `
       <!DOCTYPE html>
       <html>
         <body>
@@ -24,7 +31,9 @@ describe('main.js', () => {
           </div>
         </body>
       </html>
-    `, { url: 'http://localhost' });
+    `,
+      { url: 'http://localhost' },
+    );
 
     window = dom.window;
     document = window.document;
@@ -42,7 +51,7 @@ describe('main.js', () => {
       pluginSpotifyEnabled: false,
       weatherCurrentTemp: '72°F',
       imageZoomEffect: true,
-      imageTransitionType: 'fade'
+      imageTransitionType: 'fade',
     };
 
     // Import functions after setting up globals
@@ -64,7 +73,9 @@ describe('main.js', () => {
 
     it('handles endpoints with query params', () => {
       const url = buildApiUrl('images/next?width=1920&height=1080');
-      expect(url).toBe('http://localhost:8321/api/v1/images/next?width=1920&height=1080');
+      expect(url).toBe(
+        'http://localhost:8321/api/v1/images/next?width=1920&height=1080',
+      );
     });
   });
 
@@ -118,14 +129,14 @@ describe('main.js', () => {
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
-          json: () => Promise.resolve({ id: 'test-123', url: '/test.jpg' })
-        })
+          json: () => Promise.resolve({ id: 'test-123', url: '/test.jpg' }),
+        }),
       );
 
       const result = await getNextImage();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8321/api/v1/images/next?width=1920&height=1080'
+        'http://localhost:8321/api/v1/images/next?width=1920&height=1080',
       );
       expect(result).toEqual({ id: 'test-123', url: '/test.jpg' });
     });
@@ -136,14 +147,14 @@ describe('main.js', () => {
       vi.useFakeTimers();
       const img = document.createElement('img');
       const result = applyTransition(img, 'fade');
-      
+
       expect(result).toBe('fade');
     });
 
     it('applies slide-left transition', () => {
       const img = document.createElement('img');
       const result = applyTransition(img, 'slide-left');
-      
+
       expect(result).toBe('slide-left');
       expect(img.style.animation).toContain('slideInLeft');
       expect(img.style.opacity).toBe('1');
@@ -152,7 +163,7 @@ describe('main.js', () => {
     it('applies slide-right transition', () => {
       const img = document.createElement('img');
       const result = applyTransition(img, 'slide-right');
-      
+
       expect(result).toBe('slide-right');
       expect(img.style.animation).toContain('slideInRight');
       expect(img.style.opacity).toBe('1');
@@ -161,7 +172,7 @@ describe('main.js', () => {
     it('applies zoom transition', () => {
       const img = document.createElement('img');
       const result = applyTransition(img, 'zoom');
-      
+
       expect(result).toBe('zoom');
       expect(img.style.animation).toContain('zoomInTransition');
       expect(img.style.opacity).toBe('1');
@@ -170,7 +181,7 @@ describe('main.js', () => {
     it('applies no transition when set to none', () => {
       const img = document.createElement('img');
       const result = applyTransition(img, 'none');
-      
+
       expect(result).toBe('none');
       expect(img.style.opacity).toBe('1');
     });
@@ -178,7 +189,7 @@ describe('main.js', () => {
     it('applies random transition', () => {
       const img = document.createElement('img');
       const result = applyTransition(img, 'random');
-      
+
       // Random should return one of the valid transitions
       expect(['fade', 'slide-left', 'slide-right', 'zoom']).toContain(result);
     });
@@ -203,15 +214,23 @@ describe('main.js', () => {
         Promise.resolve({
           ok: true,
           status: 201,
-          json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Clear Cache', progress: 0, status: 'pending' })
-        })
+          json: () =>
+            Promise.resolve({
+              id: 'task-1',
+              task_type_label: 'Clear Cache',
+              progress: 0,
+              status: 'pending',
+            }),
+        }),
       );
 
       await startTask('clear_cache');
 
       const text = document.getElementById('task-toast-text');
       expect(text.textContent).toBe('Clear Cache 0%');
-      expect(document.getElementById('task-toast').classList.contains('show')).toBe(true);
+      expect(
+        document.getElementById('task-toast').classList.contains('show'),
+      ).toBe(true);
     });
 
     it('updates toast with label and percentage during polling', async () => {
@@ -220,13 +239,26 @@ describe('main.js', () => {
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({
-            ok: true, status: 201,
-            json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Rescan Library', progress: 0, status: 'pending' })
+            ok: true,
+            status: 201,
+            json: () =>
+              Promise.resolve({
+                id: 'task-1',
+                task_type_label: 'Rescan Library',
+                progress: 0,
+                status: 'pending',
+              }),
           });
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Rescan Library', progress: 50, status: 'running' })
+          json: () =>
+            Promise.resolve({
+              id: 'task-1',
+              task_type_label: 'Rescan Library',
+              progress: 50,
+              status: 'running',
+            }),
         });
       });
 
@@ -244,20 +276,35 @@ describe('main.js', () => {
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({
-            ok: true, status: 201,
-            json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Reset Image Count', progress: 0, status: 'pending' })
+            ok: true,
+            status: 201,
+            json: () =>
+              Promise.resolve({
+                id: 'task-1',
+                task_type_label: 'Reset Image Count',
+                progress: 0,
+                status: 'pending',
+              }),
           });
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Reset Image Count', progress: 100, status: 'completed' })
+          json: () =>
+            Promise.resolve({
+              id: 'task-1',
+              task_type_label: 'Reset Image Count',
+              progress: 100,
+              status: 'completed',
+            }),
         });
       });
 
       await startTask('reset_image_count');
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(document.getElementById('task-toast-text').textContent).toBe('Reset Image Count Done!');
+      expect(document.getElementById('task-toast-text').textContent).toBe(
+        'Reset Image Count Done!',
+      );
     });
 
     it('shows label with error on failure', async () => {
@@ -266,20 +313,36 @@ describe('main.js', () => {
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({
-            ok: true, status: 201,
-            json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Clear Cache', progress: 0, status: 'pending' })
+            ok: true,
+            status: 201,
+            json: () =>
+              Promise.resolve({
+                id: 'task-1',
+                task_type_label: 'Clear Cache',
+                progress: 0,
+                status: 'pending',
+              }),
           });
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ id: 'task-1', task_type_label: 'Clear Cache', progress: 30, status: 'failed', error: 'disk full' })
+          json: () =>
+            Promise.resolve({
+              id: 'task-1',
+              task_type_label: 'Clear Cache',
+              progress: 30,
+              status: 'failed',
+              error: 'disk full',
+            }),
         });
       });
 
       await startTask('clear_cache');
       await vi.advanceTimersByTimeAsync(1000);
 
-      expect(document.getElementById('task-toast-text').textContent).toBe('Clear Cache Failed: disk full');
+      expect(document.getElementById('task-toast-text').textContent).toBe(
+        'Clear Cache Failed: disk full',
+      );
     });
 
     it('shows conflict message on 409', async () => {
@@ -287,15 +350,22 @@ describe('main.js', () => {
         Promise.resolve({
           ok: false,
           status: 409,
-          json: () => Promise.resolve({ detail: 'A Clear Cache task is already pending or running.' })
-        })
+          json: () =>
+            Promise.resolve({
+              detail: 'A Clear Cache task is already pending or running.',
+            }),
+        }),
       );
 
       const result = await startTask('clear_cache');
 
       expect(result).toBeNull();
-      expect(document.getElementById('task-toast-text').textContent).toBe('A Clear Cache task is already pending or running.');
-      expect(document.getElementById('task-toast').classList.contains('show')).toBe(true);
+      expect(document.getElementById('task-toast-text').textContent).toBe(
+        'A Clear Cache task is already pending or running.',
+      );
+      expect(
+        document.getElementById('task-toast').classList.contains('show'),
+      ).toBe(true);
     });
 
     it('shows generic error on network failure', async () => {
@@ -304,7 +374,9 @@ describe('main.js', () => {
       const result = await startTask('clear_cache');
 
       expect(result).toBeNull();
-      expect(document.getElementById('task-toast-text').textContent).toBe('Failed to start task');
+      expect(document.getElementById('task-toast-text').textContent).toBe(
+        'Failed to start task',
+      );
     });
   });
 });

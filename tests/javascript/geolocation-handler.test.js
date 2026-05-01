@@ -285,7 +285,8 @@ describe('Save prevention with invalid coordinates', () => {
     for (const el of inputs) {
       if (el.type === 'checkbox' || el.type === 'select-one') continue;
       if (!validateCoordinates(el.value)) {
-        errorMessage.textContent = 'Invalid coordinates. Use lat,long format (e.g. 40.7128,-74.0060)';
+        errorMessage.textContent =
+          'Invalid coordinates. Use lat,long format (e.g. 40.7128,-74.0060)';
         errorMessage.classList.add('show');
         saveBtn.disabled = true;
         return false;
