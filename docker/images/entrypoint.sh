@@ -3,14 +3,17 @@ set -e
 
 cd /app
 
+# Fix ownership on mounted volumes (may be root-owned from prior runs)
+chown -R smplfrm:smplfrm /app/src/smplfrm/db
+
 # Generate version file from git info
-./scripts/generate_version.sh
+gosu smplfrm ./scripts/generate_version.sh
 
 # Start celery worker in background
-make start-celery &
+gosu smplfrm make start-celery &
 
 # Start celery beat in background
-make start-celery-beat &
+gosu smplfrm make start-celery-beat &
 
 # Start Django server in foreground (runs migrations and collectstatic)
-exec make run
+exec gosu smplfrm make run
