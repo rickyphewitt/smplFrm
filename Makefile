@@ -18,6 +18,15 @@ packages-js-clean:
 run: staticfiles migrations
 	. ./local_venv/bin/activate; cd ./src/smplfrm;  $(PYTHON) manage.py runserver 0.0.0.0:8321
 
+run-gunicorn: staticfiles migrations
+	. ./local_venv/bin/activate; cd ./src/smplfrm; \
+	WORKERS=$$(python3.14 -c "import os; print(max(2, min(8, 2 * os.cpu_count() + 1)))"); \
+	gunicorn smplfrm.wsgi:application \
+		--bind 0.0.0.0:8321 \
+		--workers $$WORKERS \
+		--graceful-timeout 30 \
+		--timeout 30
+
 staticfiles:
 	. ./local_venv/bin/activate; cd ./src/smplfrm;  $(PYTHON) manage.py collectstatic --noinput
 

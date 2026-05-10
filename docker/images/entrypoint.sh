@@ -15,5 +15,5 @@ gosu smplfrm make start-celery &
 # Start celery beat in background
 gosu smplfrm make start-celery-beat &
 
-# Start Django server in foreground (runs migrations and collectstatic)
-exec gosu smplfrm make run
+# Start Gunicorn in foreground (runs migrations and collectstatic first)
+exec gosu smplfrm make run-gunicorn
