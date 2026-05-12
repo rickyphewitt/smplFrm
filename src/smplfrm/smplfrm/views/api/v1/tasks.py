@@ -8,6 +8,11 @@ from rest_framework.response import Response
 
 from smplfrm.models import Task
 from smplfrm.services.task_service import TaskService
+from smplfrm.throttles import (
+    GlobalAnonThrottle,
+    GlobalAuthenticatedThrottle,
+    GlobalTaskThrottle,
+)
 from smplfrm.views.serializers.v1.task_serializer import TaskSerializer
 
 logger = logging.getLogger(__name__)
@@ -29,6 +34,11 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     pagination_class = TaskPagination
     lookup_field = "external_id"
+    throttle_classes = [
+        GlobalAnonThrottle,
+        GlobalAuthenticatedThrottle,
+        GlobalTaskThrottle,
+    ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

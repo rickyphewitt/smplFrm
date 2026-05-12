@@ -28,6 +28,7 @@ inclusion: always
 ## Formatting and Linting
 - **DO NOT** run formatters or linters on file save — formatting is handled by a pre-commit git hook
 - **DO NOT** create or enable Kiro hooks that auto-format or auto-lint on save
+- **DO NOT** run lint or format commands as part of task execution — never run `black`, `ruff`, `eslint --fix`, `prettier --write`, or similar tools during implementation
 - The `.pre-commit-config.yaml` defines all formatting and linting rules; they run automatically at commit time
 
 ## File Management
