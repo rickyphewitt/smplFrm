@@ -16,6 +16,8 @@ from pathlib import Path
 
 from celery.schedules import crontab
 
+from smplfrm.throttle_utils import parse_throttle_rate
+
 
 def _parse_bool_env(var_name: str, default: bool) -> bool:
     """Parse a boolean environment variable.
@@ -199,6 +201,30 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
+}
+
+
+# API Rate Limiting (global bucket throttling)
+SMPL_FRM_THROTTLE_ANON_RATE = parse_throttle_rate(
+    "SMPL_FRM_THROTTLE_ANON_RATE", "60/minute"
+)
+SMPL_FRM_THROTTLE_USER_RATE = parse_throttle_rate(
+    "SMPL_FRM_THROTTLE_USER_RATE", "120/minute"
+)
+SMPL_FRM_THROTTLE_TASK_RATE = parse_throttle_rate(
+    "SMPL_FRM_THROTTLE_TASK_RATE", "10/minute"
+)
+
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "smplfrm.throttles.GlobalAnonThrottle",
+        "smplfrm.throttles.GlobalAuthenticatedThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "global_anon": SMPL_FRM_THROTTLE_ANON_RATE,
+        "global_authenticated": SMPL_FRM_THROTTLE_USER_RATE,
+        "global_task": SMPL_FRM_THROTTLE_TASK_RATE,
+    },
 }
 
 

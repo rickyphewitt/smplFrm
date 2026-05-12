@@ -37,6 +37,23 @@ Environment variables seed the initial configuration on first startup. After tha
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+## Security
+
+| Name | Default | Description |
+|------|---------|-------------|
+| `SMPL_FRM_THROTTLE_ANON_RATE` | `60/minute` | Global rate limit for anonymous API requests |
+| `SMPL_FRM_THROTTLE_USER_RATE` | `120/minute` | Global rate limit for authenticated API requests |
+| `SMPL_FRM_THROTTLE_TASK_RATE` | `10/minute` | Global rate limit for task creation endpoint |
+
+Format: `{number}/{period}` where period is `second`, `minute`, `hour`, or `day`.
+
+### Behavior notes
+
+- **Global bucket**: Rate limiting uses a single shared counter across all clients (not per-IP). All anonymous requests share one bucket, all authenticated requests share another, and all task creation requests share a third.
+- **HTTP 429 + Retry-After**: When a limit is exceeded, the API returns HTTP 429 (Too Many Requests) with a `Retry-After` header indicating the number of seconds to wait before retrying.
+- **Fail-open**: If Redis is unavailable, the throttle system allows requests through rather than blocking all traffic.
+- **Invalid value fallback**: If an environment variable contains an invalid format, the system falls back to the default rate and logs a warning. Check application logs for configuration warnings at startup.
+
 ## Plugins
 
 Plugin env vars use the prefix `SMPL_FRM_PLUGINS_{PLUGIN_NAME}_`. These override plugin DB settings on every startup.
