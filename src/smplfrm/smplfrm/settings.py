@@ -216,6 +216,7 @@ SMPL_FRM_THROTTLE_TASK_RATE = parse_throttle_rate(
 )
 
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "smplfrm.exception_handler.sanitized_exception_handler",
     "DEFAULT_THROTTLE_CLASSES": [
         "smplfrm.throttles.GlobalAnonThrottle",
         "smplfrm.throttles.GlobalAuthenticatedThrottle",
