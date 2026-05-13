@@ -52,9 +52,16 @@ class TaskViewSet(viewsets.ModelViewSet):
         try:
             task = self.service.create({"task_type": task_type})
         except IntegrityError as e:
+            logger.error("IntegrityError during task creation: %s", e, exc_info=True)
             return Response(
-                {"detail": str(e)},
+                {"detail": "A conflicting task already exists"},
                 status=status.HTTP_409_CONFLICT,
+            )
+        except Exception as e:
+            logger.error("Unexpected error during task creation: %s", e, exc_info=True)
+            return Response(
+                {"detail": "An internal error occurred"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         from smplfrm.celery import app
