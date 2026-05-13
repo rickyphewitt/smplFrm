@@ -12,7 +12,6 @@ class ImageSerializer(serializers.HyperlinkedModelSerializer):
         fields = [
             "id",
             "name",
-            "file_path",
             "file_name",
             "created",
             "updated",

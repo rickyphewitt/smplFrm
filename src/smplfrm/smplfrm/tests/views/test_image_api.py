@@ -20,6 +20,33 @@ class TestImageAPI(TestCase):
         self.assertIn("view_count", response.data)
         self.assertEqual(response.data["view_count"], 0)
 
+    def test_get_image_does_not_expose_file_path(self):
+        """Test that image API response does not contain file_path."""
+        response = self.client.get(f"/api/v1/images/{self.image.external_id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("file_path", response.data)
+
+    def test_list_images_does_not_expose_file_path(self):
+        """Test that image list API response does not contain file_path."""
+        response = self.client.get("/api/v1/images")
+        self.assertEqual(response.status_code, 200)
+        for image in response.json():
+            self.assertNotIn("file_path", image)
+
+    def test_get_image_returns_expected_fields_only(self):
+        """Test that image API response contains exactly the expected fields."""
+        response = self.client.get(f"/api/v1/images/{self.image.external_id}")
+        self.assertEqual(response.status_code, 200)
+        expected_fields = {
+            "id",
+            "name",
+            "file_name",
+            "created",
+            "updated",
+            "view_count",
+        }
+        self.assertEqual(set(response.data.keys()), expected_fields)
+
 
 from smplfrm.services import ImageService, LibraryService
 
