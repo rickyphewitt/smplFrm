@@ -206,7 +206,7 @@ CACHES = {
 
 # API Rate Limiting (global bucket throttling)
 SMPL_FRM_THROTTLE_ANON_RATE = parse_throttle_rate(
-    "SMPL_FRM_THROTTLE_ANON_RATE", "60/minute"
+    "SMPL_FRM_THROTTLE_ANON_RATE", "500/minute"
 )
 SMPL_FRM_THROTTLE_USER_RATE = parse_throttle_rate(
     "SMPL_FRM_THROTTLE_USER_RATE", "120/minute"

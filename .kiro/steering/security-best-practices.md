@@ -12,6 +12,13 @@ inclusion: always
 - Use parameterized queries to prevent SQL injection
 - Implement proper authentication and authorization
 
+## Error Response Sanitization
+- NEVER return `str(e)` or raw exception messages in API responses — they can leak database schema, file paths, or internal details
+- Always return generic, user-safe error messages (e.g., "A conflicting resource already exists", "An internal error occurred")
+- Log the original exception server-side at ERROR level with `exc_info=True` for debugging
+- All view methods that call service layer code should have a catch-all `except Exception` handler returning a generic 500 response
+- Separate internal diagnostic messages (for logs) from client-facing messages (for responses)
+
 ## Dependency Management
 - Keep dependencies updated
 - Use dependency scanning tools

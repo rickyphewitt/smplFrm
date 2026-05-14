@@ -1,3 +1,5 @@
+import { resilientFetch } from './resilientFetch.js';
+
 const IMAGE_ID_ATTR = 'image-id';
 const OPACITY_INCREMENT = 0.1;
 const OPACITY_MAX = 1.0;
@@ -33,9 +35,14 @@ export function startProgress() {
 
 export async function getNextImage() {
   const { width, height } = getWindowDimensions();
-  const response = await fetch(
+  const response = await resilientFetch(
     buildApiUrl(`images/next?width=${width}&height=${height}`),
   );
+  if (response.status === 429) {
+    const error = new Error('Rate limited');
+    error.status = 429;
+    throw error;
+  }
   return response.json();
 }
 
@@ -43,10 +50,12 @@ async function displayMetadata(imageId) {
   if (!config.displayDate) return;
 
   try {
-    const response = await fetch(
+    const response = await resilientFetch(
       buildApiUrl(`images_metadata?image__external_id=${imageId}`),
     );
     if (!response.ok) {
+      // Silently ignore 429 responses — don't show error for rate limiting
+      if (response.status === 429) return;
       throw new Error(`Network response was not ok: ${response.statusText}`);
     }
 
@@ -63,7 +72,10 @@ async function displayMetadata(imageId) {
       document.getElementById('photo-date').innerHTML = `📷 ${prettyDate}`;
     }
   } catch (error) {
-    console.error('Fetch error:', error);
+    // Don't log 429 errors — they're handled silently
+    if (error && error.status !== 429) {
+      console.error('Fetch error:', error);
+    }
     document.getElementById('photo-date').innerHTML = `📷`;
   }
 }
@@ -136,34 +148,48 @@ export function fadeInImage(image, onComplete) {
 }
 
 async function loadNext(currentImage) {
-  const newImage = await buildImage();
-  newImage.classList.add('main-img');
+  try {
+    const newImage = await buildImage();
+    newImage.classList.add('main-img');
 
-  newImage.onload = () => {
-    imageContainer.appendChild(newImage);
+    newImage.onload = () => {
+      imageContainer.appendChild(newImage);
 
+      setTimeout(() => {
+        fadeInImage(newImage, () => {
+          imageContainer.removeChild(currentImage);
+        });
+        displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
+        startProgress();
+        loadNext(newImage);
+      }, config.refreshInterval);
+    };
+  } catch (error) {
+    // On 429 exhausted or fetch failure: keep current image, retry after refreshInterval
     setTimeout(() => {
-      fadeInImage(newImage, () => {
-        imageContainer.removeChild(currentImage);
-      });
-      displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
-      startProgress();
-      loadNext(newImage);
+      loadNext(currentImage);
     }, config.refreshInterval);
-  };
+  }
 }
 
 async function startImages() {
-  const newImage = await buildImage();
-  newImage.onload = () => {
-    newImage.classList.add('main-img');
-    imageContainer.appendChild(newImage);
+  try {
+    const newImage = await buildImage();
+    newImage.onload = () => {
+      newImage.classList.add('main-img');
+      imageContainer.appendChild(newImage);
 
-    fadeInImage(newImage);
-    displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
-    startProgress();
-    loadNext(newImage);
-  };
+      fadeInImage(newImage);
+      displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
+      startProgress();
+      loadNext(newImage);
+    };
+  } catch (error) {
+    // On 429 exhausted or fetch failure: retry after refreshInterval
+    setTimeout(() => {
+      startImages();
+    }, config.refreshInterval);
+  }
 }
 
 function displayClock() {
@@ -195,7 +221,7 @@ function displayWeather() {
     return;
   }
   // Fetch weather data from plugin API
-  fetch(buildApiUrl('plugins/weather'))
+  resilientFetch(buildApiUrl('plugins/weather'))
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
       if (data && data.current_temp) {
@@ -216,11 +242,23 @@ function showSpotifyBar(content) {
 
 export async function getNowPlaying() {
   try {
-    const response = await fetch(buildApiUrl('plugins/spotify/now_playing'));
+    const response = await resilientFetch(
+      buildApiUrl('plugins/spotify/now_playing'),
+    );
+
+    // On exhausted 429: show icon only, no error text
+    if (response.status === 429) {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      return;
+    }
 
     if (!response.ok) {
-      const authResponse = await fetch(buildApiUrl('plugins/spotify/auth'));
-      if (!authResponse.ok) {
+      const authResponse = await resilientFetch(
+        buildApiUrl('plugins/spotify/auth'),
+      );
+
+      // On exhausted 429 for auth: show icon only, no error text
+      if (authResponse.status === 429 || !authResponse.ok) {
         showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
         return;
       }
@@ -307,7 +345,7 @@ async function loadConfig() {
   const configId = modal.dataset.configId;
 
   try {
-    const response = await fetch(buildApiUrl(`configs/${configId}`));
+    const response = await resilientFetch(buildApiUrl(`configs/${configId}`));
     if (!response.ok) throw new Error('Failed to load config');
 
     const config = await response.json();
@@ -366,7 +404,7 @@ async function saveConfig() {
   try {
     // If active config is system-managed, create a custom copy first
     if (configName && configName.startsWith('smplFrm ')) {
-      const applyResponse = await fetch(buildApiUrl('configs/apply'), {
+      const applyResponse = await resilientFetch(buildApiUrl('configs/apply'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -382,7 +420,7 @@ async function saveConfig() {
 
     configData.name = modal.dataset.configName;
 
-    const response = await fetch(buildApiUrl(`configs/${configId}`), {
+    const response = await resilientFetch(buildApiUrl(`configs/${configId}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -428,11 +466,12 @@ export async function startTask(taskType) {
   const bar = document.getElementById('task-toast-bar');
   const text = document.getElementById('task-toast-text');
   try {
-    const response = await fetch(buildApiUrl('tasks'), {
+    const response = await resilientFetch(buildApiUrl('tasks'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ task_type: taskType }),
     });
+    if (response.status === 429) return null;
     if (response.status === 409) {
       const data = await response.json();
       toast.classList.add('show');
@@ -466,7 +505,9 @@ function pollTask(taskId, label) {
 
   const interval = setInterval(async () => {
     try {
-      const response = await fetch(buildApiUrl(`tasks/${taskId}`));
+      const response = await resilientFetch(buildApiUrl(`tasks/${taskId}`));
+      // On exhausted 429: keep toast visible with last progress, continue polling
+      if (response.status === 429) return;
       if (!response.ok) throw new Error('Poll failed');
       const task = await response.json();
 
@@ -507,7 +548,7 @@ export async function loadPlugins(page = 1) {
   const enabledPlugins = JSON.parse(modal.dataset.configPlugins || '[]');
 
   try {
-    const response = await fetch(buildApiUrl(`plugins?page=${page}`));
+    const response = await resilientFetch(buildApiUrl(`plugins?page=${page}`));
     if (!response.ok) throw new Error('Failed to load plugins');
     const data = await response.json();
 
@@ -595,7 +636,7 @@ async function openPluginDetail(pluginId) {
   const nameEl = document.getElementById('plugin-detail-name');
   const formEl = document.getElementById('plugin-detail-form');
 
-  const resp = await fetch(buildApiUrl(`plugins/${pluginId}`));
+  const resp = await resilientFetch(buildApiUrl(`plugins/${pluginId}`));
   if (!resp.ok) return;
   const plugin = await resp.json();
 
@@ -694,7 +735,7 @@ async function openPluginDetail(pluginId) {
     formEl.querySelectorAll('.plugin-setting-input').forEach((el) => {
       settings[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
     });
-    await fetch(buildApiUrl(`plugins/${pluginId}`), {
+    await resilientFetch(buildApiUrl(`plugins/${pluginId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings }),
@@ -734,7 +775,7 @@ export async function loadPresets(page = 1) {
   const activeConfigId = modal.dataset.configId;
 
   try {
-    const response = await fetch(buildApiUrl(`configs?page=${page}`));
+    const response = await resilientFetch(buildApiUrl(`configs?page=${page}`));
     if (!response.ok) throw new Error('Failed to load presets');
     const data = await response.json();
 
@@ -768,13 +809,13 @@ export async function loadPresets(page = 1) {
         const id = cell.dataset.id;
         const field = cell.dataset.field;
         try {
-          const getResp = await fetch(buildApiUrl(`configs/${id}`));
+          const getResp = await resilientFetch(buildApiUrl(`configs/${id}`));
           if (!getResp.ok) return;
           const config = await getResp.json();
           config[field] = value;
           delete config.id;
           delete config.is_active;
-          await fetch(buildApiUrl(`configs/${id}`), {
+          await resilientFetch(buildApiUrl(`configs/${id}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
@@ -798,7 +839,7 @@ export async function loadPresets(page = 1) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-inline"></span>';
         try {
-          const resp = await fetch(
+          const resp = await resilientFetch(
             buildApiUrl(`configs/${btn.dataset.id}/activate`),
             { method: 'POST' },
           );
@@ -813,7 +854,7 @@ export async function loadPresets(page = 1) {
 
     body.querySelectorAll('.preset-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await fetch(buildApiUrl(`configs/${btn.dataset.id}`), {
+        await resilientFetch(buildApiUrl(`configs/${btn.dataset.id}`), {
           method: 'DELETE',
         });
         loadPresets(presetPage);
@@ -837,7 +878,7 @@ export async function loadTasks(page = 1) {
   const info = document.getElementById('task-page-info');
 
   try {
-    const response = await fetch(buildApiUrl(`tasks?page=${page}`));
+    const response = await resilientFetch(buildApiUrl(`tasks?page=${page}`));
     if (!response.ok) throw new Error('Failed to load tasks');
     const data = await response.json();
 
@@ -850,7 +891,7 @@ export async function loadTasks(page = 1) {
 
     body.querySelectorAll('.task-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await fetch(buildApiUrl(`tasks/${btn.dataset.id}`), {
+        await resilientFetch(buildApiUrl(`tasks/${btn.dataset.id}`), {
           method: 'DELETE',
         });
         loadTasks(taskPage);
