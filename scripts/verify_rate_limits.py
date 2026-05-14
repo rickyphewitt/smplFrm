@@ -35,8 +35,8 @@ def main():
     parser.add_argument(
         "--anon-limit",
         type=int,
-        default=60,
-        help="Expected anonymous rate limit (default: 60)",
+        default=500,
+        help="Expected anonymous rate limit (default: 500)",
     )
     parser.add_argument(
         "--task-limit",
@@ -101,9 +101,9 @@ def main():
         results.append(recovery_result)
 
     # Summary
-    print(f"\n{'='*60}")
+    print("\n" + "=" * 60)
     print("SUMMARY")
-    print(f"{'='*60}")
+    print("=" * 60)
     passed = sum(1 for r in results if r.passed)
     failed = sum(1 for r in results if not r.passed)
 

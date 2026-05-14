@@ -177,7 +177,7 @@ class TestSettingsRestFrameworkConfig:
     def test_default_throttle_rate_values(self, settings):
         """Default throttle rates match expected values when no env vars are set."""
         rates = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]
-        assert rates["global_anon"] == "60/minute"
+        assert rates["global_anon"] == "500/minute"
         assert rates["global_authenticated"] == "120/minute"
         assert rates["global_task"] == "10/minute"
 

@@ -129,6 +129,7 @@ describe('main.js', () => {
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
+          status: 200,
           json: () => Promise.resolve({ id: 'test-123', url: '/test.jpg' }),
         }),
       );
@@ -137,6 +138,7 @@ describe('main.js', () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         'http://localhost:8321/api/v1/images/next?width=1920&height=1080',
+        {},
       );
       expect(result).toEqual({ id: 'test-123', url: '/test.jpg' });
     });
