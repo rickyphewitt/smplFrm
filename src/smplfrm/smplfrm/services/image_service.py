@@ -148,6 +148,6 @@ class ImageService(BaseService, TaskReportingService):
                 self.report_task(i + 1)
             self.complete_task()
         except Exception as e:
-            self.fail_task(str(e))
+            self.fail_task("Image count reset operation failed", exception=e)
             raise
         logger.info("Image Count Reset")

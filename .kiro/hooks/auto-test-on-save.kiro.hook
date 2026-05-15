@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "name": "Auto Test on Save",
   "description": "Automatically run tests when TypeScript or JavaScript files are saved with minimal verbosity",
   "version": "1",

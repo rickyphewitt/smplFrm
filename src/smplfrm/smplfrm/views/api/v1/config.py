@@ -73,7 +73,11 @@ class ConfigViewSet(viewsets.ModelViewSet):
         try:
             config = self.service.apply_preset()
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error("Config apply_preset error: %s", e, exc_info=True)
+            return Response(
+                {"detail": "Unable to apply preset configuration"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = self.get_serializer(config)
         return Response(serializer.data)
 

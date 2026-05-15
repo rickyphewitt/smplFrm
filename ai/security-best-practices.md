@@ -14,6 +14,20 @@
 - All view methods that call service layer code should have a catch-all `except Exception` handler returning a generic 500 response
 - Separate internal diagnostic messages (for logs) from client-facing messages (for responses)
 
+### Service Layer Error Handling Pattern
+When implementing error handling in service methods that use `TaskReportingService`:
+- Use `self.fail_task(generic_message, exception=e)` to pass the exception for automatic logging
+- The `fail_task()` method will automatically log the exception with `exc_info=True`
+- Never call `logger.error()` manually before `fail_task()` — it's redundant and creates maintenance burden
+- Example:
+  ```python
+  try:
+      # service operation
+  except Exception as e:
+      self.fail_task("Operation failed", exception=e)  # Logs automatically
+      raise
+  ```
+
 ## Dependency Management
 - Keep dependencies updated
 - Use dependency scanning tools

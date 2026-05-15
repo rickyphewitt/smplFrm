@@ -97,7 +97,7 @@ class LibraryService(TaskReportingService):
 
             self.complete_task()
         except Exception as e:
-            self.fail_task(str(e))
+            self.fail_task("Library scan operation failed", exception=e)
             raise
 
     def _get_file_extension(self, filename: str) -> str:

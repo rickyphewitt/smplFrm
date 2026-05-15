@@ -132,4 +132,50 @@ class TestImageService(TestCase):
 
         task.refresh_from_db()
         self.assertEqual(task.status, "failed")
-        self.assertEqual(task.error, "cache error")
+        self.assertEqual(task.error, "Cache clear operation failed")
+
+    def test_clear_logs_original_exception(self):
+        """Test that clear logs the original exception with exc_info=True."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.CLEAR_CACHE)
+
+        with patch.object(
+            self.service.cache, "clear", side_effect=RuntimeError("cache error")
+        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+            with self.assertRaises(RuntimeError):
+                self.service.clear(task_id=task.external_id)
+
+            # Verify logger.error was called with the original exception and exc_info=True
+            mock_logger.error.assert_called_once()
+            call_args = mock_logger.error.call_args
+            self.assertIn("Task execution error", call_args[0][0])
+            self.assertIsInstance(call_args[0][1], RuntimeError)
+            self.assertEqual(str(call_args[0][1]), "cache error")
+            self.assertTrue(call_args[1].get("exc_info"))
+
+    def test_clear_does_not_store_internal_details(self):
+        """Test that clear does NOT store internal error details in task failure record."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.CLEAR_CACHE)
+
+        # Use a realistic internal error message with sensitive details
+        internal_error = RuntimeError(
+            "Redis connection failed: ECONNREFUSED 127.0.0.1:6379 at redis_client.py:89"
+        )
+
+        with patch.object(self.service.cache, "clear", side_effect=internal_error):
+            with self.assertRaises(RuntimeError):
+                self.service.clear(task_id=task.external_id)
+
+        task.refresh_from_db()
+        # Verify the task error contains only the sanitized message
+        self.assertEqual(task.error, "Cache clear operation failed")
+        # Verify internal details are NOT in the task error
+        self.assertNotIn("Redis", task.error)
+        self.assertNotIn("ECONNREFUSED", task.error)
+        self.assertNotIn("127.0.0.1", task.error)
+        self.assertNotIn("redis_client.py", task.error)

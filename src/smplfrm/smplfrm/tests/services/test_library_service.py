@@ -131,4 +131,56 @@ class TestLibraryScanProgress(TestCase):
 
         task.refresh_from_db()
         self.assertEqual(task.status, "failed")
-        self.assertEqual(task.error, "db write failed")
+        self.assertEqual(task.error, "Library scan operation failed")
+
+    def test_scan_logs_original_exception_on_error(self):
+        """Test that scan logs the original exception with exc_info=True."""
+        from unittest.mock import patch
+
+        task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
+        service = LibraryService()
+
+        with patch.object(
+            service.image_service,
+            "create",
+            side_effect=RuntimeError("db write failed"),
+        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+            with self.assertRaises(RuntimeError):
+                service.scan(task_id=task.external_id)
+
+            # Verify logger.error was called with the original exception and exc_info=True
+            mock_logger.error.assert_called_once()
+            call_args = mock_logger.error.call_args
+            self.assertIn("Task execution error", call_args[0][0])
+            self.assertIsInstance(call_args[0][1], RuntimeError)
+            self.assertEqual(str(call_args[0][1]), "db write failed")
+            self.assertTrue(call_args[1].get("exc_info"))
+
+    def test_scan_does_not_store_internal_error_details(self):
+        """Test that scan does NOT store internal error details in task failure record."""
+        from unittest.mock import patch
+
+        task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
+        service = LibraryService()
+
+        # Use a realistic internal error message with sensitive details
+        internal_error = RuntimeError(
+            "UNIQUE constraint failed: smplfrm_image.file_path at line 42 in database.py"
+        )
+
+        with patch.object(
+            service.image_service,
+            "create",
+            side_effect=internal_error,
+        ):
+            with self.assertRaises(RuntimeError):
+                service.scan(task_id=task.external_id)
+
+        task.refresh_from_db()
+        # Verify the task error contains only the sanitized message
+        self.assertEqual(task.error, "Library scan operation failed")
+        # Verify internal details are NOT in the task error
+        self.assertNotIn("UNIQUE constraint", task.error)
+        self.assertNotIn("smplfrm_image", task.error)
+        self.assertNotIn("database.py", task.error)
+        self.assertNotIn("line 42", task.error)
