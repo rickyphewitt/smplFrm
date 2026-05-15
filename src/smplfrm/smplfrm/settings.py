@@ -192,13 +192,14 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "change-me")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{REDIS_HOST}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": REDIS_PASSWORD,
         },
     }
 }
@@ -230,8 +231,8 @@ REST_FRAMEWORK = {
 
 
 # celery config
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:6379/0"
-CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:6379/0"
+CELERY_BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:6379/0"
+CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:6379/0"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers.DatabaseScheduler"
 CELERY_BEAT_SCHEDULE = {
     "clear-old-tasks": {

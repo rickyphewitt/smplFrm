@@ -1,7 +1,10 @@
 services:
     cache:
       image: redis:7.4.1-alpine
+      command: sh -c "redis-server --requirepass $$REDIS_PASSWORD"
       restart: always
+      env_file:
+        - redis.env
       ports:
         - "6379:6379"
       volumes:

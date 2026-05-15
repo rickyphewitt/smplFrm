@@ -7,6 +7,7 @@ services:
          - "8321:8321"
         env_file:
           - config.env
+          - redis.env
         volumes:
             - ../../library:/app/library
             - db:/app/src/smplfrm/db
@@ -17,9 +18,10 @@ services:
 
     cache:
         image: redis:7.4.1-alpine
+        command: sh -c "redis-server --requirepass $$REDIS_PASSWORD"
         restart: always
-        ports:
-          - "6379:6379"
+        env_file:
+          - redis.env
         volumes:
           - cache:/data
         networks:

@@ -13,6 +13,7 @@ services:
         environment:
             - SMPL_FRM_LIBRARY_DIRS=/app/library
             - REDIS_HOST=cache
+            - REDIS_PASSWORD=change-me
             - PYTHONUNBUFFERED=1
         volumes:
             - /path/to/your/photos:/app/library
@@ -21,6 +22,9 @@ services:
 
     cache:
         image: redis:7.4.1-alpine
+        command: sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+        environment:
+            - REDIS_PASSWORD=change-me
         restart: always
 ```
 
@@ -58,6 +62,7 @@ services:
         environment:
             - SMPL_FRM_LIBRARY_DIRS=/app/library
             - REDIS_HOST=cache
+            - REDIS_PASSWORD=change-me
             - PYTHONUNBUFFERED=1
         volumes:
             - /path/to/your/photos:/app/library
@@ -67,6 +72,9 @@ services:
 
     cache:
         image: redis:7.4.1-alpine
+        command: sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+        environment:
+            - REDIS_PASSWORD=change-me
         restart: always
 
 volumes:
