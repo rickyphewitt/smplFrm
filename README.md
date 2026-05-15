@@ -119,3 +119,24 @@ However, there are some additional guidelines that should be used for AI commits
 ### Environment Variables
 
 See the [Environment Variables](https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables) wiki page for the full reference of all application, infrastructure, and plugin environment variables.
+
+## AI Guidelines
+
+This project uses a three-layer pattern for AI coding guidelines:
+
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| Knowledge | `ai/` | Tool-agnostic markdown — single source of truth |
+| Adapters | `.kiro/steering/`, `.claude/rules/` | Thin pointers that load knowledge files |
+| Personal | `.kiro/steering/local/`, `CLAUDE.local.md` | Gitignored personal overrides |
+
+**Supported tools:** Kiro, Claude Code
+
+| Tool | Adapter Location |
+|------|-----------------|
+| Kiro | `.kiro/steering/<topic>.md` |
+| Claude Code | `.claude/rules/<topic>.md` + `CLAUDE.md` |
+
+**Adding a new topic:** Create `ai/<topic>.md`, then add adapter files for each tool.
+
+**Onboarding a new AI tool:** See [`ai/README.md`](ai/README.md) for step-by-step instructions.
