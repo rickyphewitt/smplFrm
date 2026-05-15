@@ -38,6 +38,7 @@ services:
         environment:
             - SMPL_FRM_LIBRARY_DIRS=/app/library
             - REDIS_HOST=cache
+            - REDIS_PASSWORD=change-me
             - PYTHONUNBUFFERED=1
         volumes:
             - /path/to/your/photos:/app/library
@@ -46,11 +47,23 @@ services:
 
     cache:
         image: redis:7.4.1-alpine
+        command: sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+        environment:
+            - REDIS_PASSWORD=change-me
         restart: always
 ```
 Run `docker compose up -d` and browse to `http://localhost:8321`.
 
 For detailed configuration see the [Docker wiki page](https://github.com/rickyphewitt/smplFrm/wiki/Docker).
+
+### Default Passwords
+
+The following environment variables ship with insecure defaults and **must be changed** in any non-development deployment:
+
+| Variable | Default | How to generate a secure value |
+|----------|---------|-------------------------------|
+| `DJANGO_SECRET_KEY` | `change-me` | `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `REDIS_PASSWORD` | `change-me` | `openssl rand -base64 32` |
 
 ### Docker Hub Labels
 Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
