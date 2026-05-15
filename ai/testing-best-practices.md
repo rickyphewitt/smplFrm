@@ -65,6 +65,8 @@ pytest -k "test_specific"
 - Keep test names descriptive but concise
 - Separate unit, integration, and e2e tests
 - **Never reference spec documents** (requirement IDs, task numbers, property labels, or spec file paths) in test code — specs are not checked in and lose meaning after a feature is complete. Tests should be self-documenting through clear names and docstrings.
+- **Remove empty test files** — test files with no actual test methods should be deleted, not committed with placeholder comments
+- **Clean up exploratory test comments** — remove comments like "EXPECTED TO FAIL on unfixed code" after the fix is implemented; tests should describe current behavior, not historical states
 
 ## Performance
 - Run tests in parallel when possible (`--parallel`, `--maxWorkers`)

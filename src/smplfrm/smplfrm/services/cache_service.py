@@ -63,7 +63,7 @@ class CacheService(TaskReportingService):
             self.report_task(1)
             self.complete_task()
         except Exception as e:
-            self.fail_task(str(e))
+            self.fail_task("Cache clear operation failed", exception=e)
             raise
         logger.info("Cache Cleared")
 

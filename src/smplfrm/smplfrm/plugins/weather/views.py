@@ -1,9 +1,12 @@
 import json
+import logging
 
 from django.http import HttpResponse
 from rest_framework import viewsets
 
 from smplfrm.plugins.weather.weather import WeatherPlugin
+
+logger = logging.getLogger(__name__)
 
 
 class WeatherView(viewsets.ViewSet):
@@ -13,8 +16,9 @@ class WeatherView(viewsets.ViewSet):
         try:
             data = plugin.get_for_display()
         except ValueError as e:
+            logger.error("Weather plugin error: %s", e, exc_info=True)
             return HttpResponse(
-                json.dumps({"error": str(e)}),
+                json.dumps({"error": "Unable to retrieve weather data"}),
                 content_type="application/json",
                 status=400,
             )

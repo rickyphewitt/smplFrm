@@ -169,4 +169,51 @@ class TestImageService(TestCase):
 
         task.refresh_from_db()
         self.assertEqual(task.status, "failed")
-        self.assertEqual(task.error, "save failed")
+        self.assertEqual(task.error, "Image count reset operation failed")
+
+    def test_reset_all_view_count_logs_original_exception(self):
+        """Test that reset logs the original exception with exc_info=True."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
+        self.image_service.create(self.full_image_data)
+
+        with patch.object(
+            Image, "save", side_effect=RuntimeError("save failed")
+        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+            with self.assertRaises(RuntimeError):
+                self.image_service.reset_all_view_count(task_id=task.external_id)
+
+            # Verify logger.error was called with the original exception and exc_info=True
+            mock_logger.error.assert_called_once()
+            call_args = mock_logger.error.call_args
+            self.assertIn("Task execution error", call_args[0][0])
+            self.assertIsInstance(call_args[0][1], RuntimeError)
+            self.assertEqual(str(call_args[0][1]), "save failed")
+            self.assertTrue(call_args[1].get("exc_info"))
+
+    def test_reset_all_view_count_does_not_store_internal_details(self):
+        """Test that reset does NOT store internal error details in task failure record."""
+        from unittest.mock import patch
+        from smplfrm.models.task import Task, TaskType
+
+        task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
+        self.image_service.create(self.full_image_data)
+
+        # Use a realistic internal error message with sensitive details
+        internal_error = RuntimeError(
+            "Database connection pool exhausted at connection.py:156 - max_connections=100"
+        )
+
+        with patch.object(Image, "save", side_effect=internal_error):
+            with self.assertRaises(RuntimeError):
+                self.image_service.reset_all_view_count(task_id=task.external_id)
+
+        task.refresh_from_db()
+        # Verify the task error contains only the sanitized message
+        self.assertEqual(task.error, "Image count reset operation failed")
+        # Verify internal details are NOT in the task error
+        self.assertNotIn("connection pool", task.error)
+        self.assertNotIn("connection.py", task.error)
+        self.assertNotIn("max_connections", task.error)

@@ -49,6 +49,14 @@ class TaskReportingService:
         task.progress = 100
         self.task_service.complete(task)
 
-    def fail_task(self, error: str):
+    def fail_task(self, error: str, exception: Exception = None):
+        """Mark task as failed with an error message.
+
+        Args:
+            error: User-facing error message (should be sanitized/generic)
+            exception: Optional exception to log server-side with full traceback
+        """
+        if exception:
+            logger.error("Task execution error: %s", exception, exc_info=True)
         task = self.task_service.read(self.task_id)
         self.task_service.fail(task, error)
