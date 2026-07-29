@@ -92,7 +92,15 @@ describe('spotify bar visibility', () => {
     setupDOM();
     global.fetch = vi
       .fn()
-      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () =>
+          Promise.resolve({
+            error: 'spotify_authorization_required',
+            reason: 'missing',
+          }),
+      })
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -116,7 +124,15 @@ describe('spotify bar visibility', () => {
     setupDOM();
     global.fetch = vi
       .fn()
-      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () =>
+          Promise.resolve({
+            error: 'spotify_authorization_required',
+            reason: 'missing',
+          }),
+      })
       .mockResolvedValueOnce({ ok: false });
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     getNowPlaying = module.getNowPlaying;

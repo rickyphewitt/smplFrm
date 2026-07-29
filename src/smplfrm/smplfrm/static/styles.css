@@ -248,6 +248,36 @@ img {
     gap: 8px;
 }
 
+.spotify-connect-link,
+.spotify-reconnect-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spotify-reconnect-link .spotify-icon,
+.spotify-reconnect-link span {
+    color: #fbbf24;
+}
+
+.spotify-expired {
+    animation: spotifyPulse 2s ease-in-out infinite;
+}
+
+@keyframes spotifyPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.spotify-reconnect-link:hover .spotify-expired {
+    color: #f59e0b;
+    animation-play-state: paused;
+}
+
 /* Logo Icon */
 .logo-icon {
     position: fixed;

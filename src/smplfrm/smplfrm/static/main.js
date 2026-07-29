@@ -240,6 +240,61 @@ function showSpotifyBar(content) {
   bar.classList.add('bar-fade-in');
 }
 
+let spotifyAuthLinkActive = false;
+let spotifyAuthRequestInFlight = false;
+
+function showSpotifyAuthLink(authUrl, reason) {
+  const reconnect = reason === 'expired';
+  const label = reconnect
+    ? 'Expired - Reconnect Spotify'
+    : 'Connect Spotify';
+  const tooltip = reconnect
+    ? 'Spotify connection expired - Click to reconnect'
+    : 'Connect Spotify';
+  const link = document.createElement('a');
+  link.href = authUrl;
+  link.title = tooltip;
+  link.className = reconnect ? 'spotify-reconnect-link' : 'spotify-connect-link';
+
+  const icon = document.createElement('i');
+  icon.className = reconnect
+    ? 'iconoir-spotify spotify-icon spotify-expired'
+    : 'iconoir-spotify spotify-icon';
+  const text = document.createElement('span');
+  text.textContent = label;
+  link.append(icon, text);
+
+  const spotifyDiv = document.getElementById('spotify-now-playing');
+  spotifyDiv.replaceChildren(link);
+  const bar = document.getElementById('spotify-bar');
+  bar.style.display = 'flex';
+  bar.classList.add('bar-fade-in');
+}
+
+async function showSpotifyAuthorization(reason) {
+  if (spotifyAuthLinkActive || spotifyAuthRequestInFlight) {
+    return;
+  }
+
+  spotifyAuthRequestInFlight = true;
+  try {
+    const authResponse = await resilientFetch(
+      buildApiUrl('plugins/spotify/auth'),
+    );
+
+    if (authResponse.status === 429 || !authResponse.ok) {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      return;
+    }
+
+    const authData = await authResponse.json();
+    showSpotifyAuthLink(authData.auth_url, reason);
+    spotifyAuthLinkActive = true;
+  } finally {
+    spotifyAuthRequestInFlight = false;
+  }
+}
+
 export async function getNowPlaying() {
   try {
     const response = await resilientFetch(
@@ -248,35 +303,37 @@ export async function getNowPlaying() {
 
     // On exhausted 429: show icon only, no error text
     if (response.status === 429) {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      if (!spotifyAuthLinkActive) {
+        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      }
       return;
     }
 
-    if (!response.ok) {
-      const authResponse = await resilientFetch(
-        buildApiUrl('plugins/spotify/auth'),
-      );
-
-      // On exhausted 429 for auth: show icon only, no error text
-      if (authResponse.status === 429 || !authResponse.ok) {
-        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+    if (response.status === 401) {
+      const errorData = await response.json();
+      if (errorData.error === 'spotify_authorization_required') {
+        await showSpotifyAuthorization(errorData.reason);
         return;
       }
+    }
 
-      const authData = await authResponse.json();
-      showSpotifyBar(
-        `<a href="${authData.auth_url}"><i class="iconoir-spotify spotify-icon"></i></a>`,
-      );
+    if (!response.ok) {
+      if (!spotifyAuthLinkActive) {
+        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      }
       return;
     }
 
     const data = await response.json();
+    spotifyAuthLinkActive = false;
     showSpotifyBar(
       `<i class="iconoir-spotify spotify-icon"></i> ${data.artist} - ${data.song}`,
     );
   } catch (error) {
     console.error('Spotify error:', error);
-    showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+    if (!spotifyAuthLinkActive) {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+    }
   }
 }
 
