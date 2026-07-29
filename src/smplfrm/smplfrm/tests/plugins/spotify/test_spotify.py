@@ -22,6 +22,11 @@ class TestSpotifyService(TestCase):
         mock_spotify_oauth.return_value = Mock()
         self.service = SpotifyPlugin()
         self.service.configure()
+        self.service.cache_manager = Mock()
+        self.service.cache_manager.get_cached_token.return_value = {
+            "access_token": "test-token",
+            "refresh_token": "test-refresh-token",
+        }
         self.spotify_now_playing = {
             "currently_playing_type": "track",
             "item": {
@@ -32,11 +37,17 @@ class TestSpotifyService(TestCase):
 
     def test_spotify_missing_config(self):
         plugin = Plugin.objects.get(name="spotify")
-        plugin.settings = {"client_id": "", "client_secret": ""}
-        plugin.save()
+        incomplete_settings = (
+            {"client_id": "", "client_secret": "secret"},
+            {"client_id": "client-id", "client_secret": ""},
+        )
 
-        svc = SpotifyPlugin()
-        self.assertFalse(svc.is_ready)
+        # OAuth cannot operate with only half of the client credential pair.
+        for settings in incomplete_settings:
+            with self.subTest(settings=settings):
+                plugin.settings = settings
+                plugin.save()
+                self.assertFalse(SpotifyPlugin().is_ready)
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_success(self, mock_spotify):
@@ -118,6 +129,13 @@ class TestSpotifyService(TestCase):
         self.assertEqual(plugin.settings["client_id"], "env_id")
         self.assertEqual(plugin.settings["client_secret"], "env_secret")
 
+    @patch.dict(
+        "os.environ",
+        {
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "",
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET": "",
+        },
+    )
     def test_db_settings_preserved_when_no_env_vars(self):
         """Test that DB settings are preserved when no env vars are set."""
         from smplfrm.services.plugin_service import PluginService
@@ -136,6 +154,7 @@ class TestSpotifyService(TestCase):
         "os.environ",
         {
             "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_ID": "env_id",
+            "SMPL_FRM_PLUGINS_SPOTIFY_CLIENT_SECRET": "",
         },
     )
     def test_env_overrides_merge_with_db(self):

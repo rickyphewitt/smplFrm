@@ -105,7 +105,9 @@ Clicking Configure opens a detail view with plugin-specific settings. The form f
 | Client ID | Spotify API client ID. Masked by default with reveal toggle. |
 | Client Secret | Spotify API client secret. Masked by default with reveal toggle. |
 
-See [Spotify Developer](https://spotipy.readthedocs.io/en/latest/#getting-started) for setup instructions.
+See [Spotify Developer](https://spotipy.readthedocs.io/en/latest/#getting-started) for setup instructions. Configure the Spotify application redirect URI as `{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}:{SMPL_FRM_EXTERNAL_PORT}/api/v1/plugins/spotify/callback`.
+
+Spotify refresh tokens expire six months after authorization. When a token expires, the frame displays an amber **Reconnect Spotify** link instead of retrying the expired token. Start and finish the connection flow in the same browser session so the callback can validate its one-time security state.
 
 #### Weather
 
