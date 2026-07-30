@@ -175,6 +175,9 @@ coverage/
 # Build artifacts
 VERSION
 
+# Feature docs (local only, not committed)
+docs/features/
+
 # Personal AI overrides
 .kiro/steering/local/
 CLAUDE.local.md

@@ -77,6 +77,9 @@ Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
 ### Environment variables
 For a full list of environment variables see the [Environment Variable wiki page](https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables)
 
+### API
+For the API standard and resource documentation see [docs/API.md](docs/API.md).
+
 ## Development
 
 ### JavaScript
