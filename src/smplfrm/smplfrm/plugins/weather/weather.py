@@ -131,13 +131,28 @@ class WeatherPlugin(BasePlugin):
         return cache.get(self.redis_key)
 
     def get_for_display(self, now: Optional[datetime] = None) -> Dict[str, str]:
-        """Get formatted weather data for display."""
+        """Get weather data for display as structured key-value pairs.
+
+        Returns:
+            Dict with separate value and scale fields:
+            - temperature: numeric string (e.g., "72")
+            - temperature_scale: "F" or "C"
+            - daily_low: numeric string
+            - daily_low_scale: "F" or "C"
+            - daily_high: numeric string
+            - daily_high_scale: "F" or "C"
+        """
         self._ensure_configured()
 
+        scale = "F" if self.temp_unit == TemperatureUnit.FAHRENHEIT else "C"
+
         weather_data = {
-            "current_temp": f"N/A {self.temp_unit_display}",
-            "current_low_temp": f"N/A {self.temp_unit_display}",
-            "current_high_temp": f"N/A{self.temp_unit_display}",
+            "temperature": "N/A",
+            "temperature_scale": scale,
+            "daily_low": "N/A",
+            "daily_low_scale": scale,
+            "daily_high": "N/A",
+            "daily_high_scale": scale,
         }
 
         if not now:
@@ -153,30 +168,27 @@ class WeatherPlugin(BasePlugin):
 
         if current_temp_index is not None:
             current_temp_value = self._get_current_temp(raw_data, current_temp_index)
-        else:
-            current_temp_value = "N/A"
+            if current_temp_value != "N/A":
+                weather_data["temperature"] = str(current_temp_value)
 
         daily_index = self._get_current_daily_index(raw_data, now)
-        current_low_temp_value = None
-        current_high_temp_value = None
 
         if daily_index is not None:
             try:
-                current_low_temp_value = raw_data.daily.temperature_2m_min[daily_index]
-                current_high_temp_value = raw_data.daily.temperature_2m_max[daily_index]
+                low_value = raw_data.daily.temperature_2m_min[daily_index]
+                if low_value is not None:
+                    weather_data["daily_low"] = str(low_value)
             except Exception as e:
-                logger.error(f"Failed to get low/high temps: {e}")
+                logger.error(f"Failed to get low temp: {e}")
 
-        if not current_low_temp_value:
-            current_low_temp_value = "N/A"
-        if not current_high_temp_value:
-            current_high_temp_value = "N/A"
+            try:
+                high_value = raw_data.daily.temperature_2m_max[daily_index]
+                if high_value is not None:
+                    weather_data["daily_high"] = str(high_value)
+            except Exception as e:
+                logger.error(f"Failed to get high temp: {e}")
 
-        return {
-            "current_temp": f"{current_temp_value} {self.temp_unit_display}",
-            "current_low_temp": f"{current_low_temp_value}{self.temp_unit_display}",
-            "current_high_temp": f"{current_high_temp_value}{self.temp_unit_display}",
-        }
+        return weather_data
 
     def _get_current_temp(self, raw_data: Any, index: int) -> Any:
         try:

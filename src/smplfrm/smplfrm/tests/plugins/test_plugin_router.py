@@ -41,5 +41,5 @@ class TestPluginRouter(TestCase):
 
     def test_weather_endpoint_accessible(self):
         """Verify weather plugin endpoint is reachable via auto-discovered router."""
-        response = self.client.get("/api/v1/plugins/weather")
+        response = self.client.get("/api/v1/plugins/weather/current")
         self.assertEqual(response.status_code, 200)

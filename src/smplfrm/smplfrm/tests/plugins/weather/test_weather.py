@@ -28,13 +28,12 @@ class TestWeatherService(TestCase):
         test_now = datetime.datetime(2025, 2, 13, 5, 0, 0)
         display_data = self.service.get_for_display(now=test_now)
 
-        current_temp = display_data["current_temp"].split(" ")[0]
-        current_temp_unit = display_data["current_temp"].split(" ")[1]
-
-        self.assertEqual(current_temp, "7.1")
-        self.assertEqual(current_temp_unit, "°F")
-        self.assertEqual("-5.3°F", display_data["current_low_temp"])
-        self.assertEqual("14.4°F", display_data["current_high_temp"])
+        self.assertEqual(display_data["temperature"], "7.1")
+        self.assertEqual(display_data["temperature_scale"], "F")
+        self.assertEqual(display_data["daily_low"], "-5.3")
+        self.assertEqual(display_data["daily_low_scale"], "F")
+        self.assertEqual(display_data["daily_high"], "14.4")
+        self.assertEqual(display_data["daily_high_scale"], "F")
 
     def __returned_weather_data(self):
         return Forecast(
