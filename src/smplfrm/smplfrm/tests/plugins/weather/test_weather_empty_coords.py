@@ -29,5 +29,5 @@ class TestWeatherEmptyCoords(TestCase):
             "Invalid coordinates"
         )
         client = APIClient()
-        response = client.get("/api/v1/plugins/weather")
+        response = client.get("/api/v1/plugins/weather/current")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

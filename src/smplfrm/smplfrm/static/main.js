@@ -1,4 +1,9 @@
 import { resilientFetch } from './resilientFetch.js';
+import {
+  fetchJsonApi,
+  unwrapResource,
+  formatWeatherTemp,
+} from './jsonApiClient.js';
 
 const IMAGE_ID_ATTR = 'image-id';
 const OPACITY_INCREMENT = 0.1;
@@ -220,13 +225,14 @@ function displayWeather() {
     weatherGroup.style.display = 'none';
     return;
   }
-  // Fetch weather data from plugin API
-  resilientFetch(buildApiUrl('plugins/weather'))
-    .then((r) => (r.ok ? r.json() : null))
-    .then((data) => {
-      if (data && data.current_temp) {
-        document.getElementById('weather-temp').innerHTML =
-          `🌡️ ${data.current_temp}`;
+  // Fetch weather data from plugin API (JSON:API format)
+  fetchJsonApi(buildApiUrl('plugins/weather/current'))
+    .then((jsonApiDoc) => {
+      const resource = unwrapResource(jsonApiDoc);
+      if (resource && resource.attributes) {
+        const { temperature, temperature_scale } = resource.attributes;
+        const formatted = formatWeatherTemp(temperature, temperature_scale);
+        document.getElementById('weather-temp').innerHTML = `🌡️ ${formatted}`;
       }
     })
     .catch(() => {});
