@@ -1,40 +1,87 @@
-from django.core.exceptions import PermissionDenied
-from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
+"""Plugin configuration API views.
 
+Provides JSON:API endpoints for plugin list, detail, and update.
+Create, partial update, and delete are forbidden.
+"""
+
+import logging
+
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
+from rest_framework import viewsets
+from rest_framework.response import Response
+from rest_framework_json_api.pagination import JsonApiPageNumberPagination
+
+from smplfrm.jsonapi import (
+    JsonApiRenderer,
+    JsonApiParser,
+    jsonapi_exception_handler,
+    SECRET_MASK,
+)
+from smplfrm.views.serializers.v1.plugin_serializer import PluginSerializer
 from smplfrm.models import Plugin
 from smplfrm.plugins import PLUGIN_REGISTRY
 from smplfrm.services.plugin_service import PluginService
-from smplfrm.views.serializers.v1.plugin_serializer import PluginSerializer, SECRET_MASK
+
+logger = logging.getLogger(__name__)
 
 
-class PluginPagination(PageNumberPagination):
+class PluginPagination(JsonApiPageNumberPagination):
+    """JSON:API pagination for plugins with page[number] and page[size]."""
+
     page_size = 5
+    max_page_size = 100
 
 
 class PluginViewSet(viewsets.ModelViewSet):
+    """JSON:API Plugin configuration endpoint.
 
-    queryset = Plugin.objects.all()
+    Supports:
+    - GET /plugins - list all plugins (paginated)
+    - GET /plugins/{id} - plugin detail
+    - PUT /plugins/{id} - full update of plugin settings
+
+    Forbidden:
+    - POST (create)
+    - PATCH (partial update)
+    - DELETE
+
+    Security:
+    - Returns 403 for non-existent resources to prevent enumeration attacks
+    """
+
+    queryset = Plugin.objects.filter(deleted=False).order_by("name")
     serializer_class = PluginSerializer
-    lookup_field = "external_id"
+    renderer_classes = [JsonApiRenderer]
+    parser_classes = [JsonApiParser]
     pagination_class = PluginPagination
+    lookup_field = "external_id"
+    resource_name = "plugins"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = PluginService()
 
-    def create(self, request, *args, **kwargs):
-        raise PermissionDenied()
+    def get_exception_handler(self):
+        return jsonapi_exception_handler
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.service.list()
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    def get_object(self):
+        """Return 403 instead of 404 to prevent resource enumeration."""
+        try:
+            return super().get_object()
+        except Http404:
+            raise PermissionDenied("Access denied")
+
+    def create(self, request, *args, **kwargs):
+        raise PermissionDenied("Plugin creation is not supported")
+
+    def partial_update(self, request, *args, **kwargs):
+        raise PermissionDenied(
+            "Partial update is not supported. Use PUT for full update."
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        raise PermissionDenied("Plugin deletion is not supported")
 
     def _get_secret_keys(self, plugin_name):
         """Return set of setting keys marked as type 'password' for a plugin."""
@@ -49,6 +96,10 @@ class PluginViewSet(viewsets.ModelViewSet):
         return set()
 
     def update(self, request, *args, **kwargs):
+        """Full update of plugin settings.
+
+        Retains original secret values when the masked placeholder is submitted.
+        """
         plugin = self.get_object()
         serializer = self.get_serializer(plugin, data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -65,9 +116,3 @@ class PluginViewSet(viewsets.ModelViewSet):
         plugin.settings = new_settings
         self.service.update(plugin)
         return Response(self.get_serializer(plugin).data)
-
-    def partial_update(self, request, *args, **kwargs):
-        raise PermissionDenied()
-
-    def destroy(self, request, *args, **kwargs):
-        raise PermissionDenied()

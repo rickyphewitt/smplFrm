@@ -1,4 +1,9 @@
-from rest_framework import serializers
+"""JSON:API serializer for plugin configuration resources.
+
+Uses rest_framework_json_api for proper JSON:API document structure.
+"""
+
+from rest_framework_json_api import serializers
 
 from smplfrm.models import Plugin
 from smplfrm.plugins import PLUGIN_REGISTRY
@@ -6,23 +11,24 @@ from smplfrm.plugins import PLUGIN_REGISTRY
 SECRET_MASK = "******"
 
 
-class PluginSerializer(serializers.HyperlinkedModelSerializer):
+class PluginSerializer(serializers.ModelSerializer):
+    """Serializer for plugin configuration resources.
+
+    Uses external_id as the JSON:API id field.
+    Masks secret fields (type='password') in responses.
+    """
 
     id = serializers.CharField(source="external_id", read_only=True)
     settings_schema = serializers.SerializerMethodField()
 
     class Meta:
         model = Plugin
-        fields = [
-            "id",
-            "name",
-            "description",
-            "settings",
-            "settings_schema",
-        ]
-        read_only_fields = ["name", "description"]
+        resource_name = "plugins"
+        fields = ["id", "name", "description", "settings", "settings_schema"]
+        read_only_fields = ["id", "name", "description", "settings_schema"]
 
     def get_settings_schema(self, obj):
+        """Return the settings schema from the plugin registry."""
         for cls in PLUGIN_REGISTRY:
             plugin = cls()
             if plugin.name == obj.name:

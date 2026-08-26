@@ -17,7 +17,7 @@ from smplfrm.jsonapi import (
     WeatherUnavailableError,
     jsonapi_exception_handler,
 )
-from smplfrm.jsonapi.serializers import WeatherSerializer
+from smplfrm.plugins.weather.serializers import WeatherSerializer
 from smplfrm.plugins.weather.weather import WeatherPlugin
 
 logger = logging.getLogger(__name__)

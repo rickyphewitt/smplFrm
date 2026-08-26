@@ -2,6 +2,8 @@ import { resilientFetch } from './resilientFetch.js';
 import {
   fetchJsonApi,
   unwrapResource,
+  unwrapResourceList,
+  buildResourceDocument,
   formatWeatherTemp,
 } from './jsonApiClient.js';
 
@@ -611,12 +613,14 @@ export async function loadPlugins(page = 1) {
   const enabledPlugins = JSON.parse(modal.dataset.configPlugins || '[]');
 
   try {
-    const response = await resilientFetch(buildApiUrl(`plugins?page=${page}`));
-    if (!response.ok) throw new Error('Failed to load plugins');
-    const data = await response.json();
+    const doc = await fetchJsonApi(
+      buildApiUrl(`plugins?page[number]=${page}`),
+    );
+    const { resources, meta, links } = unwrapResourceList(doc);
 
-    body.innerHTML = data.results
-      .map((p) => {
+    body.innerHTML = resources
+      .map((r) => {
+        const p = { id: r.id, ...r.attributes };
         const isEnabled = enabledPlugins.includes(p.name);
         const checked = isEnabled ? 'checked' : '';
         return `<tr>
@@ -647,10 +651,12 @@ export async function loadPlugins(page = 1) {
       btn.addEventListener('click', () => openPluginDetail(btn.dataset.id));
     });
 
-    const totalPages = Math.ceil(data.count / 5) || 1;
+    const count = meta.pagination?.count || resources.length;
+    const pageSize = meta.pagination?.page_size || 5;
+    const totalPages = Math.ceil(count / pageSize) || 1;
     info.textContent = `Page ${page} of ${totalPages}`;
-    prev.disabled = !data.previous;
-    next.disabled = !data.next;
+    prev.disabled = !links.prev;
+    next.disabled = !links.next;
   } catch {
     body.innerHTML = '<tr><td colspan="4">Failed to load plugins</td></tr>';
   }
@@ -699,9 +705,10 @@ async function openPluginDetail(pluginId) {
   const nameEl = document.getElementById('plugin-detail-name');
   const formEl = document.getElementById('plugin-detail-form');
 
-  const resp = await resilientFetch(buildApiUrl(`plugins/${pluginId}`));
-  if (!resp.ok) return;
-  const plugin = await resp.json();
+  const doc = await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`));
+  const resource = unwrapResource(doc);
+  if (!resource) return;
+  const plugin = { id: resource.id, ...resource.attributes };
 
   nameEl.textContent = plugin.name;
   formEl.innerHTML = '';
@@ -798,10 +805,11 @@ async function openPluginDetail(pluginId) {
     formEl.querySelectorAll('.plugin-setting-input').forEach((el) => {
       settings[el.dataset.key] = el.type === 'checkbox' ? el.checked : el.value;
     });
-    await resilientFetch(buildApiUrl(`plugins/${pluginId}`), {
+
+    const requestDoc = buildResourceDocument('plugins', pluginId, { settings });
+    await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`), {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings }),
+      body: JSON.stringify(requestDoc),
     });
     newSave.textContent = 'Saved!';
     setTimeout(() => {

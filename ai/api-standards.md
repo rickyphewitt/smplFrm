@@ -46,6 +46,12 @@ This project implements **JSON:API 1.1 with a documented PUT deviation**. Never 
 - Every view method calling service code must catch `Exception`, log exactly once at `ERROR` with `exc_info=True`, and return the generic mapped `500`
 - `TaskReportingService` paths use `fail_task(generic_message, exception=e)` as the sole logger — never double-log
 
+### Resource Enumeration Prevention
+- Detail endpoints (`/{id}`) return `403 Forbidden` for non-existent resources instead of `404 Not Found`
+- This prevents attackers from determining whether specific IDs exist via response code analysis
+- Applies to all resource detail, update, and delete operations
+- List endpoints continue to return empty collections when no resources match filters
+
 ### Filters
 - Equality-only via `filter[field]` syntax on explicitly approved fields per endpoint
 - No arbitrary ORM lookup expressions

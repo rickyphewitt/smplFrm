@@ -52,13 +52,58 @@ describe('Plugins Tab', () => {
     vi.restoreAllMocks();
   });
 
-  it('should show list view and hide detail view on loadPlugins', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
+  /**
+   * Helper to create a JSON:API list response for plugins.
+   */
+  function makeJsonApiListResponse(plugins, { next = null, prev = null } = {}) {
+    return {
+      data: plugins.map((p) => ({
+        type: 'plugins',
+        id: p.id,
+        attributes: {
+          name: p.name,
+          description: p.description || '',
+          settings: p.settings || {},
+          settings_schema: p.settings_schema || [],
+        },
+      })),
+      meta: {
+        pagination: {
+          count: plugins.length,
+          page_size: 5,
+        },
+      },
+      links: {
+        first: 'http://localhost/api/v1/plugins?page[number]=1',
+        last: 'http://localhost/api/v1/plugins?page[number]=1',
+        next: next,
+        prev: prev,
+      },
     };
+  }
+
+  /**
+   * Helper to create a JSON:API detail response for a plugin.
+   */
+  function makeJsonApiDetailResponse(plugin) {
+    return {
+      data: {
+        type: 'plugins',
+        id: plugin.id,
+        attributes: {
+          name: plugin.name,
+          description: plugin.description || '',
+          settings: plugin.settings || {},
+          settings_schema: plugin.settings_schema || [],
+        },
+      },
+    };
+  }
+
+  it('should show list view and hide detail view on loadPlugins', async () => {
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -80,12 +125,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should restore main action buttons on loadPlugins', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -107,12 +149,9 @@ describe('Plugins Tab', () => {
     document.getElementById('plugin-detail-view').style.display = '';
     document.getElementById('plugin-list-view').style.display = 'none';
 
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -131,15 +170,10 @@ describe('Plugins Tab', () => {
   });
 
   it('should render plugin rows with toggle', async () => {
-    const mockData = {
-      count: 2,
-      next: null,
-      previous: null,
-      results: [
-        { id: 'p1', name: 'weather', description: 'Weather data' },
-        { id: 'p2', name: 'spotify', description: 'Now playing' },
-      ],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+      { id: 'p2', name: 'spotify', description: 'Now playing' },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -164,12 +198,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should update configPlugins when toggle is changed', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'spotify', description: 'Now playing' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'spotify', description: 'Now playing' },
+    ]);
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockData),
@@ -192,12 +223,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should render configure button with correct plugin id', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockData),
@@ -224,17 +252,26 @@ describe('Plugins Tab', () => {
   });
 
   it('should set pagination controls correctly', async () => {
+    const plugins = [
+      { id: 'p1', name: 'a', description: '' },
+      { id: 'p2', name: 'b', description: '' },
+      { id: 'p3', name: 'c', description: '' },
+      { id: 'p4', name: 'd', description: '' },
+      { id: 'p5', name: 'e', description: '' },
+    ];
     const mockData = {
-      count: 8,
-      next: 'http://localhost/api/v1/plugins?page=2',
-      previous: null,
-      results: [
-        { id: 'p1', name: 'a', description: '' },
-        { id: 'p2', name: 'b', description: '' },
-        { id: 'p3', name: 'c', description: '' },
-        { id: 'p4', name: 'd', description: '' },
-        { id: 'p5', name: 'e', description: '' },
-      ],
+      data: plugins.map((p) => ({
+        type: 'plugins',
+        id: p.id,
+        attributes: { name: p.name, description: p.description, settings: {}, settings_schema: [] },
+      })),
+      meta: { pagination: { count: 8, page_size: 5 } },
+      links: {
+        first: 'http://localhost/api/v1/plugins?page[number]=1',
+        last: 'http://localhost/api/v1/plugins?page[number]=2',
+        next: 'http://localhost/api/v1/plugins?page[number]=2',
+        prev: null,
+      },
     };
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -253,12 +290,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should render form fields from settings schema in detail view', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockData),
@@ -270,21 +304,23 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: { coords: '63.17,-147.46', temp_unit: 'F' },
-          settings_schema: [
-            { key: 'coords', label: 'Coordinates', type: 'text' },
-            {
-              key: 'temp_unit',
-              label: 'Temperature',
-              type: 'select',
-              options: ['F', 'C'],
-            },
-          ],
-        }),
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            description: 'Weather data',
+            settings: { coords: '63.17,-147.46', temp_unit: 'F' },
+            settings_schema: [
+              { key: 'coords', label: 'Coordinates', type: 'text' },
+              {
+                key: 'temp_unit',
+                label: 'Temperature',
+                type: 'select',
+                options: ['F', 'C'],
+              },
+            ],
+          }),
+        ),
     });
 
     const configBtn = document.querySelector('.plugin-configure-btn');
@@ -301,12 +337,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should PUT plugin settings when detail save is clicked', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockData),
@@ -318,15 +351,17 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: { coords: '63.17,-147.46' },
-          settings_schema: [
-            { key: 'coords', label: 'Coordinates', type: 'text' },
-          ],
-        }),
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            description: 'Weather data',
+            settings: { coords: '63.17,-147.46' },
+            settings_schema: [
+              { key: 'coords', label: 'Coordinates', type: 'text' },
+            ],
+          }),
+        ),
     });
 
     const configBtn = document.querySelector('.plugin-configure-btn');
@@ -335,7 +370,7 @@ describe('Plugins Tab', () => {
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: { coords: '63.17,-147.46' } })),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -347,7 +382,9 @@ describe('Plugins Tab', () => {
     );
     expect(putCall).toBeDefined();
     const putBody = JSON.parse(putCall[1].body);
-    expect(putBody.settings.coords).toBe('63.17,-147.46');
+    expect(putBody.data.type).toBe('plugins');
+    expect(putBody.data.id).toBe('p1');
+    expect(putBody.data.attributes.settings.coords).toBe('63.17,-147.46');
   });
 
   it('should show Reload Now on cancel button after plugin detail save', async () => {
@@ -355,7 +392,7 @@ describe('Plugins Tab', () => {
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: {} })),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -371,7 +408,7 @@ describe('Plugins Tab', () => {
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: {} })),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -383,12 +420,9 @@ describe('Plugins Tab', () => {
   });
 
   it('should keep main action buttons visible when not in detail view', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -404,20 +438,15 @@ describe('Plugins Tab', () => {
   });
 
   it('should hide main action buttons only when in detail view', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [
-        {
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: {},
-          settings_schema: [],
-        },
-      ],
-    };
+    const mockData = makeJsonApiListResponse([
+      {
+        id: 'p1',
+        name: 'weather',
+        description: 'Weather data',
+        settings: {},
+        settings_schema: [],
+      },
+    ]);
 
     // First load for loadPlugins
     global.fetch.mockResolvedValueOnce({
@@ -432,13 +461,15 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: {},
-          settings_schema: [],
-        }),
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            description: 'Weather data',
+            settings: {},
+            settings_schema: [],
+          }),
+        ),
     });
 
     // Click configure to open detail
@@ -465,20 +496,15 @@ describe('Plugins Tab', () => {
   });
 
   it('should show only main save button after navigating away from plugin detail', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [
-        {
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: {},
-          settings_schema: [],
-        },
-      ],
-    };
+    const mockData = makeJsonApiListResponse([
+      {
+        id: 'p1',
+        name: 'weather',
+        description: 'Weather data',
+        settings: {},
+        settings_schema: [],
+      },
+    ]);
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -492,13 +518,15 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          id: 'p1',
-          name: 'weather',
-          description: 'Weather data',
-          settings: {},
-          settings_schema: [],
-        }),
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            description: 'Weather data',
+            settings: {},
+            settings_schema: [],
+          }),
+        ),
     });
     const configBtn = document.querySelector('.plugin-configure-btn');
     await configBtn.click();
@@ -546,19 +574,16 @@ describe('Plugins Tab', () => {
 
   // Helper to enter plugin detail view
   async function enterPluginDetail() {
-    const pluginListData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-    };
-    const pluginDetailData = {
+    const pluginListData = makeJsonApiListResponse([
+      { id: 'p1', name: 'weather', description: 'Weather data' },
+    ]);
+    const pluginDetailData = makeJsonApiDetailResponse({
       id: 'p1',
       name: 'weather',
       description: 'Weather data',
       settings: {},
       settings_schema: [],
-    };
+    });
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -601,12 +626,11 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          count: 1,
-          next: null,
-          previous: null,
-          results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-        }),
+        Promise.resolve(
+          makeJsonApiListResponse([
+            { id: 'p1', name: 'weather', description: 'Weather data' },
+          ]),
+        ),
     });
     const backBtn = document.getElementById('plugin-detail-back');
     await backBtn.click();
@@ -622,12 +646,11 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          count: 1,
-          next: null,
-          previous: null,
-          results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-        }),
+        Promise.resolve(
+          makeJsonApiListResponse([
+            { id: 'p1', name: 'weather', description: 'Weather data' },
+          ]),
+        ),
     });
     const mod = await import('../../src/smplfrm/smplfrm/static/main.js');
     await mod.loadPlugins();
@@ -662,12 +685,11 @@ describe('Plugins Tab', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
-        Promise.resolve({
-          count: 1,
-          next: null,
-          previous: null,
-          results: [{ id: 'p1', name: 'weather', description: 'Weather data' }],
-        }),
+        Promise.resolve(
+          makeJsonApiListResponse([
+            { id: 'p1', name: 'weather', description: 'Weather data' },
+          ]),
+        ),
     });
     await mod.loadPlugins();
     expect(document.getElementById('main-actions').style.display).toBe('');
