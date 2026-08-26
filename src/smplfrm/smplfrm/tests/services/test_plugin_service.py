@@ -61,24 +61,32 @@ class TestPluginAPI(TestCase):
     def test_list_plugins(self):
         response = self.client.get("/api/v1/plugins")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["name"], "weather")
+        data = response.json()
+        self.assertEqual(len(data["data"]), 1)
+        self.assertEqual(data["data"][0]["attributes"]["name"], "weather")
 
     def test_retrieve_plugin(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], "weather")
-        self.assertEqual(response.data["settings"]["coords"], "63.17,-147.46")
+        data = response.json()
+        self.assertEqual(data["data"]["attributes"]["name"], "weather")
+        self.assertEqual(
+            data["data"]["attributes"]["settings"]["coords"], "63.17,-147.46"
+        )
 
     def test_update_plugin_settings(self):
         response = self.client.put(
             self.url,
             {
-                "name": "weather",
-                "description": "Weather data",
-                "settings": {"coords": "40.71,-74.00"},
+                "data": {
+                    "type": "plugins",
+                    "id": self.plugin.external_id,
+                    "attributes": {
+                        "settings": {"coords": "40.71,-74.00"},
+                    },
+                }
             },
-            content_type="application/json",
+            content_type="application/vnd.api+json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.plugin.refresh_from_db()
@@ -89,11 +97,16 @@ class TestPluginAPI(TestCase):
         response = self.client.put(
             self.url,
             {
-                "name": "renamed",
-                "description": "Weather data",
-                "settings": {"coords": "40.71,-74.00"},
+                "data": {
+                    "type": "plugins",
+                    "id": self.plugin.external_id,
+                    "attributes": {
+                        "name": "renamed",
+                        "settings": {"coords": "40.71,-74.00"},
+                    },
+                }
             },
-            content_type="application/json",
+            content_type="application/vnd.api+json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.plugin.refresh_from_db()
@@ -105,11 +118,16 @@ class TestPluginAPI(TestCase):
         response = self.client.put(
             self.url,
             {
-                "name": "weather",
-                "description": "Changed",
-                "settings": {"coords": "40.71,-74.00"},
+                "data": {
+                    "type": "plugins",
+                    "id": self.plugin.external_id,
+                    "attributes": {
+                        "description": "Changed",
+                        "settings": {"coords": "40.71,-74.00"},
+                    },
+                }
             },
-            content_type="application/json",
+            content_type="application/vnd.api+json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.plugin.refresh_from_db()
@@ -117,7 +135,16 @@ class TestPluginAPI(TestCase):
         self.assertEqual(self.plugin.settings["coords"], "40.71,-74.00")
 
     def test_create_plugin_forbidden(self):
-        response = self.client.post("/api/v1/plugins", {}, format="json")
+        response = self.client.post(
+            "/api/v1/plugins",
+            {
+                "data": {
+                    "type": "plugins",
+                    "attributes": {"name": "new", "settings": {}},
+                }
+            },
+            content_type="application/vnd.api+json",
+        )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_plugin_forbidden(self):

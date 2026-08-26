@@ -38,11 +38,15 @@ class TestWeatherSettingsRefreshAPI(TestCase):
         self.client.put(
             self.url,
             {
-                "name": "weather",
-                "description": "Weather data",
-                "settings": {"coords": "40.71,-74.00"},
+                "data": {
+                    "type": "plugins",
+                    "id": self.plugin.external_id,
+                    "attributes": {
+                        "settings": {"coords": "40.71,-74.00"},
+                    },
+                }
             },
-            content_type="application/json",
+            content_type="application/vnd.api+json",
         )
         mock_dispatch.assert_called_once_with("refresh_weather")
 
@@ -57,10 +61,14 @@ class TestWeatherSettingsRefreshAPI(TestCase):
         self.client.put(
             f"/api/v1/plugins/{other.external_id}",
             {
-                "name": "spotify",
-                "description": "Spotify",
-                "settings": {"token": "abc"},
+                "data": {
+                    "type": "plugins",
+                    "id": other.external_id,
+                    "attributes": {
+                        "settings": {"token": "abc"},
+                    },
+                }
             },
-            content_type="application/json",
+            content_type="application/vnd.api+json",
         )
         mock_dispatch.assert_not_called()

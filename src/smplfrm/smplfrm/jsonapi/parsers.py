@@ -1,16 +1,17 @@
 """JSON:API parser for smplFrm.
 
 Accepts requests with Content-Type: application/vnd.api+json.
+Uses rest_framework_json_api parser to properly unwrap JSON:API documents.
 """
 
-from rest_framework.parsers import JSONParser
+from rest_framework_json_api.parsers import JSONParser as JsonApiPackageParser
 
 
-class JsonApiParser(JSONParser):
-    """Parser that accepts application/vnd.api+json requests.
+class JsonApiParser(JsonApiPackageParser):
+    """Parser that accepts and unwraps application/vnd.api+json requests.
 
-    This is a scoped parser for views that have migrated to JSON:API.
-    It does not globally replace the default parser.
+    Extends the package's parser which extracts attributes from the
+    JSON:API document structure for use by serializers.
     """
 
-    media_type = "application/vnd.api+json"
+    pass

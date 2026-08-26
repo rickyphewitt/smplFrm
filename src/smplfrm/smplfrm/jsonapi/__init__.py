@@ -12,7 +12,7 @@ Usage in views:
         StrictQueryMixin,
         JsonApiError,
     )
-    from smplfrm.jsonapi.serializers import WeatherSerializer
+    from smplfrm.jsonapi.serializers import WeatherSerializer, PluginSerializer
 """
 
 from smplfrm.jsonapi.renderers import JsonApiRenderer
@@ -25,6 +25,7 @@ from smplfrm.jsonapi.exceptions import (
     jsonapi_exception_handler,
 )
 from smplfrm.jsonapi.query import StrictQueryMixin
+from smplfrm.jsonapi.serializers import SECRET_MASK
 
 __all__ = [
     "JsonApiRenderer",
@@ -35,4 +36,5 @@ __all__ = [
     "InternalError",
     "jsonapi_exception_handler",
     "StrictQueryMixin",
+    "SECRET_MASK",
 ]

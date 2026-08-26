@@ -4,7 +4,9 @@
  * Provides utilities for consuming JSON:API endpoints:
  * - fetchJsonApi: fetch with proper Accept header and error handling
  * - unwrapResource: extract resource from data envelope
+ * - unwrapResourceList: extract resource array from data envelope with pagination
  * - unwrapErrors: extract errors array
+ * - buildResourceDocument: build JSON:API request document for create/update
  * - formatWeatherTemp: concatenate value + "°" + scale
  */
 
@@ -43,6 +45,11 @@ export async function fetchJsonApi(url, options = {}) {
     ...options.headers,
   };
 
+  // Add Content-Type for requests with body
+  if (options.body) {
+    headers['Content-Type'] = JSONAPI_MEDIA_TYPE;
+  }
+
   const response = await resilientFetch(url, {
     ...options,
     headers,
@@ -74,6 +81,23 @@ export function unwrapResource(document) {
 }
 
 /**
+ * Extract the resource array and pagination info from a JSON:API list document.
+ *
+ * @param {Object} document - JSON:API document with top-level 'data' array
+ * @returns {Object} - { resources: Array, meta: Object, links: Object }
+ */
+export function unwrapResourceList(document) {
+  if (!document) {
+    return { resources: [], meta: {}, links: {} };
+  }
+  return {
+    resources: document.data || [],
+    meta: document.meta || {},
+    links: document.links || {},
+  };
+}
+
+/**
  * Extract the errors array from a JSON:API error response.
  *
  * @param {Object} document - JSON:API document with top-level 'errors'
@@ -84,6 +108,27 @@ export function unwrapErrors(document) {
     return [];
   }
   return document.errors;
+}
+
+/**
+ * Build a JSON:API request document for create/update operations.
+ *
+ * @param {string} type - Resource type (e.g., "plugins")
+ * @param {string} [id] - Resource id (required for update, omit for create)
+ * @param {Object} attributes - Resource attributes
+ * @returns {Object} - JSON:API document with data.type, data.id, data.attributes
+ */
+export function buildResourceDocument(type, id, attributes) {
+  const doc = {
+    data: {
+      type,
+      attributes,
+    },
+  };
+  if (id) {
+    doc.data.id = id;
+  }
+  return doc;
 }
 
 /**
