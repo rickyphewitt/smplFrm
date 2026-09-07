@@ -410,10 +410,11 @@ async function loadConfig() {
   const configId = modal.dataset.configId;
 
   try {
-    const response = await resilientFetch(buildApiUrl(`configs/${configId}`));
-    if (!response.ok) throw new Error('Failed to load config');
+    const doc = await fetchJsonApi(buildApiUrl(`configs/${configId}`));
+    const resource = unwrapResource(doc);
+    if (!resource) throw new Error('Failed to load config');
 
-    const config = await response.json();
+    const config = { id: resource.id, ...resource.attributes };
 
     modal.dataset.configName = config.name;
     modal.dataset.configPlugins = JSON.stringify(config.plugins || []);
@@ -444,7 +445,7 @@ async function saveConfig() {
   const errorMessage = document.getElementById('error-message');
   const cancelBtn = document.getElementById('cancel-settings');
 
-  const configData = {
+  const configAttributes = {
     display_date: document.getElementById('setting-date').checked,
     display_clock: document.getElementById('setting-clock').checked,
     image_refresh_interval: parseInt(
@@ -467,30 +468,45 @@ async function saveConfig() {
   };
 
   try {
-    // If active config is system-managed, create a custom copy first
+    // If active config is system-managed, create new custom config via POST
     if (configName && configName.startsWith('smplFrm ')) {
-      const applyResponse = await resilientFetch(buildApiUrl('configs/apply'), {
+      // POST to create new config with is_active=true
+      const createDoc = await fetchJsonApi(buildApiUrl('configs'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify(
+          buildResourceDocument('configs', null, {
+            ...configAttributes,
+            is_active: true,
+          }),
+        ),
       });
-      if (!applyResponse.ok) {
-        const err = await applyResponse.json();
-        throw new Error(err.detail || 'Failed to create custom config');
+      const newConfig = unwrapResource(createDoc);
+      if (!newConfig) {
+        throw new Error('Failed to create custom config');
       }
-      const newConfig = await applyResponse.json();
       configId = newConfig.id;
       modal.dataset.configId = configId;
-      modal.dataset.configName = newConfig.name;
+      modal.dataset.configName = newConfig.attributes.name;
+
+      console.log('Settings saved successfully');
+      modal.dataset.changesSaved = 'true';
+      cancelBtn.textContent = 'Reload Now';
+      cancelBtn.classList.remove('btn-secondary');
+      cancelBtn.classList.add('btn-primary');
+      return true;
     }
 
-    configData.name = modal.dataset.configName;
+    configAttributes.name = modal.dataset.configName;
 
     const response = await resilientFetch(buildApiUrl(`configs/${configId}`), {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/vnd.api+json',
       },
-      body: JSON.stringify(configData),
+      body: JSON.stringify(
+        buildResourceDocument('configs', configId, configAttributes),
+      ),
     });
 
     if (!response.ok) {
@@ -846,11 +862,13 @@ export async function loadPresets(page = 1) {
   const activeConfigId = modal.dataset.configId;
 
   try {
-    const response = await resilientFetch(buildApiUrl(`configs?page=${page}`));
-    if (!response.ok) throw new Error('Failed to load presets');
-    const data = await response.json();
+    const doc = await fetchJsonApi(
+      buildApiUrl(`configs?page[number]=${page}`),
+    );
+    const { resources } = unwrapResourceList(doc);
+    const configs = resources.map((r) => ({ id: r.id, ...r.attributes }));
 
-    body.innerHTML = data.results
+    body.innerHTML = configs
       .map((c) => {
         const isManaged = c.name.startsWith('smplFrm ');
         const nameCell = isManaged
@@ -880,16 +898,17 @@ export async function loadPresets(page = 1) {
         const id = cell.dataset.id;
         const field = cell.dataset.field;
         try {
-          const getResp = await resilientFetch(buildApiUrl(`configs/${id}`));
-          if (!getResp.ok) return;
-          const config = await getResp.json();
+          const getDoc = await fetchJsonApi(buildApiUrl(`configs/${id}`));
+          const resource = unwrapResource(getDoc);
+          if (!resource) return;
+          const config = { id: resource.id, ...resource.attributes };
           config[field] = value;
           delete config.id;
           delete config.is_active;
           await resilientFetch(buildApiUrl(`configs/${id}`), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config),
+            headers: { 'Content-Type': 'application/vnd.api+json' },
+            body: JSON.stringify(buildResourceDocument('configs', id, config)),
           });
           cell.dataset.original = value;
         } catch (e) {
@@ -910,10 +929,22 @@ export async function loadPresets(page = 1) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-inline"></span>';
         try {
-          const resp = await resilientFetch(
-            buildApiUrl(`configs/${btn.dataset.id}/activate`),
-            { method: 'POST' },
-          );
+          const configId = btn.dataset.id;
+          // Fetch full config then send all attributes with is_active: true
+          const getDoc = await fetchJsonApi(buildApiUrl(`configs/${configId}`));
+          const resource = unwrapResource(getDoc);
+          if (!resource) throw new Error('Config not found');
+          const { id, is_active, ...attrs } = resource.attributes;
+          const resp = await resilientFetch(buildApiUrl(`configs/${configId}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/vnd.api+json' },
+            body: JSON.stringify(
+              buildResourceDocument('configs', configId, {
+                ...attrs,
+                is_active: true,
+              }),
+            ),
+          });
           if (!resp.ok) throw new Error('Failed to activate');
           location.reload();
         } catch {
@@ -932,10 +963,11 @@ export async function loadPresets(page = 1) {
       });
     });
 
-    const totalPages = Math.ceil(data.count / 5) || 1;
+    const pagination = doc.meta?.pagination || {};
+    const totalPages = pagination.pages || Math.ceil((pagination.count || 0) / 5) || 1;
     info.textContent = `Page ${page} of ${totalPages}`;
-    prev.disabled = !data.previous;
-    next.disabled = !data.next;
+    prev.disabled = !doc.links?.prev;
+    next.disabled = !doc.links?.next;
   } catch {
     body.innerHTML = '<tr><td colspan="4">Failed to load presets</td></tr>';
   }

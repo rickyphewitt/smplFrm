@@ -1,11 +1,13 @@
 # Git Best Practices
 
 ## Commit Messages
-- Use conventional commit format: `type(scope): description`
-- Types: feat, fix, docs, style, refactor, test, chore
-- Keep first line under 50 characters
+- Use [Conventional Commits](https://www.conventionalcommits.org/) format: `type(scope): description`
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`
+- Scope is optional but encouraged for clarity (e.g., `feat(api):`, `fix(auth):`)
+- Keep title under 72 characters
 - Use imperative mood ("Add feature" not "Added feature")
-- Include body for complex changes
+- Body: concise bulleted list of what was done
+- Do not include test pass/fail rates in commit messages
 
 ## Branching
 - Use feature branches for new development
@@ -15,8 +17,8 @@
 
 ## Workflow
 - Pull latest changes before starting work
-- Commit frequently with logical chunks
-- Use interactive rebase to clean up history before merging
+- Commit frequently with logical chunks during development
+- Before pushing: squash/amend local commits into a single commit per feature/fix
 - Review code before merging (pull requests)
 
 ## Repository Management
