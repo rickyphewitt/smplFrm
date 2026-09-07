@@ -31,23 +31,28 @@ describe('Presets Tab', () => {
 
   it('should load presets and render table rows', async () => {
     const mockData = {
-      count: 2,
-      next: null,
-      previous: null,
-      results: [
+      data: [
         {
+          type: 'configs',
           id: 'p1',
-          name: 'smplFrm Default',
-          description: 'All display elements enabled',
-          is_active: true,
+          attributes: {
+            name: 'smplFrm Default',
+            description: 'All display elements enabled',
+            is_active: true,
+          },
         },
         {
+          type: 'configs',
           id: 'p2',
-          name: 'smplFrm Minimal',
-          description: 'Logo only, no overlays',
-          is_active: false,
+          attributes: {
+            name: 'smplFrm Minimal',
+            description: 'Logo only, no overlays',
+            is_active: false,
+          },
         },
       ],
+      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      meta: { pagination: { count: 2, page: 1, pages: 1 } },
     };
 
     global.fetch.mockResolvedValueOnce({
@@ -82,23 +87,28 @@ describe('Presets Tab', () => {
 
   it('should make custom config name and description editable', async () => {
     const mockData = {
-      count: 2,
-      next: null,
-      previous: null,
-      results: [
+      data: [
         {
+          type: 'configs',
           id: 'c1',
-          name: 'custom-20260101',
-          description: 'My config',
-          is_active: true,
+          attributes: {
+            name: 'custom-20260101',
+            description: 'My config',
+            is_active: true,
+          },
         },
         {
+          type: 'configs',
           id: 'p1',
-          name: 'smplFrm Default',
-          description: 'All display elements',
-          is_active: false,
+          attributes: {
+            name: 'smplFrm Default',
+            description: 'All display elements',
+            is_active: false,
+          },
         },
       ],
+      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      meta: { pagination: { count: 2, page: 1, pages: 1 } },
     };
 
     global.fetch.mockResolvedValueOnce({
@@ -123,22 +133,42 @@ describe('Presets Tab', () => {
     expect(rows[1].querySelector('[contenteditable]')).toBeNull();
   });
 
-  it('should call activate endpoint and reload on click', async () => {
-    const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 'p2', name: 'smplFrm Minimal', is_active: false }],
+  it('should call PUT with is_active true to activate config', async () => {
+    const mockListData = {
+      data: [
+        {
+          type: 'configs',
+          id: 'p2',
+          attributes: { name: 'custom-20260101', description: 'Test config', is_active: false },
+        },
+      ],
+      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      meta: { pagination: { count: 1, page: 1, pages: 1 } },
+    };
+
+    const mockDetailData = {
+      data: {
+        type: 'configs',
+        id: 'p2',
+        attributes: { name: 'custom-20260101', description: 'Test config', is_active: false },
+      },
     };
 
     global.fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockData),
+        json: () => Promise.resolve(mockListData),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 'p2', is_active: true }),
+        json: () => Promise.resolve(mockDetailData),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { type: 'configs', id: 'p2', attributes: { is_active: true } },
+          }),
       });
 
     const { loadPresets } =
@@ -151,9 +181,21 @@ describe('Presets Tab', () => {
     // Wait for async handler
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:8321/api/v1/configs/p2/activate',
-      { method: 'POST' },
+    // Should fetch detail first, then PUT with full attributes and is_active: true
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8321/api/v1/configs/p2',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Accept: 'application/vnd.api+json' }),
+      }),
+    );
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      3,
+      'http://localhost:8321/api/v1/configs/p2',
+      expect.objectContaining({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+      }),
     );
     expect(global.location.reload).toHaveBeenCalled();
   });
@@ -171,16 +213,20 @@ describe('Presets Tab', () => {
 
   it('should handle pagination controls', async () => {
     const mockData = {
-      count: 8,
-      next: 'http://localhost:8321/api/v1/configs?page=2',
-      previous: null,
-      results: [
-        { id: 'p1', name: 'smplFrm Default', is_active: true },
-        { id: 'p2', name: 'smplFrm Minimal', is_active: false },
-        { id: 'p3', name: 'smplFrm Info', is_active: false },
-        { id: 'p4', name: 'smplFrm Media', is_active: false },
-        { id: 'p5', name: 'custom-20260101', is_active: false },
+      data: [
+        { type: 'configs', id: 'p1', attributes: { name: 'smplFrm Default', is_active: true } },
+        { type: 'configs', id: 'p2', attributes: { name: 'smplFrm Minimal', is_active: false } },
+        { type: 'configs', id: 'p3', attributes: { name: 'smplFrm Info', is_active: false } },
+        { type: 'configs', id: 'p4', attributes: { name: 'smplFrm Media', is_active: false } },
+        { type: 'configs', id: 'p5', attributes: { name: 'custom-20260101', is_active: false } },
       ],
+      links: {
+        first: '/api/v1/configs?page[number]=1',
+        last: '/api/v1/configs?page[number]=2',
+        next: '/api/v1/configs?page[number]=2',
+        prev: null,
+      },
+      meta: { pagination: { count: 8, page: 1, pages: 2 } },
     };
 
     global.fetch.mockResolvedValueOnce({
@@ -236,22 +282,26 @@ describe('saveConfig copy-on-write', () => {
     vi.restoreAllMocks();
   });
 
-  it('should call apply before PUT when active config is system-managed', async () => {
-    const newConfig = { id: 'new123', name: 'custom-20260324' };
+  it('should use POST to create config when active config is system-managed', async () => {
+    const newConfig = {
+      data: {
+        type: 'configs',
+        id: 'new123',
+        attributes: { name: 'custom-20260324', is_active: true },
+      },
+    };
 
-    global.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(newConfig),
-      })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(newConfig),
+    });
 
     // Dynamic import to get saveConfig — it's not exported, so we test via the module
     // We need to call it indirectly. Let's just verify the fetch calls.
     const mod = await import('../../src/smplfrm/smplfrm/static/main.js');
 
     // saveConfig is not exported, but we can verify the pattern by checking
-    // that when we simulate the save flow, apply is called first
+    // that when we simulate the save flow, POST is called for system-managed configs
     // For now, verify the modal data attributes are set correctly
     const modal = document.getElementById('settings-modal');
     expect(modal.dataset.configName).toBe('smplFrm Default');

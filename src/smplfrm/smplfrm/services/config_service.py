@@ -48,8 +48,42 @@ class ConfigService(BaseService):
     """Service for managing SmplFrm Settings."""
 
     def create(self, data: Dict[str, Any]) -> Config:
-        """Not supported for Config."""
-        raise NotImplementedError("Config creation not supported")
+        """Create a new custom config.
+
+        Name is always generated server-side as custom-{timestamp}.
+        If is_active=True, deactivates the current active config.
+
+        Args:
+            data: Config attributes (name is ignored/overwritten)
+
+        Returns:
+            The new Config instance
+
+        Raises:
+            ValueError: If config limit exceeded
+        """
+        if Config.objects.filter(deleted=False).count() >= CONFIG_LIMIT:
+            raise ValueError(
+                f"Config limit of {CONFIG_LIMIT} reached. "
+                "Delete an existing config first."
+            )
+
+        # Generate name server-side (ignore any client-provided name)
+        data.pop("name", None)
+        name = f"custom-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        # Handle activation
+        request_is_active = data.pop("is_active", False)
+        if request_is_active:
+            active = Config.objects.filter(is_active=True).first()
+            if active:
+                active.is_active = False
+                active.save()
+
+        config = Config(name=name, is_active=request_is_active, **data)
+        config.save()
+        logger.info(f"Created custom config: {name}")
+        return config
 
     def read(self, ext_id: str, deleted: bool = False) -> Config:
         """Retrieve settings by external ID.
@@ -77,19 +111,56 @@ class ConfigService(BaseService):
             .order_by("-is_active", "sort_order", "name")
         )
 
-    def update(self, config: Config) -> Config:
+    def update(self, config: Config, validated_data: Dict[str, Any] = None) -> Config:
         """Update an existing Config record.
+
+        For system-managed configs (smplFrm prefix), only activation is allowed.
+        For custom configs, all fields can be updated.
 
         Args:
             config: Config instance to update
+            validated_data: Validated data from serializer. If None, saves config as-is.
 
         Returns:
             Updated Config instance
+
+        Raises:
+            PermissionDenied: If trying to modify system-managed config fields
         """
-        logger.info(
-            f"Updating config {config.external_id}: display_date={config.display_date}, display_clock={config.display_clock}, refresh={config.image_refresh_interval}"
-        )
+        from django.core.exceptions import PermissionDenied
+
+        # Simple save when no validated_data provided (internal calls)
+        if validated_data is None:
+            config.save()
+            return config
+
+        request_is_active = validated_data.get("is_active")
+
+        # System-managed configs: only allow activation changes
+        if config.name.startswith(PRESET_PREFIX):
+            # Check if any fields other than is_active differ
+            for field, value in validated_data.items():
+                if field == "is_active":
+                    continue
+                if getattr(config, field) != value:
+                    raise PermissionDenied("System-managed configs cannot be modified")
+
+            # Handle activation only
+            if request_is_active is True and not config.is_active:
+                return self.activate(config.external_id)
+            return config
+
+        # Custom config: apply all field updates
+        for field, value in validated_data.items():
+            if field != "is_active":
+                setattr(config, field, value)
+
         config.save()
+
+        # Handle activation after other updates
+        if request_is_active is True and not config.is_active:
+            return self.activate(config.external_id)
+
         return config
 
     def delete(self, ext_id: str) -> None:

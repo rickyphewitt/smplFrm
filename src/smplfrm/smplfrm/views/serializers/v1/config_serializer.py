@@ -1,14 +1,28 @@
-from rest_framework import serializers
+"""JSON:API serializer for config resources.
+
+Uses rest_framework_json_api for proper JSON:API document structure.
+"""
+
+from rest_framework_json_api import serializers
 
 from smplfrm.models import Config
 
 
-class ConfigSerializer(serializers.HyperlinkedModelSerializer):
+class ConfigSerializer(serializers.ModelSerializer):
+    """Serializer for config resources.
+
+    Uses external_id as the JSON:API id field.
+    is_active is writable; the service layer controls activation logic
+    and handles the unique constraint (only one active config).
+    """
 
     id = serializers.CharField(source="external_id", read_only=True)
+    # Override is_active to remove the unique validator - service handles this
+    is_active = serializers.BooleanField(required=False)
 
     class Meta:
         model = Config
+        resource_name = "configs"
         fields = [
             "id",
             "name",
@@ -26,3 +40,4 @@ class ConfigSerializer(serializers.HyperlinkedModelSerializer):
             "timezone",
             "plugins",
         ]
+        read_only_fields = ["id"]

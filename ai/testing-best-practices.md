@@ -1,5 +1,10 @@
 # Testing Best Practices
 
+## Verification Before Commit
+- **Always run the full test suite before considering changes complete**
+- Both Python and JavaScript tests must pass
+- Do not rely on running only tests related to changed files — changes can break unrelated tests
+
 ## Test Execution
 - Always run tests with minimal verbosity to prevent session timeouts
 - Use `--silent` or `--quiet` flags when available

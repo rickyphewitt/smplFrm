@@ -98,16 +98,19 @@ class TestAnonymousThrottling:
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
     def test_429_response_has_json_body_with_detail(self, api_client):
-        """Throttled responses include a JSON body with a 'detail' field."""
+        """Throttled responses include a JSON:API errors array with detail."""
         for _ in range(3):
             api_client.get("/api/v1/configs")
 
         response = api_client.get("/api/v1/configs")
         assert response.status_code == 429
         data = response.json()
-        assert "detail" in data
-        assert isinstance(data["detail"], str)
-        assert len(data["detail"]) > 0
+        # JSON:API format uses errors array
+        assert "errors" in data
+        assert len(data["errors"]) > 0
+        assert "detail" in data["errors"][0]
+        assert isinstance(data["errors"][0]["detail"], str)
+        assert len(data["errors"][0]["detail"]) > 0
 
 
 class TestAuthenticatedThrottling:
@@ -228,13 +231,13 @@ class TestResponseFormat:
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
     def test_429_response_content_type_is_json(self, api_client):
-        """Throttled responses have Content-Type: application/json."""
+        """Throttled responses have Content-Type: application/vnd.api+json."""
         for _ in range(3):
             api_client.get("/api/v1/configs")
 
         response = api_client.get("/api/v1/configs")
         assert response.status_code == 429
-        assert "application/json" in response["Content-Type"]
+        assert "application/vnd.api+json" in response["Content-Type"]
 
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
