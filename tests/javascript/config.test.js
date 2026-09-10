@@ -304,66 +304,97 @@ describe('Library Maintenance Tasks', () => {
     vi.restoreAllMocks();
   });
 
-  it('should POST to create a task', async () => {
-    const mockTask = {
-      id: 'task123',
-      task_type: 'clear_cache',
-      status: 'pending',
-      progress: 0,
-      error: '',
+  it('should POST to create a task with JSON:API format', async () => {
+    const mockResponse = {
+      data: {
+        type: 'clear_cache_tasks',
+        id: 'task123',
+        attributes: {
+          label: 'Clear Cache',
+          status: 'pending',
+          progress: 0,
+          error: '',
+          created: '2026-08-05T10:30:00Z',
+        },
+      },
     };
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockTask,
+      json: async () => mockResponse,
     });
 
     const response = await fetch('http://localhost:8321/api/v1/tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_type: 'clear_cache' }),
+      headers: { 'Content-Type': 'application/vnd.api+json' },
+      body: JSON.stringify({
+        data: {
+          type: 'clear_cache_tasks',
+          attributes: {},
+        },
+      }),
     });
-    const task = await response.json();
+    const data = await response.json();
 
     expect(global.fetch).toHaveBeenCalledWith(
       'http://localhost:8321/api/v1/tasks',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(task.task_type).toBe('clear_cache');
-    expect(task.status).toBe('pending');
+    expect(data.data.type).toBe('clear_cache_tasks');
+    expect(data.data.attributes.status).toBe('pending');
   });
 
-  it('should GET to poll task status', async () => {
-    const mockTask = {
-      id: 'task123',
-      task_type: 'rescan_library',
-      status: 'running',
-      progress: 50,
-      error: '',
+  it('should GET to poll task status with JSON:API format', async () => {
+    const mockResponse = {
+      data: {
+        type: 'rescan_library_tasks',
+        id: 'task123',
+        attributes: {
+          label: 'Rescan Library',
+          status: 'running',
+          progress: 50,
+          error: '',
+          created: '2026-08-05T10:30:00Z',
+        },
+      },
     };
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockTask,
+      json: async () => mockResponse,
     });
 
     const response = await fetch('http://localhost:8321/api/v1/tasks/task123');
-    const task = await response.json();
+    const data = await response.json();
 
-    expect(task.status).toBe('running');
-    expect(task.progress).toBe(50);
+    expect(data.data.attributes.status).toBe('running');
+    expect(data.data.attributes.progress).toBe(50);
   });
 
   it('should handle task creation failure', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: false,
-      status: 400,
+      status: 409,
+      json: async () => ({
+        errors: [
+          {
+            status: '409',
+            code: 'conflict',
+            detail: 'A conflicting task already exists',
+          },
+        ],
+      }),
     });
 
     const response = await fetch('http://localhost:8321/api/v1/tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_type: 'invalid' }),
+      headers: { 'Content-Type': 'application/vnd.api+json' },
+      body: JSON.stringify({
+        data: {
+          type: 'invalid-type',
+          attributes: {},
+        },
+      }),
     });
 
     expect(response.ok).toBe(false);

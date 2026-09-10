@@ -211,18 +211,38 @@ describe('main.js', () => {
       vi.useRealTimers();
     });
 
+    // Helper to create JSON:API task response
+    function makeTaskResponse(taskData) {
+      return {
+        data: {
+          type: `${taskData.taskType || 'clear-cache'}-tasks`,
+          id: taskData.id || 'task-1',
+          attributes: {
+            label: taskData.label || 'Clear Cache',
+            status: taskData.status || 'pending',
+            progress: taskData.progress || 0,
+            error: taskData.error || '',
+            created: '2026-08-05T10:30:00Z',
+          },
+        },
+      };
+    }
+
     it('shows task label in toast after starting task', async () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           status: 201,
           json: () =>
-            Promise.resolve({
-              id: 'task-1',
-              task_type_label: 'Clear Cache',
-              progress: 0,
-              status: 'pending',
-            }),
+            Promise.resolve(
+              makeTaskResponse({
+                id: 'task-1',
+                taskType: 'clear-cache',
+                label: 'Clear Cache',
+                progress: 0,
+                status: 'pending',
+              }),
+            ),
         }),
       );
 
@@ -244,23 +264,29 @@ describe('main.js', () => {
             ok: true,
             status: 201,
             json: () =>
-              Promise.resolve({
-                id: 'task-1',
-                task_type_label: 'Rescan Library',
-                progress: 0,
-                status: 'pending',
-              }),
+              Promise.resolve(
+                makeTaskResponse({
+                  id: 'task-1',
+                  taskType: 'rescan-library',
+                  label: 'Rescan Library',
+                  progress: 0,
+                  status: 'pending',
+                }),
+              ),
           });
         }
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({
-              id: 'task-1',
-              task_type_label: 'Rescan Library',
-              progress: 50,
-              status: 'running',
-            }),
+            Promise.resolve(
+              makeTaskResponse({
+                id: 'task-1',
+                taskType: 'rescan-library',
+                label: 'Rescan Library',
+                progress: 50,
+                status: 'running',
+              }),
+            ),
         });
       });
 
@@ -281,23 +307,29 @@ describe('main.js', () => {
             ok: true,
             status: 201,
             json: () =>
-              Promise.resolve({
-                id: 'task-1',
-                task_type_label: 'Reset Image Count',
-                progress: 0,
-                status: 'pending',
-              }),
+              Promise.resolve(
+                makeTaskResponse({
+                  id: 'task-1',
+                  taskType: 'reset-image-count',
+                  label: 'Reset Image Count',
+                  progress: 0,
+                  status: 'pending',
+                }),
+              ),
           });
         }
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({
-              id: 'task-1',
-              task_type_label: 'Reset Image Count',
-              progress: 100,
-              status: 'completed',
-            }),
+            Promise.resolve(
+              makeTaskResponse({
+                id: 'task-1',
+                taskType: 'reset-image-count',
+                label: 'Reset Image Count',
+                progress: 100,
+                status: 'completed',
+              }),
+            ),
         });
       });
 
@@ -318,24 +350,30 @@ describe('main.js', () => {
             ok: true,
             status: 201,
             json: () =>
-              Promise.resolve({
-                id: 'task-1',
-                task_type_label: 'Clear Cache',
-                progress: 0,
-                status: 'pending',
-              }),
+              Promise.resolve(
+                makeTaskResponse({
+                  id: 'task-1',
+                  taskType: 'clear-cache',
+                  label: 'Clear Cache',
+                  progress: 0,
+                  status: 'pending',
+                }),
+              ),
           });
         }
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({
-              id: 'task-1',
-              task_type_label: 'Clear Cache',
-              progress: 30,
-              status: 'failed',
-              error: 'disk full',
-            }),
+            Promise.resolve(
+              makeTaskResponse({
+                id: 'task-1',
+                taskType: 'clear-cache',
+                label: 'Clear Cache',
+                progress: 30,
+                status: 'failed',
+                error: 'disk full',
+              }),
+            ),
         });
       });
 
@@ -354,7 +392,13 @@ describe('main.js', () => {
           status: 409,
           json: () =>
             Promise.resolve({
-              detail: 'A Clear Cache task is already pending or running.',
+              errors: [
+                {
+                  status: '409',
+                  code: 'conflict',
+                  detail: 'A Clear Cache task is already pending or running.',
+                },
+              ],
             }),
         }),
       );

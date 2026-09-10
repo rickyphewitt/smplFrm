@@ -546,24 +546,40 @@ export async function startTask(taskType) {
   const toast = document.getElementById('task-toast');
   const bar = document.getElementById('task-toast-bar');
   const text = document.getElementById('task-toast-text');
+
+  // Map old task_type values to JSON:API types
+  const typeMapping = {
+    reset_image_count: 'reset_image_count_tasks',
+    clear_cache: 'clear_cache_tasks',
+    rescan_library: 'rescan_library_tasks',
+  };
+  const jsonApiType = typeMapping[taskType] || taskType;
+
   try {
     const response = await resilientFetch(buildApiUrl('tasks'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_type: taskType }),
+      headers: { 'Content-Type': 'application/vnd.api+json' },
+      body: JSON.stringify({
+        data: {
+          type: jsonApiType,
+          attributes: {},
+        },
+      }),
     });
     if (response.status === 429) return null;
     if (response.status === 409) {
       const data = await response.json();
       toast.classList.add('show');
       bar.style.width = '0%';
-      text.textContent = data.detail || 'Task already running';
+      text.textContent =
+        data.errors?.[0]?.detail || data.detail || 'Task already running';
       setTimeout(() => toast.classList.remove('show'), 3000);
       return null;
     }
     if (!response.ok) throw new Error('Failed to start task');
-    const task = await response.json();
-    pollTask(task.id, task.task_type_label);
+    const data = await response.json();
+    const task = data.data;
+    pollTask(task.id, task.attributes.label);
     return task;
   } catch (error) {
     console.error('Error starting task:', error);
@@ -590,7 +606,8 @@ function pollTask(taskId, label) {
       // On exhausted 429: keep toast visible with last progress, continue polling
       if (response.status === 429) return;
       if (!response.ok) throw new Error('Poll failed');
-      const task = await response.json();
+      const data = await response.json();
+      const task = data.data.attributes;
 
       bar.style.width = `${task.progress}%`;
       text.textContent = `${label} ${task.progress}%`;
@@ -981,14 +998,16 @@ export async function loadTasks(page = 1) {
   const info = document.getElementById('task-page-info');
 
   try {
-    const response = await resilientFetch(buildApiUrl(`tasks?page=${page}`));
+    const response = await resilientFetch(
+      buildApiUrl(`tasks?page[number]=${page}`),
+    );
     if (!response.ok) throw new Error('Failed to load tasks');
     const data = await response.json();
 
-    body.innerHTML = data.results
+    body.innerHTML = data.data
       .map((t) => {
-        const created = new Date(t.created).toLocaleString();
-        return `<tr data-id="${t.id}"><td>${t.task_type_label}</td><td>${t.status}</td><td>${t.progress}%</td><td>${created}</td><td><button class="btn btn-secondary btn-sm task-delete-btn" data-id="${t.id}">&times;</button></td></tr>`;
+        const created = new Date(t.attributes.created).toLocaleString();
+        return `<tr data-id="${t.id}"><td>${t.attributes.label}</td><td>${t.attributes.status}</td><td>${t.attributes.progress}%</td><td>${created}</td><td><button class="btn btn-secondary btn-sm task-delete-btn" data-id="${t.id}">&times;</button></td></tr>`;
       })
       .join('');
 
@@ -1001,10 +1020,11 @@ export async function loadTasks(page = 1) {
       });
     });
 
-    const totalPages = Math.ceil(data.count / 5) || 1;
-    info.textContent = `Page ${page} of ${totalPages}`;
-    prev.disabled = !data.previous;
-    next.disabled = !data.next;
+    const totalPages = data.meta?.pagination?.pages || 1;
+    const currentPage = data.meta?.pagination?.page || page;
+    info.textContent = `Page ${currentPage} of ${totalPages}`;
+    prev.disabled = !data.links?.prev;
+    next.disabled = !data.links?.next;
   } catch {
     body.innerHTML = '<tr><td colspan="5">Failed to load tasks</td></tr>';
   }

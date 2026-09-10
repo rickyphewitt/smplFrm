@@ -42,6 +42,23 @@ describe('task poll resilience to 429 responses', () => {
     };
   }
 
+  // Helper to create JSON:API task response
+  function makeTaskResponse(status, taskData) {
+    return makeResponse(status, {
+      data: {
+        type: `${taskData.taskType || 'rescan-library'}-tasks`,
+        id: taskData.id || 'task-1',
+        attributes: {
+          label: taskData.label || 'Rescan Library',
+          status: taskData.status || 'pending',
+          progress: taskData.progress || 0,
+          error: taskData.error || '',
+          created: '2026-08-05T10:30:00Z',
+        },
+      },
+    });
+  }
+
   it('task toast preserved with last progress on exhausted 429', async () => {
     let callCount = 0;
     fetch.mockImplementation(() => {
@@ -49,9 +66,10 @@ describe('task poll resilience to 429 responses', () => {
       if (callCount === 1) {
         // startTask POST — success
         return Promise.resolve(
-          makeResponse(201, {
+          makeTaskResponse(201, {
             id: 'task-1',
-            task_type_label: 'Rescan Library',
+            taskType: 'rescan-library',
+            label: 'Rescan Library',
             progress: 0,
             status: 'pending',
           }),
@@ -60,9 +78,10 @@ describe('task poll resilience to 429 responses', () => {
       if (callCount === 2) {
         // First poll — returns progress 40%
         return Promise.resolve(
-          makeResponse(200, {
+          makeTaskResponse(200, {
             id: 'task-1',
-            task_type_label: 'Rescan Library',
+            taskType: 'rescan-library',
+            label: 'Rescan Library',
             progress: 40,
             status: 'running',
           }),
@@ -102,9 +121,10 @@ describe('task poll resilience to 429 responses', () => {
       if (callCount === 1) {
         // startTask POST — success
         return Promise.resolve(
-          makeResponse(201, {
+          makeTaskResponse(201, {
             id: 'task-1',
-            task_type_label: 'Clear Cache',
+            taskType: 'clear-cache',
+            label: 'Clear Cache',
             progress: 0,
             status: 'pending',
           }),
@@ -147,9 +167,10 @@ describe('task poll resilience to 429 responses', () => {
       if (callCount === 1) {
         // startTask POST — success
         return Promise.resolve(
-          makeResponse(201, {
+          makeTaskResponse(201, {
             id: 'task-1',
-            task_type_label: 'Clear Cache',
+            taskType: 'clear-cache',
+            label: 'Clear Cache',
             progress: 0,
             status: 'pending',
           }),
@@ -190,9 +211,10 @@ describe('task poll resilience to 429 responses', () => {
       if (callCount === 1) {
         // startTask POST — success
         return Promise.resolve(
-          makeResponse(201, {
+          makeTaskResponse(201, {
             id: 'task-1',
-            task_type_label: 'Clear Cache',
+            taskType: 'clear-cache',
+            label: 'Clear Cache',
             progress: 0,
             status: 'pending',
           }),

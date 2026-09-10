@@ -1,10 +1,11 @@
 """JSON:API renderer for smplFrm.
 
 Extends the package's JSONRenderer to handle error responses correctly
-when using a custom exception handler.
+when using a custom exception handler, and supports dynamic resource types.
 """
 
 from rest_framework_json_api.renderers import JSONRenderer as PackageJSONRenderer
+from rest_framework_json_api.utils import get_resource_id
 
 
 class JsonApiRenderer(PackageJSONRenderer):
@@ -14,7 +15,8 @@ class JsonApiRenderer(PackageJSONRenderer):
     handling flow. When using a custom exception handler that returns
     pre-formatted JSON:API errors, we need to pass them through unchanged.
 
-    This can be removed when JSON_API_UNIFORM_EXCEPTIONS is enabled globally.
+    Also supports dynamic resource types via get_resource_type_from_instance
+    method on serializers.
     """
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
@@ -30,3 +32,37 @@ class JsonApiRenderer(PackageJSONRenderer):
 
         # Normal success response - let package handle document structure
         return super().render(data, accepted_media_type, renderer_context)
+
+    @classmethod
+    def build_json_resource_obj(
+        cls,
+        fields,
+        resource,
+        resource_instance,
+        resource_name,
+        serializer,
+        force_type_resolution=False,
+    ):
+        """Build resource object with support for dynamic types.
+
+        If the serializer has a get_resource_type_from_instance classmethod,
+        use it to determine the type dynamically.
+        """
+        # Check for dynamic type method on serializer
+        serializer_class = serializer.__class__
+        if hasattr(serializer, "child"):
+            serializer_class = serializer.child.__class__
+
+        if hasattr(serializer_class, "get_resource_type_from_instance"):
+            resource_name = serializer_class.get_resource_type_from_instance(
+                resource_instance
+            )
+
+        return super().build_json_resource_obj(
+            fields,
+            resource,
+            resource_instance,
+            resource_name,
+            serializer,
+            force_type_resolution=False,  # We handled it
+        )

@@ -86,7 +86,7 @@ Exempt routes are classified in the contract manifest and validated by route-com
 - Route spelling and JSON:API `type` spelling are independent explicit fields
 - Preserve existing route paths for compatibility unless an approved checkpoint records migration handling
 - Retain `snake_case` attribute names unless a family checkpoint approves a justified breaking change
-- Resource `type` values use plural lowercase (e.g., `images`, `tasks`, `configs`, `plugins`)
+- Resource `type` values use plural lowercase with `snake_case` for multi-word types (e.g., `images`, `tasks`, `configs`, `rescan_library_tasks`)
 
 ## Atomic Migration
 
