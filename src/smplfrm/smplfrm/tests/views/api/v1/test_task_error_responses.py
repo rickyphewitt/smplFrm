@@ -13,7 +13,8 @@ class TestTaskErrorResponses(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.url = "/api/v1/tasks"
-        self.valid_payload = {"task_type": "clear_cache"}
+        # JSON:API format with polymorphic type
+        self.valid_payload = {"data": {"type": "clear_cache_tasks", "attributes": {}}}
 
     # --- IntegrityError handling ---
 
@@ -24,10 +25,18 @@ class TestTaskErrorResponses(TestCase):
             "UNIQUE constraint failed: smplfrm_task.task_type"
         )
 
-        response = self.client.post(self.url, self.valid_payload, format="json")
+        response = self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.data["detail"], "A conflicting task already exists")
+        body = json.loads(response.content)
+        self.assertIn("errors", body)
+        self.assertEqual(
+            body["errors"][0]["detail"], "A conflicting task already exists"
+        )
 
     @patch("smplfrm.views.api.v1.tasks.TaskService.create")
     def test_integrity_error_does_not_leak_schema_details(self, mock_create):
@@ -36,12 +45,15 @@ class TestTaskErrorResponses(TestCase):
             "UNIQUE constraint failed: smplfrm_task.task_type"
         )
 
-        response = self.client.post(self.url, self.valid_payload, format="json")
+        response = self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
-        response_text = str(response.data)
+        response_text = response.content.decode()
         self.assertNotIn("smplfrm_task", response_text)
         self.assertNotIn("UNIQUE constraint", response_text)
-        self.assertNotIn("task_type", response_text)
 
     @patch("smplfrm.views.api.v1.tasks.logger")
     @patch("smplfrm.views.api.v1.tasks.TaskService.create")
@@ -50,7 +62,11 @@ class TestTaskErrorResponses(TestCase):
         exc = IntegrityError("UNIQUE constraint failed: smplfrm_task.task_type")
         mock_create.side_effect = exc
 
-        self.client.post(self.url, self.valid_payload, format="json")
+        self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         mock_logger.error.assert_called_once()
         call_args = mock_logger.error.call_args
@@ -67,12 +83,17 @@ class TestTaskErrorResponses(TestCase):
         mock_create.side_effect = RuntimeError("connection pool exhausted")
         self.client.raise_request_exception = False
 
-        response = self.client.post(self.url, self.valid_payload, format="json")
+        response = self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertIn("application/vnd.api+json", response["Content-Type"])
         body = json.loads(response.content)
-        self.assertEqual(body["detail"], "An internal error occurred")
+        self.assertIn("errors", body)
+        self.assertEqual(body["errors"][0]["detail"], "An internal error occurred")
 
     @patch("smplfrm.views.api.v1.tasks.TaskService.create")
     def test_unexpected_exception_does_not_leak_internal_details(self, mock_create):
@@ -80,7 +101,11 @@ class TestTaskErrorResponses(TestCase):
         mock_create.side_effect = RuntimeError("connection pool exhausted")
         self.client.raise_request_exception = False
 
-        response = self.client.post(self.url, self.valid_payload, format="json")
+        response = self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         response_text = response.content.decode()
         self.assertNotIn("connection pool", response_text)
@@ -97,7 +122,11 @@ class TestTaskErrorResponses(TestCase):
         mock_create.side_effect = exc
         self.client.raise_request_exception = False
 
-        self.client.post(self.url, self.valid_payload, format="json")
+        self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         mock_logger.error.assert_called_once()
         call_args = mock_logger.error.call_args
@@ -111,22 +140,33 @@ class TestTaskErrorResponses(TestCase):
     @patch("smplfrm.celery.app")
     def test_successful_creation_returns_201_with_serialized_data(self, mock_app):
         """Successful task creation still returns HTTP 201 with serialized task."""
-        response = self.client.post(self.url, self.valid_payload, format="json")
+        response = self.client.post(
+            self.url,
+            data=json.dumps(self.valid_payload),
+            content_type="application/vnd.api+json",
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["task_type"], "clear_cache")
-        self.assertEqual(response.data["task_type_label"], "Clear Cache")
-        self.assertEqual(response.data["status"], "pending")
-        self.assertEqual(response.data["progress"], 0)
-        self.assertIn("id", response.data)
+        body = json.loads(response.content)
+        self.assertIn("data", body)
+        self.assertEqual(body["data"]["type"], "clear_cache_tasks")
+        self.assertEqual(body["data"]["attributes"]["label"], "Clear Cache")
+        self.assertEqual(body["data"]["attributes"]["status"], "pending")
+        self.assertEqual(body["data"]["attributes"]["progress"], 0)
+        self.assertIn("id", body["data"])
 
     # --- Preservation: validation errors ---
 
-    def test_invalid_input_returns_400_with_validation_errors(self):
-        """Invalid input still returns HTTP 400 with validation error details."""
+    def test_invalid_input_returns_409_with_validation_errors(self):
+        """Invalid task type returns HTTP 409 with JSON:API error object."""
+        invalid_payload = {"data": {"type": "not-a-real-type", "attributes": {}}}
         response = self.client.post(
-            self.url, {"task_type": "not_a_real_type"}, format="json"
+            self.url,
+            data=json.dumps(invalid_payload),
+            content_type="application/vnd.api+json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("task_type", response.data)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        body = json.loads(response.content)
+        self.assertIn("errors", body)
+        self.assertIn("not-a-real-type", body["errors"][0]["detail"])

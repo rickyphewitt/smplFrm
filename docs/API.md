@@ -180,3 +180,159 @@ Some endpoints expose non-CRUD actions:
 
 Custom actions return standard JSON:API resource documents.
 
+## Resources
+
+### Tasks
+
+Background operations (library rescanning, cache clearing, image count reset) are exposed as **polymorphic task resources**. The task type becomes the JSON:API `type` field, enabling type-specific behavior in future versions.
+
+**Endpoint:** `/api/v1/tasks`
+
+**Polymorphic Types:**
+| Type | Description |
+|------|-------------|
+| `rescan_library_tasks` | Rescan photo library directories |
+| `clear_cache_tasks` | Clear cached image data |
+| `reset_image_count_tasks` | Reset image view counts |
+
+#### Create Task (POST)
+
+```http
+POST /api/v1/tasks
+Content-Type: application/vnd.api+json
+
+{
+  "data": {
+    "type": "rescan_library_tasks",
+    "attributes": {}
+  }
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "data": {
+    "type": "rescan_library_tasks",
+    "id": "aBcDeFgHiJkLmNoP",
+    "attributes": {
+      "label": "Rescan Library",
+      "status": "pending",
+      "progress": 0,
+      "error": "",
+      "created": "2026-08-05T10:30:00Z"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `409 Conflict` — A task of this type is already pending or running
+- `409 Conflict` — Invalid task type (type not in accepted list)
+- `500 Internal Server Error` — Server error during task creation
+
+#### Get Task (GET)
+
+```http
+GET /api/v1/tasks/aBcDeFgHiJkLmNoP
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "rescan_library_tasks",
+    "id": "aBcDeFgHiJkLmNoP",
+    "attributes": {
+      "label": "Rescan Library",
+      "status": "running",
+      "progress": 45,
+      "error": "",
+      "created": "2026-08-05T10:30:00Z"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `403 Forbidden` — Task not found (prevents ID enumeration)
+
+#### List Tasks (GET)
+
+```http
+GET /api/v1/tasks?page[number]=1
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "type": "rescan_library_tasks",
+      "id": "aBcDeFgHiJkLmNoP",
+      "attributes": {
+        "label": "Rescan Library",
+        "status": "completed",
+        "progress": 100,
+        "error": "",
+        "created": "2026-08-05T10:30:00Z"
+      }
+    },
+    {
+      "type": "clear_cache_tasks",
+      "id": "qRsTuVwXyZaBcDeF",
+      "attributes": {
+        "label": "Clear Cache",
+        "status": "failed",
+        "progress": 30,
+        "error": "Disk write error",
+        "created": "2026-08-05T09:15:00Z"
+      }
+    }
+  ],
+  "links": {
+    "first": "/api/v1/tasks?page[number]=1",
+    "last": "/api/v1/tasks?page[number]=2",
+    "next": "/api/v1/tasks?page[number]=2",
+    "prev": null
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pages": 2,
+      "count": 8
+    }
+  }
+}
+```
+
+#### Delete Task (DELETE)
+
+```http
+DELETE /api/v1/tasks/aBcDeFgHiJkLmNoP
+```
+
+**Response:** `204 No Content`
+
+**Error Responses:**
+- `403 Forbidden` — Task not found (prevents ID enumeration)
+
+#### Task Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `label` | string | Human-readable task type label for UI display |
+| `status` | string | One of: `pending`, `running`, `completed`, `failed` |
+| `progress` | integer | Completion percentage (0-100) |
+| `error` | string | Error message if status is `failed`, empty otherwise |
+| `created` | datetime | ISO 8601 creation timestamp |
+
+#### Notes
+
+- Tasks are **read-only** after creation — `PUT` and `PATCH` return `405 Method Not Allowed`
+- Only one task per type can be `pending` or `running` at a time
+- Tasks are soft-deleted and retained for history
+- Rate limiting: `SMPL_FRM_THROTTLE_TASK_RATE` (default: `10/minute`)
+
