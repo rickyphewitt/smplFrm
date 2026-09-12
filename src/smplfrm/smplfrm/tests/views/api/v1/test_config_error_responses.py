@@ -18,7 +18,7 @@ class TestConfigCreateErrorResponses(TestCase):
 
     @patch("smplfrm.views.api.v1.config.ConfigService.create")
     def test_value_error_returns_error_message(self, mock_create):
-        """Test that ValueError returns HTTP 400 with error message."""
+        """Test that ValueError returns HTTP 400 with JSON:API errors array."""
         error_msg = "Config limit of 10 reached. Delete an existing config first."
         mock_create.side_effect = ValueError(error_msg)
 
@@ -34,7 +34,13 @@ class TestConfigCreateErrorResponses(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("detail", response.data)
+        data = response.json()
+        self.assertIn("errors", data)
+        self.assertEqual(len(data["errors"]), 1)
+        error = data["errors"][0]
+        self.assertEqual(error["status"], "400")
+        self.assertEqual(error["code"], "validation_error")
+        self.assertEqual(error["detail"], error_msg)
 
     @patch("smplfrm.views.api.v1.config.logger")
     @patch("smplfrm.views.api.v1.config.ConfigService.create")

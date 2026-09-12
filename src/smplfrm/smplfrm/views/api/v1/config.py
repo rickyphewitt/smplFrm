@@ -90,7 +90,15 @@ class ConfigViewSet(viewsets.ModelViewSet):
         except ValueError as e:
             logger.error("Config create error: %s", e, exc_info=True)
             return Response(
-                {"detail": str(e)},
+                {
+                    "errors": [
+                        {
+                            "status": "400",
+                            "code": "validation_error",
+                            "detail": str(e),
+                        }
+                    ]
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

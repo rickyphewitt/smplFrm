@@ -151,6 +151,7 @@ The following routes retain their native protocol and bypass JSON:API negotiatio
 | Route | Protocol | Reason |
 |-------|----------|--------|
 | `/api/v1/images/{id}/display` | Binary `image/jpeg` | Frame image delivery with resize parameters |
+| `/api/v1/plugins/spotify/auth` | JSON (non-JSON:API) | OAuth2 authorization flow initiation |
 | `/api/v1/plugins/spotify/callback` | OAuth2 redirect/HTML | OAuth code/state exchange and error recovery |
 | Any `204` response | Empty body | Delete confirmations and similar |
 
@@ -601,3 +602,188 @@ Accept: application/vnd.api+json
 #### Notes
 
 - Image metadata is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
+
+
+
+### Weather
+
+Weather provides current weather conditions as a singleton resource. The plugin must be configured with valid coordinates and API credentials.
+
+**Endpoint:** `/api/v1/plugins/weather/current`
+
+#### Get Current Weather (GET)
+
+```http
+GET /api/v1/plugins/weather/current
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "weather",
+    "id": "current",
+    "attributes": {
+      "temperature": "72",
+      "temperature_scale": "°F",
+      "daily_low": "65",
+      "daily_low_scale": "°F",
+      "daily_high": "78",
+      "daily_high_scale": "°F"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `503 Service Unavailable` — Weather service unavailable (plugin not configured or API error)
+
+#### Weather Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `temperature` | string | Current temperature value |
+| `temperature_scale` | string | Temperature unit (e.g., "°F", "°C") |
+| `daily_low` | string | Today's forecasted low temperature |
+| `daily_low_scale` | string | Low temperature unit |
+| `daily_high` | string | Today's forecasted high temperature |
+| `daily_high_scale` | string | High temperature unit |
+
+#### Notes
+
+- Weather is a **singleton resource** with fixed ID `"current"`
+- Weather is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
+- No query parameters are accepted
+
+
+
+### Spotify Status
+
+Spotify status provides current playback state as a singleton resource with an optional track relationship. OAuth authorization is required before use.
+
+**Endpoint:** `/api/v1/plugins/spotify/status`
+
+#### Get Current Status (GET)
+
+```http
+GET /api/v1/plugins/spotify/status
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK) — Playing:**
+```json
+{
+  "data": {
+    "type": "spotify_status",
+    "id": "current",
+    "attributes": {
+      "is_playing": true
+    },
+    "relationships": {
+      "track": {
+        "data": { "type": "spotify_tracks", "id": "a1b2c3d4e5f67890" }
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "spotify_tracks",
+      "id": "a1b2c3d4e5f67890",
+      "attributes": {
+        "artist": "Artist Name",
+        "song": "Song Title"
+      }
+    }
+  ]
+}
+```
+
+**Response (200 OK) — Not Playing:**
+```json
+{
+  "data": {
+    "type": "spotify_status",
+    "id": "current",
+    "attributes": {
+      "is_playing": false
+    },
+    "relationships": {
+      "track": {
+        "data": null
+      }
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` — Spotify authorization missing or expired
+- `412 Precondition Failed` — Spotify plugin not configured
+- `500 Internal Server Error` — Failed to retrieve Spotify status
+
+#### Spotify Status Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `is_playing` | boolean | Whether music is currently playing |
+
+#### Relationships
+
+| Relationship | Type | Description |
+|--------------|------|-------------|
+| `track` | spotify_tracks | Currently playing track (null when not playing) |
+
+#### Included Resources
+
+When a track is playing, the response includes the track resource:
+
+| Type | Attributes |
+|------|------------|
+| `spotify_tracks` | `artist` (string), `song` (string) |
+
+#### Notes
+
+- Spotify status is a **singleton resource** with fixed ID `"current"`
+- Track ID is an opaque 16-character hex string derived from the Spotify URI
+- Spotify status is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
+- OAuth endpoints (`/auth`, `/callback`) are protocol-exempt and documented separately
+
+
+
+### Spotify OAuth (Protocol Exempt)
+
+OAuth2 endpoints for Spotify authorization. **Not JSON:API endpoints.**
+
+**Base path:** `/api/v1/plugins/spotify/`
+
+#### Initiate Authorization (GET)
+
+```http
+GET /api/v1/plugins/spotify/auth
+```
+
+**Response (200 OK):**
+```json
+{
+  "auth_url": "https://accounts.spotify.com/authorize?..."
+}
+```
+
+**Error Responses:**
+- `412 Precondition Failed` — Spotify not configured
+- `500 Internal Server Error` — Failed to create authorization URL
+
+#### OAuth Callback (GET)
+
+```http
+GET /api/v1/plugins/spotify/callback?code=...&state=...
+```
+
+Handles OAuth2 callback from Spotify. Returns HTML page or redirect on success.
+
+**Error Responses:**
+- `400 Bad Request` — Missing authorization code (HTML error page)
+- `403 Forbidden` — Invalid state parameter (HTML error page)
+- `412 Precondition Failed` — Plugin not configured (HTML error page)
+- `500 Internal Server Error` — Token exchange failed (HTML error page)
