@@ -108,10 +108,17 @@ class SpotifyPlugin(BasePlugin):
         }
 
     def get_now_playing(self):
-        """Get currently playing track information."""
-        now_playing = {"success": False}
+        """Get currently playing track information.
+
+        Returns:
+            dict with keys:
+                - success (bool): Whether the request succeeded
+                - error (str, optional): Error code if failed
+                - is_playing (bool, optional): Whether something is currently playing
+                - track (dict, optional): Track info with uri, artist, song keys
+        """
         if not self.is_ready:
-            return now_playing
+            return {"success": False}
 
         if not self.cache_manager.get_cached_token():
             return {"success": False, "error": "authorization_required"}
@@ -120,19 +127,41 @@ class SpotifyPlugin(BasePlugin):
             self.sp = Spotify(auth_manager=self.auth_manager)
             results = self.sp.current_user_playing_track()
 
-            if results.get("currently_playing_type") == "track":
-                artist = results.get("item").get("artists")[0]["name"]
-                song = results.get("item").get("name")
-            elif results.get("currently_playing_type") == "episode":
-                artist = "Awesome"
-                song = "Podcast"
-            else:
-                artist = "Unsupported Type"
-                song = results.get("currently_playing_type")
+            # Nothing playing or no results
+            if not results:
+                return {"success": True, "is_playing": False, "track": None}
 
-            now_playing["artist"] = artist
-            now_playing["song"] = song
-            now_playing["success"] = True
+            is_playing = results.get("is_playing", False)
+            item = results.get("item")
+            playing_type = results.get("currently_playing_type")
+
+            if not item:
+                return {"success": True, "is_playing": is_playing, "track": None}
+
+            if playing_type == "track":
+                track = {
+                    "uri": item.get("uri"),
+                    "artist": item.get("artists", [{}])[0].get("name", "Unknown"),
+                    "song": item.get("name", "Unknown"),
+                }
+            elif playing_type == "episode":
+                track = {
+                    "uri": item.get("uri"),
+                    "artist": item.get("show", {}).get("name", "Podcast"),
+                    "song": item.get("name", "Episode"),
+                }
+            else:
+                track = {
+                    "uri": None,
+                    "artist": "Unsupported Type",
+                    "song": playing_type or "Unknown",
+                }
+
+            return {
+                "success": True,
+                "is_playing": is_playing,
+                "track": track,
+            }
         except SpotifyOauthError as error:
             if _is_invalid_grant(error):
                 self.cache_manager.clear_cached_token()
@@ -145,7 +174,7 @@ class SpotifyPlugin(BasePlugin):
             logger.error("Spotify OAuth request failed", exc_info=True)
         except Exception:
             logger.error("Failed to get now playing song", exc_info=True)
-        return now_playing
+        return {"success": False}
 
     def callback(self, code):
         """Exchange a validated authorization code for fresh tokens."""

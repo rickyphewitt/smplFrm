@@ -1,6 +1,7 @@
 import { resilientFetch } from './resilientFetch.js';
 import {
   fetchJsonApi,
+  JsonApiError,
   unwrapResource,
   unwrapResourceList,
   buildResourceDocument,
@@ -315,39 +316,52 @@ async function showSpotifyAuthorization(reason) {
 
 export async function getNowPlaying() {
   try {
-    const response = await resilientFetch(
-      buildApiUrl('plugins/spotify/now_playing'),
-    );
+    const response = await fetchJsonApi(buildApiUrl('plugins/spotify/status'));
+    const resource = unwrapResource(response);
 
-    // On exhausted 429: show icon only, no error text
-    if (response.status === 429) {
-      if (!spotifyAuthLinkActive) {
-        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
-      }
+    spotifyAuthLinkActive = false;
+
+    // Check if anything is playing
+    if (!resource || !resource.attributes.is_playing) {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
       return;
     }
 
-    if (response.status === 401) {
-      const errorData = await response.json();
-      if (errorData.error === 'spotify_authorization_required') {
-        await showSpotifyAuthorization(errorData.reason);
+    // Get track from included resources
+    const trackId = resource.relationships?.track?.data?.id;
+    const track = response.included?.find(
+      (r) => r.type === 'spotify_tracks' && r.id === trackId,
+    );
+
+    if (track) {
+      showSpotifyBar(
+        `<i class="iconoir-spotify spotify-icon"></i> ${track.attributes.artist} - ${track.attributes.song}`,
+      );
+    } else {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+    }
+  } catch (error) {
+    if (error instanceof JsonApiError) {
+      if (error.status === 401) {
+        const authError = error.errors[0];
+        if (authError?.code === 'spotify_authorization_required') {
+          const reason = authError.detail?.includes('expired')
+            ? 'expired'
+            : 'missing';
+          await showSpotifyAuthorization(reason);
+          return;
+        }
+      }
+
+      // On 429 or other errors: show icon only
+      if (error.status === 429) {
+        if (!spotifyAuthLinkActive) {
+          showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+        }
         return;
       }
     }
 
-    if (!response.ok) {
-      if (!spotifyAuthLinkActive) {
-        showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
-      }
-      return;
-    }
-
-    const data = await response.json();
-    spotifyAuthLinkActive = false;
-    showSpotifyBar(
-      `<i class="iconoir-spotify spotify-icon"></i> ${data.artist} - ${data.song}`,
-    );
-  } catch (error) {
     console.error('Spotify error:', error);
     if (!spotifyAuthLinkActive) {
       showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);

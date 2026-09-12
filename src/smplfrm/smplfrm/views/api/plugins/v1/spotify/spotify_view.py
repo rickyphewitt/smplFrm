@@ -4,10 +4,24 @@ import secrets
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from rest_framework.renderers import JSONRenderer as BaseJSONRenderer
 
 from smplfrm.plugins import SpotifyPlugin
+from smplfrm.views.api.plugins.v1.spotify.serializers import SpotifyStatusSerializer
+
+
+class JsonApiPassthroughRenderer(BaseJSONRenderer):
+    """JSON renderer that uses JSON:API media type without document wrapping.
+
+    Use for endpoints that build their own JSON:API document structure.
+    """
+
+    media_type = "application/vnd.api+json"
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,34 +44,66 @@ class SpotifyView(viewsets.ViewSet):
         request.session[SPOTIFY_OAUTH_STATE_SESSION_KEY] = auth_result["state"]
         return JsonResponse({"auth_url": auth_result["auth_url"]})
 
-    @action(methods=["get"], detail=False, url_path="now_playing")
-    def get_now_playing(self, request, **kwargs):
-        try:
-            now_playing = SpotifyPlugin().get_now_playing()
-        except Exception:
-            logger.error("Failed to retrieve Spotify now-playing data", exc_info=True)
-            return JsonResponse({"error": "spotify_unavailable"}, status=500)
+    @action(
+        methods=["get"],
+        detail=False,
+        url_path="status",
+        renderer_classes=[JsonApiPassthroughRenderer],
+    )
+    def status(self, request, **kwargs):
+        """Get current Spotify playback status.
 
-        error = now_playing.get("error")
-        if error in {"authorization_required", "reauth_required"}:
-            reason = "expired" if error == "reauth_required" else "missing"
-            return JsonResponse(
+        Returns JSON:API formatted spotify_status resource with track relationship.
+        """
+        try:
+            result = SpotifyPlugin().get_now_playing()
+        except Exception:
+            logger.error("Failed to retrieve Spotify status", exc_info=True)
+            return Response(
                 {
-                    "error": "spotify_authorization_required",
-                    "reason": reason,
+                    "errors": [
+                        {
+                            "status": "500",
+                            "code": "spotify_unavailable",
+                            "detail": "Failed to retrieve Spotify status",
+                        }
+                    ]
                 },
-                status=401,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        if not now_playing.get("success"):
-            return JsonResponse({"error": "spotify_unavailable"}, status=412)
+        error = result.get("error")
+        if error in {"authorization_required", "reauth_required"}:
+            reason = "expired" if error == "reauth_required" else "missing"
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "401",
+                            "code": "spotify_authorization_required",
+                            "detail": f"Spotify authorization {reason}",
+                        }
+                    ]
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
-        return JsonResponse(
-            {
-                "artist": now_playing.get("artist"),
-                "song": now_playing.get("song"),
-            }
-        )
+        if not result.get("success"):
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "412",
+                            "code": "spotify_unavailable",
+                            "detail": "Spotify plugin not configured",
+                        }
+                    ]
+                },
+                status=status.HTTP_412_PRECONDITION_FAILED,
+            )
+
+        serializer = SpotifyStatusSerializer()
+        return Response(serializer.to_representation(result))
 
     @action(methods=["get"], detail=False, url_path="callback")
     def callback(self, request, **kwargs):

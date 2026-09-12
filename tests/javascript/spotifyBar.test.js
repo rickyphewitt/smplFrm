@@ -7,6 +7,50 @@ import { JSDOM } from 'jsdom';
 describe('spotify bar visibility', () => {
   let document, getNowPlaying;
 
+  // Helper to create JSON:API status response
+  function createStatusResponse(isPlaying, artist, song, trackUri) {
+    const trackId = trackUri
+      ? Array.from(new TextEncoder().encode(trackUri))
+          .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
+          .toString(16)
+          .slice(0, 16)
+      : null;
+
+    const response = {
+      data: {
+        type: 'spotify_status',
+        id: 'current',
+        attributes: { is_playing: isPlaying },
+        relationships: {
+          track: {
+            data: trackId
+              ? { type: 'spotify_tracks', id: trackId }
+              : null,
+          },
+        },
+      },
+    };
+
+    if (trackId) {
+      response.included = [
+        {
+          type: 'spotify_tracks',
+          id: trackId,
+          attributes: { artist, song },
+        },
+      ];
+    }
+
+    return response;
+  }
+
+  // Helper to create JSON:API error response
+  function createErrorResponse(status, code, detail) {
+    return {
+      errors: [{ status: String(status), code, detail }],
+    };
+  }
+
   function setupDOM() {
     const dom = new JSDOM(
       `
@@ -73,7 +117,10 @@ describe('spotify bar visibility', () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ artist: 'Artist', song: 'Song' }),
+        json: () =>
+          Promise.resolve(
+            createStatusResponse(true, 'Artist', 'Song', 'spotify:track:123'),
+          ),
       }),
     );
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
@@ -88,6 +135,29 @@ describe('spotify bar visibility', () => {
     );
   });
 
+  it('shows spotify bar with icon when not playing', async () => {
+    setupDOM();
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(createStatusResponse(false, null, null, null)),
+      }),
+    );
+    const module = await import('../../src/smplfrm/smplfrm/static/main.js');
+    getNowPlaying = module.getNowPlaying;
+
+    await getNowPlaying();
+
+    const bar = document.getElementById('spotify-bar');
+    expect(bar.style.display).toBe('flex');
+    expect(document.getElementById('spotify-now-playing').innerHTML).toContain(
+      'iconoir-spotify',
+    );
+    expect(document.getElementById('spotify-now-playing').innerHTML).not.toContain(
+      'Artist',
+    );
+  });
+
   it('shows spotify bar with oauth link when not authenticated', async () => {
     setupDOM();
     global.fetch = vi
@@ -96,10 +166,13 @@ describe('spotify bar visibility', () => {
         ok: false,
         status: 401,
         json: () =>
-          Promise.resolve({
-            error: 'spotify_authorization_required',
-            reason: 'missing',
-          }),
+          Promise.resolve(
+            createErrorResponse(
+              401,
+              'spotify_authorization_required',
+              'Spotify authorization missing',
+            ),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -128,12 +201,15 @@ describe('spotify bar visibility', () => {
         ok: false,
         status: 401,
         json: () =>
-          Promise.resolve({
-            error: 'spotify_authorization_required',
-            reason: 'missing',
-          }),
+          Promise.resolve(
+            createErrorResponse(
+              401,
+              'spotify_authorization_required',
+              'Spotify authorization missing',
+            ),
+          ),
       })
-      .mockResolvedValueOnce({ ok: false });
+      .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) });
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     getNowPlaying = module.getNowPlaying;
 
