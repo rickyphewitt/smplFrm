@@ -181,7 +181,7 @@ class LibraryService(TaskReportingService):
         if isinstance(value, TiffImagePlugin.IFDRational):
             return float(value)
         elif isinstance(value, tuple):
-            return tuple(self._cast_to_json_compatible(t) for t in value)
+            return [self._cast_to_json_compatible(t) for t in value]
         elif isinstance(value, bytes):
             return value.decode(errors="replace")
         elif isinstance(value, dict):
