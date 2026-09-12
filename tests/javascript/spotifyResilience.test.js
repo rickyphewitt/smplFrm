@@ -4,6 +4,41 @@ import { JSDOM } from 'jsdom';
 describe('Spotify polling resilience to 429 responses', () => {
   let getNowPlaying;
 
+  // Helper to create JSON:API status response
+  function createStatusResponse(isPlaying, artist, song, trackUri) {
+    const trackId = trackUri
+      ? Array.from(new TextEncoder().encode(trackUri))
+          .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
+          .toString(16)
+          .slice(0, 16)
+      : null;
+
+    const response = {
+      data: {
+        type: 'spotify_status',
+        id: 'current',
+        attributes: { is_playing: isPlaying },
+        relationships: {
+          track: {
+            data: trackId ? { type: 'spotify_tracks', id: trackId } : null,
+          },
+        },
+      },
+    };
+
+    if (trackId) {
+      response.included = [
+        {
+          type: 'spotify_tracks',
+          id: trackId,
+          attributes: { artist, song },
+        },
+      ];
+    }
+
+    return response;
+  }
+
   function setupDOM() {
     const dom = new JSDOM(
       `
@@ -71,7 +106,10 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: true,
       status: 200,
       headers: new Headers(),
-      json: () => Promise.resolve({ artist: 'Radiohead', song: 'Creep' }),
+      json: () =>
+        Promise.resolve(
+          createStatusResponse(true, 'Radiohead', 'Creep', 'spotify:track:123'),
+        ),
     });
 
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
@@ -89,6 +127,7 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '1' }),
+      json: () => Promise.resolve({ errors: [] }),
     });
 
     // Start the getNowPlaying call (it will await resilientFetch which sleeps)
@@ -112,6 +151,7 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '1' }),
+      json: () => Promise.resolve({ errors: [] }),
     });
 
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
@@ -142,6 +182,7 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '1' }),
+      json: () => Promise.resolve({ errors: [] }),
     });
 
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
@@ -176,7 +217,10 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: true,
       status: 200,
       headers: new Headers(),
-      json: () => Promise.resolve({ artist: 'Artist', song: 'Song' }),
+      json: () =>
+        Promise.resolve(
+          createStatusResponse(true, 'Artist', 'Song', 'spotify:track:456'),
+        ),
     });
 
     setTimeoutSpy.mockClear();
@@ -202,6 +246,7 @@ describe('Spotify polling resilience to 429 responses', () => {
       ok: false,
       status: 429,
       headers: new Headers({ 'Retry-After': '1' }),
+      json: () => Promise.resolve({ errors: [] }),
     });
 
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');

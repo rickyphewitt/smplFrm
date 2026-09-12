@@ -136,16 +136,13 @@ class TestSpotifyAuthorizationResponses(TestCase):
             "error": "reauth_required",
         }
 
-        response = self.client.get(f"{SPOTIFY_URI}/now_playing")
+        response = self.client.get(f"{SPOTIFY_URI}/status")
 
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(
-            response.json(),
-            {
-                "error": "spotify_authorization_required",
-                "reason": "expired",
-            },
-        )
+        data = response.json()
+        self.assertIn("errors", data)
+        self.assertEqual(data["errors"][0]["code"], "spotify_authorization_required")
+        self.assertIn("expired", data["errors"][0]["detail"])
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_missing_token_returns_typed_unauthorized_response(self, plugin_class):
@@ -154,21 +151,21 @@ class TestSpotifyAuthorizationResponses(TestCase):
             "error": "authorization_required",
         }
 
-        response = self.client.get(f"{SPOTIFY_URI}/now_playing")
+        response = self.client.get(f"{SPOTIFY_URI}/status")
 
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(
-            response.json(),
-            {
-                "error": "spotify_authorization_required",
-                "reason": "missing",
-            },
-        )
+        data = response.json()
+        self.assertIn("errors", data)
+        self.assertEqual(data["errors"][0]["code"], "spotify_authorization_required")
+        self.assertIn("missing", data["errors"][0]["detail"])
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_generic_failure_remains_precondition_failed(self, plugin_class):
         plugin_class.return_value.get_now_playing.return_value = {"success": False}
 
-        response = self.client.get(f"{SPOTIFY_URI}/now_playing")
+        response = self.client.get(f"{SPOTIFY_URI}/status")
 
         self.assertEqual(response.status_code, 412)
+        data = response.json()
+        self.assertIn("errors", data)
+        self.assertEqual(data["errors"][0]["code"], "spotify_unavailable")

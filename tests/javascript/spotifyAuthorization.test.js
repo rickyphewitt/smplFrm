@@ -10,6 +10,48 @@ function makeResponse(status, body = {}) {
   };
 }
 
+// Helper to create JSON:API status response
+function createStatusResponse(isPlaying, artist, song, trackUri) {
+  const trackId = trackUri
+    ? Array.from(new TextEncoder().encode(trackUri))
+        .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
+        .toString(16)
+        .slice(0, 16)
+    : null;
+
+  const response = {
+    data: {
+      type: 'spotify_status',
+      id: 'current',
+      attributes: { is_playing: isPlaying },
+      relationships: {
+        track: {
+          data: trackId ? { type: 'spotify_tracks', id: trackId } : null,
+        },
+      },
+    },
+  };
+
+  if (trackId) {
+    response.included = [
+      {
+        type: 'spotify_tracks',
+        id: trackId,
+        attributes: { artist, song },
+      },
+    ];
+  }
+
+  return response;
+}
+
+// Helper to create JSON:API error response
+function createErrorResponse(status, code, detail) {
+  return {
+    errors: [{ status: String(status), code, detail }],
+  };
+}
+
 function setupDOM() {
   const dom = new JSDOM(
     `
@@ -64,10 +106,14 @@ describe('Spotify authorization recovery', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(
-        makeResponse(401, {
-          error: 'spotify_authorization_required',
-          reason: 'missing',
-        }),
+        makeResponse(
+          401,
+          createErrorResponse(
+            401,
+            'spotify_authorization_required',
+            'Spotify authorization missing',
+          ),
+        ),
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
@@ -90,10 +136,14 @@ describe('Spotify authorization recovery', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(
-        makeResponse(401, {
-          error: 'spotify_authorization_required',
-          reason: 'expired',
-        }),
+        makeResponse(
+          401,
+          createErrorResponse(
+            401,
+            'spotify_authorization_required',
+            'Spotify authorization expired',
+          ),
+        ),
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
@@ -122,10 +172,14 @@ describe('Spotify authorization recovery', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(
-        makeResponse(401, {
-          error: 'spotify_authorization_required',
-          reason: 'expired',
-        }),
+        makeResponse(
+          401,
+          createErrorResponse(
+            401,
+            'spotify_authorization_required',
+            'Spotify authorization expired',
+          ),
+        ),
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
@@ -133,10 +187,14 @@ describe('Spotify authorization recovery', () => {
         }),
       )
       .mockResolvedValueOnce(
-        makeResponse(401, {
-          error: 'spotify_authorization_required',
-          reason: 'expired',
-        }),
+        makeResponse(
+          401,
+          createErrorResponse(
+            401,
+            'spotify_authorization_required',
+            'Spotify authorization expired',
+          ),
+        ),
       );
     const { getNowPlaying } = await import(
       '../../src/smplfrm/smplfrm/static/main.js'
@@ -152,7 +210,9 @@ describe('Spotify authorization recovery', () => {
   });
 
   it('does not initiate OAuth for an unrelated Spotify failure', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce(makeResponse(412));
+    global.fetch = vi.fn().mockResolvedValueOnce(
+      makeResponse(412, createErrorResponse(412, 'spotify_unavailable', 'Plugin not configured')),
+    );
     const { getNowPlaying } = await import(
       '../../src/smplfrm/smplfrm/static/main.js'
     );
@@ -168,13 +228,20 @@ describe('Spotify authorization recovery', () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(
-        makeResponse(200, { artist: 'Artist', song: 'Song' }),
+        makeResponse(
+          200,
+          createStatusResponse(true, 'Artist', 'Song', 'spotify:track:123'),
+        ),
       )
       .mockResolvedValueOnce(
-        makeResponse(401, {
-          error: 'spotify_authorization_required',
-          reason: 'expired',
-        }),
+        makeResponse(
+          401,
+          createErrorResponse(
+            401,
+            'spotify_authorization_required',
+            'Spotify authorization expired',
+          ),
+        ),
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
