@@ -17,6 +17,7 @@ This project implements **JSON:API 1.1 with a documented PUT deviation**. Never 
 - Resource `id` is the existing 16-character `external_id` serialized as a string
 - Singleton resources use an approved stable string ID (e.g., `"current"`)
 - Related resources appear only under `relationships` as identifier-only linkage: `{"type": "...", "id": "..."}`
+- Relationship `id` values must use the related resource's `external_id`, never the internal database primary key
 - Never emit top-level `included` (compound documents not supported)
 - Never duplicate relationship data under `attributes`
 
