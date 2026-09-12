@@ -10,11 +10,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework_json_api.pagination import JsonApiPageNumberPagination
 
 from smplfrm.jsonapi import (
-    JsonApiRenderer,
-    JsonApiParser,
     jsonapi_exception_handler,
     SECRET_MASK,
 )
@@ -24,13 +21,6 @@ from smplfrm.plugins import PLUGIN_REGISTRY
 from smplfrm.services.plugin_service import PluginService
 
 logger = logging.getLogger(__name__)
-
-
-class PluginPagination(JsonApiPageNumberPagination):
-    """JSON:API pagination for plugins with page[number] and page[size]."""
-
-    page_size = 5
-    max_page_size = 100
 
 
 class PluginViewSet(viewsets.ModelViewSet):
@@ -52,9 +42,6 @@ class PluginViewSet(viewsets.ModelViewSet):
 
     queryset = Plugin.objects.filter(deleted=False).order_by("name")
     serializer_class = PluginSerializer
-    renderer_classes = [JsonApiRenderer]
-    parser_classes = [JsonApiParser]
-    pagination_class = PluginPagination
     lookup_field = "external_id"
     resource_name = "plugins"
 
