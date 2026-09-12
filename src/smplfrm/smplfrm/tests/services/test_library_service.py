@@ -67,6 +67,40 @@ class TestLibraryService(TestCase):
             old_task_count + 2, new_task_count, "A new task should have been created"
         )
 
+    def test_cast_to_json_compatible_converts_tuples_to_lists(self):
+        """Test that EXIF tuple values are converted to lists for JSON compatibility.
+
+        This prevents IntegrityError from SQLite's JSON_VALID() constraint.
+        JSON spec does not support tuples, only arrays (lists).
+        """
+        from PIL.TiffImagePlugin import IFDRational
+
+        # Test tuple conversion
+        result = self.library_service._cast_to_json_compatible((1, 2, 3))
+        self.assertIsInstance(result, list, "Tuples should be converted to lists")
+        self.assertEqual(result, [1, 2, 3])
+
+        # Test nested tuple conversion
+        result = self.library_service._cast_to_json_compatible(((1, 2), (3, 4)))
+        self.assertEqual(result, [[1, 2], [3, 4]])
+
+        # Test tuple with IFDRational (common in EXIF data)
+        rational = IFDRational(3, 2)
+        result = self.library_service._cast_to_json_compatible((rational, 100))
+        self.assertIsInstance(result, list)
+        self.assertIsInstance(result[0], float)
+        self.assertEqual(result, [1.5, 100])
+
+        # Test dict with tuple values
+        result = self.library_service._cast_to_json_compatible(
+            {"key": (1, 2), "nested": {"inner": (3, 4)}}
+        )
+        self.assertEqual(result, {"key": [1, 2], "nested": {"inner": [3, 4]}})
+
+        # Test bytes (another EXIF type)
+        result = self.library_service._cast_to_json_compatible(b"test")
+        self.assertEqual(result, "test")
+
 
 @override_settings(SMPL_FRM_LIBRARY_DIRS=test_library)
 class TestLibraryScanProgress(TestCase):
