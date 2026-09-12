@@ -13,9 +13,8 @@ from django.http import Http404, HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_json_api.pagination import JsonApiPageNumberPagination
 
-from smplfrm.jsonapi import JsonApiRenderer, JsonApiParser, jsonapi_exception_handler
+from smplfrm.jsonapi import jsonapi_exception_handler
 from smplfrm.models import Image
 from smplfrm.services import CacheService, ImageService, ImageManipulationService
 from smplfrm.tasks import cache_images_task
@@ -26,13 +25,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_WIDTH = "100"
 DEFAULT_HEIGHT = "100"
 NEXT_IMAGE_COUNT = 5
-
-
-class ImagePagination(JsonApiPageNumberPagination):
-    """JSON:API pagination for images with page[number]."""
-
-    page_size = 5
-    max_page_size = 100
 
 
 class Images(viewsets.ModelViewSet):
@@ -57,9 +49,6 @@ class Images(viewsets.ModelViewSet):
 
     queryset = Image.objects.filter(deleted=False).order_by("-created")
     serializer_class = ImageSerializer
-    renderer_classes = [JsonApiRenderer]
-    parser_classes = [JsonApiParser]
-    pagination_class = ImagePagination
     lookup_field = "external_id"
     resource_name = "images"
 

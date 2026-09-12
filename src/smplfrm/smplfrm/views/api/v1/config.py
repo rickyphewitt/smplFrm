@@ -10,13 +10,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework_json_api.pagination import JsonApiPageNumberPagination
 
-from smplfrm.jsonapi import (
-    JsonApiRenderer,
-    JsonApiParser,
-    jsonapi_exception_handler,
-)
+from smplfrm.jsonapi import jsonapi_exception_handler
 from smplfrm.models import Config
 from smplfrm.services.config_service import ConfigService, PRESET_PREFIX
 from smplfrm.views.serializers.v1.config_serializer import (
@@ -24,13 +19,6 @@ from smplfrm.views.serializers.v1.config_serializer import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class ConfigPagination(JsonApiPageNumberPagination):
-    """JSON:API pagination for configs with page[number] and page[size]."""
-
-    page_size = 5
-    max_page_size = 100
 
 
 class ConfigViewSet(viewsets.ModelViewSet):
@@ -53,9 +41,6 @@ class ConfigViewSet(viewsets.ModelViewSet):
 
     queryset = Config.objects.all()
     serializer_class = ConfigSerializer
-    renderer_classes = [JsonApiRenderer]
-    parser_classes = [JsonApiParser]
-    pagination_class = ConfigPagination
     lookup_field = "external_id"
     resource_name = "configs"
 

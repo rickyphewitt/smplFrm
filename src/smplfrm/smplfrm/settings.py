@@ -218,7 +218,15 @@ SMPL_FRM_THROTTLE_TASK_RATE = parse_throttle_rate(
 )
 
 REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "smplfrm.exception_handler.sanitized_exception_handler",
+    "EXCEPTION_HANDLER": "smplfrm.jsonapi.exceptions.jsonapi_exception_handler",
+    "DEFAULT_RENDERER_CLASSES": [
+        "smplfrm.jsonapi.renderers.JsonApiRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "smplfrm.jsonapi.parsers.JsonApiParser",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "smplfrm.jsonapi.pagination.JsonApiPagination",
+    "DEFAULT_METADATA_CLASS": "rest_framework_json_api.metadata.JSONAPIMetadata",
     "DEFAULT_THROTTLE_CLASSES": [
         "smplfrm.throttles.GlobalAnonThrottle",
         "smplfrm.throttles.GlobalAuthenticatedThrottle",

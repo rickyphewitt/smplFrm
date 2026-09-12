@@ -16,13 +16,8 @@ from django.db import IntegrityError
 from django.http import Http404
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework_json_api.pagination import JsonApiPageNumberPagination
 
-from smplfrm.jsonapi import (
-    JsonApiRenderer,
-    JsonApiParser,
-    jsonapi_exception_handler,
-)
+from smplfrm.jsonapi import jsonapi_exception_handler
 from smplfrm.models import Task
 from smplfrm.services.task_service import TaskService
 from smplfrm.throttles import (
@@ -45,13 +40,6 @@ TASK_DISPATCH = {
 }
 
 
-class TaskPagination(JsonApiPageNumberPagination):
-    """JSON:API pagination for tasks with page[number] and page[size]."""
-
-    page_size = 5
-    max_page_size = 100
-
-
 class TaskViewSet(viewsets.ModelViewSet):
     """JSON:API Task endpoint.
 
@@ -71,9 +59,6 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     queryset = Task.objects.filter(deleted=False).order_by("-created")
     serializer_class = TaskSerializer
-    renderer_classes = [JsonApiRenderer]
-    parser_classes = [JsonApiParser]
-    pagination_class = TaskPagination
     lookup_field = "external_id"
     throttle_classes = [
         GlobalAnonThrottle,

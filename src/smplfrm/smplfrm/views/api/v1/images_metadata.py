@@ -10,9 +10,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from rest_framework import status, viewsets
 from rest_framework.response import Response
-from rest_framework_json_api.pagination import JsonApiPageNumberPagination
 
-from smplfrm.jsonapi import JsonApiRenderer, JsonApiParser, jsonapi_exception_handler
+from smplfrm.jsonapi import jsonapi_exception_handler
 from smplfrm.models import ImageMetadata
 from smplfrm.services.image_metadata_service import ImageMetadataService
 from smplfrm.views.serializers.v1.image_metadata_serializer import (
@@ -20,13 +19,6 @@ from smplfrm.views.serializers.v1.image_metadata_serializer import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class ImageMetadataPagination(JsonApiPageNumberPagination):
-    """JSON:API pagination for image metadata with page[number]."""
-
-    page_size = 5
-    max_page_size = 100
 
 
 class ImagesMetadata(viewsets.ModelViewSet):
@@ -54,9 +46,6 @@ class ImagesMetadata(viewsets.ModelViewSet):
         .order_by("-created")
     )
     serializer_class = ImageMetadataSerializer
-    renderer_classes = [JsonApiRenderer]
-    parser_classes = [JsonApiParser]
-    pagination_class = ImageMetadataPagination
     lookup_field = "external_id"
     resource_name = "image_metadata"
 
