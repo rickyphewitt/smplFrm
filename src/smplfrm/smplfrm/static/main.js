@@ -50,7 +50,10 @@ export async function getNextImage() {
     error.status = 429;
     throw error;
   }
-  return response.json();
+  const data = await response.json();
+  // Unwrap JSON:API response: { data: { type, id, attributes } } -> { id, ...attributes }
+  const resource = unwrapResource(data);
+  return { id: resource.id, ...resource.attributes };
 }
 
 async function displayMetadata(imageId) {

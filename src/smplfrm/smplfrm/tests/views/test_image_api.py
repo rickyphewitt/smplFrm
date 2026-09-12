@@ -2,10 +2,11 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from smplfrm.models import Image
+from smplfrm.services import ImageService, LibraryService
 
 
 class TestImageAPI(TestCase):
-    """Test suite for Image API serialization."""
+    """Test suite for Image API serialization with JSON:API format."""
 
     def setUp(self):
         self.client = APIClient()
@@ -14,41 +15,51 @@ class TestImageAPI(TestCase):
         )
 
     def test_get_image_includes_view_count(self):
-        """Test that image API response includes view_count field."""
+        """Test that image API response includes view_count in attributes."""
         response = self.client.get(f"/api/v1/images/{self.image.external_id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("view_count", response.data)
-        self.assertEqual(response.data["view_count"], 0)
+        body = response.json()
+        self.assertIn("view_count", body["data"]["attributes"])
+        self.assertEqual(body["data"]["attributes"]["view_count"], 0)
 
     def test_get_image_does_not_expose_file_path(self):
         """Test that image API response does not contain file_path."""
         response = self.client.get(f"/api/v1/images/{self.image.external_id}")
         self.assertEqual(response.status_code, 200)
-        self.assertNotIn("file_path", response.data)
+        body = response.json()
+        self.assertNotIn("file_path", body["data"]["attributes"])
 
     def test_list_images_does_not_expose_file_path(self):
         """Test that image list API response does not contain file_path."""
         response = self.client.get("/api/v1/images")
         self.assertEqual(response.status_code, 200)
-        for image in response.json():
-            self.assertNotIn("file_path", image)
+        body = response.json()
+        for image in body["data"]:
+            self.assertNotIn("file_path", image["attributes"])
 
     def test_get_image_returns_expected_fields_only(self):
         """Test that image API response contains exactly the expected fields."""
         response = self.client.get(f"/api/v1/images/{self.image.external_id}")
         self.assertEqual(response.status_code, 200)
+        body = response.json()
         expected_fields = {
-            "id",
             "name",
             "file_name",
             "created",
             "updated",
             "view_count",
         }
-        self.assertEqual(set(response.data.keys()), expected_fields)
+        self.assertEqual(set(body["data"]["attributes"].keys()), expected_fields)
 
-
-from smplfrm.services import ImageService, LibraryService
+    def test_get_image_json_api_structure(self):
+        """Test that response follows JSON:API structure."""
+        response = self.client.get(f"/api/v1/images/{self.image.external_id}")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("data", body)
+        self.assertEqual(body["data"]["type"], "images")
+        self.assertEqual(body["data"]["id"], self.image.external_id)
+        self.assertIn("attributes", body["data"])
 
 
 class TestImageDimensionBoundsExploration(TestCase):

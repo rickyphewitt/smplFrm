@@ -72,7 +72,7 @@ describe('Image Cycle Resilience to 429 Responses', () => {
     });
   }
 
-  function make200Response(data = { id: 'img-new' }) {
+  function make200Response(data = { data: { type: 'images', id: 'img-new', attributes: { name: 'new.jpg' } } }) {
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -158,11 +158,15 @@ describe('Image Cycle Resilience to 429 Responses', () => {
 
   describe('refreshInterval timer restarted from recovery moment on success', () => {
     it('uses refreshInterval as the delay for the next cycle after successful fetch', async () => {
-      // Successful response — no retries needed
-      fetch.mockResolvedValueOnce(make200Response({ id: 'img-recovered' }));
+      // Successful response — no retries needed (JSON:API format)
+      fetch.mockResolvedValueOnce(
+        make200Response({
+          data: { type: 'images', id: 'img-recovered', attributes: { name: 'recovered.jpg' } },
+        }),
+      );
 
       const result = await getNextImage();
-      expect(result).toEqual({ id: 'img-recovered' });
+      expect(result.id).toBe('img-recovered');
 
       // loadNext schedules the next image load via:
       //   setTimeout(() => { ... loadNext(newImage) }, config.refreshInterval)
@@ -174,10 +178,14 @@ describe('Image Cycle Resilience to 429 Responses', () => {
     });
 
     it('resets timer from recovery moment after 429 then success', async () => {
-      // First attempt: 429, then retry succeeds
+      // First attempt: 429, then retry succeeds (JSON:API format)
       fetch
         .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make200Response({ id: 'img-recovered' }));
+        .mockResolvedValueOnce(
+          make200Response({
+            data: { type: 'images', id: 'img-recovered', attributes: { name: 'recovered.jpg' } },
+          }),
+        );
 
       let result = null;
       const promise = getNextImage().then((r) => {
@@ -188,7 +196,7 @@ describe('Image Cycle Resilience to 429 Responses', () => {
       await vi.advanceTimersByTimeAsync(1000);
       await promise;
 
-      expect(result).toEqual({ id: 'img-recovered' });
+      expect(result.id).toBe('img-recovered');
 
       // After recovery, loadNext uses refreshInterval from this moment
       // (not from the original request time)
