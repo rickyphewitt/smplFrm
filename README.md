@@ -117,10 +117,54 @@ This repo uses python 3.14. Ensure you download the following dependencies
 * python3.14-venv
   * Same note about deadsnakes above
 
+**Run tests:**
+```bash
+make test                 # Run all Python tests (includes contract validation)
+make test-api-contract    # Run only API contract validation tests
+```
+
 ### Code Formating
 * This repo uses [black](https://pypi.org/project/black/) to format the code
 * Run `make pre-commit` to install the pre-commit hook
 * To mostly ignore the commit that formatted the repo run `make ignore-format-commit`
+
+### API Contract Enforcement
+
+All `/api/v1/` endpoints must be explicitly classified in the API contract manifest. This prevents unreviewed or misconfigured endpoints from being deployed.
+
+**Adding a new API endpoint:**
+
+1. Implement your view and register the route in `urls.py`
+2. Run `make test-api-contract` (or `make test`)
+   - ❌ **Test will fail** with message: `UNCLASSIFIED ROUTES: GET /api/v1/your-endpoint`
+3. Add a `RouteContract` entry to `src/smplfrm/smplfrm/tests/api_contract/manifest.py`:
+   ```python
+   RouteContract(
+       method="GET",
+       pattern="/api/v1/your-endpoint",
+       protocol=Protocol.JSON_API,  # or BINARY, OAUTH_EXEMPT, etc.
+       resource_type="your_resources",
+       allowed_query_params={"page[number]"},  # Explicitly list allowed params
+       exemption_reason=None,  # Required for non-JSON:API protocols
+       notes="Optional description",
+   ),
+   ```
+4. Run `make test-api-contract` again
+   - ✅ **Test passes** - endpoint is now classified
+5. Commit your code and manifest entry together
+
+**Contract validation runs automatically:**
+- Locally: `make test` includes contract tests
+- CI: Every PR runs contract validation before merge
+- **CI will fail** if you add an endpoint without classifying it
+
+**Protocol classifications:**
+- `Protocol.JSON_API` - Standard JSON:API 1.1 endpoint
+- `Protocol.BINARY` - Binary response (e.g., image delivery)
+- `Protocol.OAUTH_EXEMPT` - OAuth/auth flows with native responses
+- `Protocol.REDIRECT_EXEMPT` - Endpoints that return redirects or HTML
+
+See `src/smplfrm/smplfrm/tests/api_contract/manifest.py` for examples of all route types.
 
 
 ### Environment Variables

@@ -39,6 +39,9 @@ makemigrations:
 test:
 	. ./local_venv/bin/activate; cd ./src/smplfrm; pytest
 
+test-api-contract:
+	. ./local_venv/bin/activate; cd ./src/smplfrm; pytest smplfrm/tests/test_api_contract.py -q --tb=short
+
 test-js:
 	$(NPM) test
 
