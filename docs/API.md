@@ -2,6 +2,9 @@
 
 smplFrm exposes a REST API under `/api/v1/` following **JSON:API 1.1 with a documented PUT deviation**.
 
+**NOTE: These API standards are for internal API's used by the smplFrm frontend and not intended for external api client use. Breaking changes will occur without warning.**
+
+
 ## Profile Summary
 
 - **Specification basis:** [JSON:API 1.1](https://jsonapi.org/format/1.1/)
@@ -336,3 +339,151 @@ DELETE /api/v1/tasks/aBcDeFgHiJkLmNoP
 - Tasks are soft-deleted and retained for history
 - Rate limiting: `SMPL_FRM_THROTTLE_TASK_RATE` (default: `10/minute`)
 
+
+
+### Images
+
+Image resources represent photos in the library. Images are read-only through the API.
+
+**Endpoint:** `/api/v1/images`
+
+#### List Images (GET)
+
+```http
+GET /api/v1/images?page[number]=1
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "type": "images",
+      "id": "aBcDeFgHiJkLmNoP",
+      "attributes": {
+        "name": "sunset.jpg",
+        "file_name": "sunset.jpg",
+        "created": "2026-08-05T10:30:00Z",
+        "updated": "2026-08-05T10:30:00Z",
+        "view_count": 42
+      }
+    }
+  ],
+  "links": {
+    "first": "/api/v1/images?page[number]=1",
+    "last": "/api/v1/images?page[number]=10",
+    "next": "/api/v1/images?page[number]=2",
+    "prev": null
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pages": 10,
+      "count": 50
+    }
+  }
+}
+```
+
+#### Get Image (GET)
+
+```http
+GET /api/v1/images/aBcDeFgHiJkLmNoP
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "images",
+    "id": "aBcDeFgHiJkLmNoP",
+    "attributes": {
+      "name": "sunset.jpg",
+      "file_name": "sunset.jpg",
+      "created": "2026-08-05T10:30:00Z",
+      "updated": "2026-08-05T10:30:00Z",
+      "view_count": 42
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `403 Forbidden` — Image not found (prevents ID enumeration)
+
+#### Next Image (GET)
+
+Select the next image for display cycling and preload upcoming images.
+
+```http
+GET /api/v1/images/next?width=1920&height=1080
+Accept: application/vnd.api+json
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `width` | integer | 100 | Target display width in pixels |
+| `height` | integer | 100 | Target display height in pixels |
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "images",
+    "id": "aBcDeFgHiJkLmNoP",
+    "attributes": {
+      "name": "sunset.jpg",
+      "file_name": "sunset.jpg",
+      "created": "2026-08-05T10:30:00Z",
+      "updated": "2026-08-05T10:30:00Z",
+      "view_count": 42
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` — Invalid dimension parameters (non-numeric, zero, negative, or exceeds max)
+- `404 Not Found` — No images available in library
+
+#### Display Image (GET) — Protocol Exempt
+
+Returns binary image data for display. **Not a JSON:API endpoint.**
+
+```http
+GET /api/v1/images/aBcDeFgHiJkLmNoP/display?width=1920&height=1080
+```
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `width` | integer | 100 | Target width in pixels |
+| `height` | integer | 100 | Target height in pixels |
+
+**Response (200 OK):**
+- Content-Type: `image/jpeg`
+- Body: Binary image data
+
+**Error Responses:**
+- `400 Bad Request` — Invalid dimension parameters
+- `404 Not Found` — Image file not found on disk
+
+#### Image Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Display name of the image |
+| `file_name` | string | Original filename |
+| `created` | datetime | ISO 8601 creation timestamp |
+| `updated` | datetime | ISO 8601 last update timestamp |
+| `view_count` | integer | Number of times image has been displayed |
+
+#### Notes
+
+- Images are **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
+- `file_path` is intentionally excluded from responses for security
+- View count is incremented each time `/display` is called
+- The `/next` endpoint triggers background caching of upcoming images

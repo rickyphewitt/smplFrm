@@ -123,14 +123,21 @@ describe('main.js', () => {
   });
 
   describe('getNextImage', () => {
-    it('fetches next image with window dimensions', async () => {
+    it('fetches next image with window dimensions and unwraps JSON:API', async () => {
       window.innerWidth = 1920;
       window.innerHeight = 1080;
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
           status: 200,
-          json: () => Promise.resolve({ id: 'test-123', url: '/test.jpg' }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                type: 'images',
+                id: 'test-123',
+                attributes: { name: 'test.jpg', view_count: 5 },
+              },
+            }),
         }),
       );
 
@@ -140,7 +147,8 @@ describe('main.js', () => {
         'http://localhost:8321/api/v1/images/next?width=1920&height=1080',
         {},
       );
-      expect(result).toEqual({ id: 'test-123', url: '/test.jpg' });
+      // Should unwrap JSON:API to flat object
+      expect(result).toEqual({ id: 'test-123', name: 'test.jpg', view_count: 5 });
     });
   });
 
