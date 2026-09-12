@@ -61,7 +61,7 @@ async function displayMetadata(imageId) {
 
   try {
     const response = await resilientFetch(
-      buildApiUrl(`images_metadata?image__external_id=${imageId}`),
+      buildApiUrl(`images_metadata?filter[image]=${imageId}`),
     );
     if (!response.ok) {
       // Silently ignore 429 responses — don't show error for rate limiting
@@ -70,7 +70,14 @@ async function displayMetadata(imageId) {
     }
 
     const data = await response.json();
-    const takenDate = Date.parse(data[0].taken);
+    // Unwrap JSON:API response
+    const { resources } = unwrapResourceList(data);
+    if (resources.length === 0) {
+      document.getElementById('photo-date').innerHTML = `📷`;
+      return;
+    }
+
+    const takenDate = Date.parse(resources[0].attributes.taken);
 
     if (isNaN(takenDate)) {
       document.getElementById('photo-date').innerHTML = `📷`;

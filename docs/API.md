@@ -132,6 +132,7 @@ Related resources are expressed as identifier-only linkage objects:
 }
 ```
 
+- The `id` in relationships must be the related resource's `external_id` (16-character alphanumeric), never the internal database primary key
 - No `included` compound documents (never emitted)
 - No inline embedding of related objects
 - Related data is never duplicated under `attributes`
@@ -487,3 +488,116 @@ GET /api/v1/images/aBcDeFgHiJkLmNoP/display?width=1920&height=1080
 - `file_path` is intentionally excluded from responses for security
 - View count is incremented each time `/display` is called
 - The `/next` endpoint triggers background caching of upcoming images
+
+
+
+### Image Metadata
+
+Image metadata resources contain EXIF-derived information about images, primarily the date the photo was taken.
+
+**Endpoint:** `/api/v1/images_metadata`
+
+#### List Image Metadata (GET)
+
+```http
+GET /api/v1/images_metadata?page[number]=1
+Accept: application/vnd.api+json
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page[number]` | integer | Page number (default: 1) |
+| `filter[image]` | string | Filter by image external_id |
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "type": "image_metadata",
+      "id": "aBcDeFgHiJkLmNoP",
+      "attributes": {
+        "taken": "2024-06-15T14:30:00Z",
+        "created": "2026-08-05T10:30:00Z",
+        "updated": "2026-08-05T10:30:00Z"
+      },
+      "relationships": {
+        "image": {
+          "data": { "type": "images", "id": "qRsTuVwXyZaBcDeF" }
+        }
+      }
+    }
+  ],
+  "links": {
+    "first": "/api/v1/images_metadata?page[number]=1",
+    "last": "/api/v1/images_metadata?page[number]=5",
+    "next": "/api/v1/images_metadata?page[number]=2",
+    "prev": null
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pages": 5,
+      "count": 25
+    }
+  }
+}
+```
+
+#### Filter by Image
+
+```http
+GET /api/v1/images_metadata?filter[image]=aBcDeFgHiJkLmNoP
+Accept: application/vnd.api+json
+```
+
+Returns metadata for the specified image only.
+
+#### Get Image Metadata (GET)
+
+```http
+GET /api/v1/images_metadata/aBcDeFgHiJkLmNoP
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "image_metadata",
+    "id": "aBcDeFgHiJkLmNoP",
+    "attributes": {
+      "taken": "2024-06-15T14:30:00Z",
+      "created": "2026-08-05T10:30:00Z",
+      "updated": "2026-08-05T10:30:00Z"
+    },
+    "relationships": {
+      "image": {
+        "data": { "type": "images", "id": "qRsTuVwXyZaBcDeF" }
+      }
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `403 Forbidden` — Metadata not found (prevents ID enumeration)
+
+#### Image Metadata Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `taken` | datetime | ISO 8601 timestamp when photo was taken (from EXIF) |
+| `created` | datetime | ISO 8601 record creation timestamp |
+| `updated` | datetime | ISO 8601 last update timestamp |
+
+#### Relationships
+
+| Relationship | Type | Description |
+|--------------|------|-------------|
+| `image` | Image | Parent image this metadata belongs to |
+
+#### Notes
+
+- Image metadata is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
