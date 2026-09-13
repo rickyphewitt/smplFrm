@@ -60,11 +60,24 @@ class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.filter(deleted=False).order_by("-created")
     serializer_class = TaskSerializer
     lookup_field = "external_id"
+    # Default throttles cover every action with the applicable principal bucket.
+    # The task-creation bucket is added only for the create action.
     throttle_classes = [
         GlobalAnonThrottle,
         GlobalAuthenticatedThrottle,
-        GlobalTaskThrottle,
     ]
+
+    def get_throttles(self):
+        """Select throttle classes by action.
+
+        All task actions are subject to the applicable anonymous or authenticated
+        global throttle.  Only task creation (POST) additionally consumes the
+        task-specific creation bucket, per the API rate-limiting contract.
+        """
+        throttles = super().get_throttles()
+        if self.action == "create":
+            throttles.append(GlobalTaskThrottle())
+        return throttles
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

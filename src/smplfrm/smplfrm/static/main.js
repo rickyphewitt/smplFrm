@@ -1,4 +1,4 @@
-import { resilientFetch } from './resilientFetch.js';
+import { resilientFetch, taskPollFetch, parseRetryAfter } from './resilientFetch.js';
 import {
   fetchJsonApi,
   JsonApiError,
@@ -615,40 +615,151 @@ export async function startTask(taskType) {
   }
 }
 
-function pollTask(taskId, label) {
+// Registry of active poll controllers, keyed by task external ID.
+// Prevents duplicate pollers for the same task within one browser page.
+const _activePollers = new Map();
+
+// Normal polling cadence after a successful response settles (milliseconds).
+const POLL_INTERVAL_MS = 3000;
+
+/**
+ * Starts or replaces the poll controller for a given task.
+ *
+ * Maintains at most one active controller per task identifier. If a controller
+ * already exists for the task, it is cancelled before the new one starts,
+ * preventing duplicate concurrent pollers for the same task.
+ *
+ * The controller is self-scheduling: it issues one request, waits for it to
+ * settle, then schedules the next iteration — never overlapping. On 429 it
+ * schedules exactly one subsequent iteration after the Retry-After delay
+ * without an internal retry chain. On a terminal response the controller
+ * marks itself terminal before any UI work, cancelling all future scheduling
+ * and suppressing stale continuations.
+ *
+ * @param {string} taskId - The task external identifier
+ * @param {string} label  - Human-readable task label for the toast
+ */
+export function pollTask(taskId, label) {
   const toast = document.getElementById('task-toast');
   const bar = document.getElementById('task-toast-bar');
   const text = document.getElementById('task-toast-text');
+
+  // Cancel any existing controller for this task ID before creating a new one.
+  const existing = _activePollers.get(taskId);
+  if (existing) {
+    existing.cancel();
+  }
+
+  // Controller state
+  const controller = {
+    terminal: false,
+    _timerId: null,
+    cancel() {
+      this.terminal = true;
+      if (this._timerId !== null) {
+        clearTimeout(this._timerId);
+        this._timerId = null;
+      }
+      _activePollers.delete(taskId);
+    },
+  };
+
+  _activePollers.set(taskId, controller);
 
   toast.classList.add('show');
   text.textContent = `${label} 0%`;
   bar.style.width = '0%';
 
-  const interval = setInterval(async () => {
-    try {
-      const response = await resilientFetch(buildApiUrl(`tasks/${taskId}`));
-      // On exhausted 429: keep toast visible with last progress, continue polling
-      if (response.status === 429) return;
-      if (!response.ok) throw new Error('Poll failed');
-      const data = await response.json();
-      const task = data.data.attributes;
-
-      bar.style.width = `${task.progress}%`;
-      text.textContent = `${label} ${task.progress}%`;
-
-      if (task.status === 'completed' || task.status === 'failed') {
-        clearInterval(interval);
-        text.textContent =
-          task.status === 'completed'
-            ? `${label} Done!`
-            : `${label} Failed: ${task.error}`;
-        setTimeout(() => toast.classList.remove('show'), 3000);
-      }
-    } catch {
-      clearInterval(interval);
-      toast.classList.remove('show');
+  /**
+   * Executes one poll iteration. Checks controller identity and terminal state
+   * before issuing the request and before any UI mutation, preventing stale
+   * continuations from a replaced or cancelled controller from having effects.
+   */
+  async function runIteration() {
+    // Guard: do nothing if this controller has been superseded or cancelled.
+    if (controller.terminal || _activePollers.get(taskId) !== controller) {
+      return;
     }
-  }, 1000);
+
+    let response;
+    try {
+      response = await taskPollFetch(buildApiUrl(`tasks/${taskId}`));
+    } catch {
+      // Network failure: retain existing toast state, stop polling.
+      if (!controller.terminal && _activePollers.get(taskId) === controller) {
+        controller.cancel();
+        toast.classList.remove('show');
+      }
+      return;
+    }
+
+    // Stale-continuation guard: check identity again after the async boundary.
+    if (controller.terminal || _activePollers.get(taskId) !== controller) {
+      return;
+    }
+
+    if (response.status === 429) {
+      // Backoff: one subsequent iteration after Retry-After; no internal retry.
+      const waitSeconds = parseRetryAfter(response);
+      console.debug(
+        `[pollTask:${taskId}] 429 received, scheduling next poll in ${waitSeconds}s`,
+      );
+      controller._timerId = setTimeout(() => {
+        controller._timerId = null;
+        runIteration();
+      }, waitSeconds * 1000);
+      return;
+    }
+
+    if (!response.ok) {
+      // Unexpected non-429 error: retain current toast state, stop polling.
+      controller.cancel();
+      return;
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      controller.cancel();
+      return;
+    }
+
+    // Stale-continuation guard: check identity again after JSON parsing.
+    if (controller.terminal || _activePollers.get(taskId) !== controller) {
+      return;
+    }
+
+    const task = data.data.attributes;
+
+    if (task.status === 'completed' || task.status === 'failed') {
+      // Mark terminal BEFORE any UI work to block all future scheduling.
+      controller.cancel();
+      if (task.status === 'completed') {
+        bar.style.width = '100%';
+        text.textContent = `${label} Done!`;
+      } else {
+        text.textContent = `${label} Failed: ${task.error}`;
+      }
+      setTimeout(() => toast.classList.remove('show'), 3000);
+      return;
+    }
+
+    // Nonterminal success: update progress, schedule next iteration.
+    bar.style.width = `${task.progress}%`;
+    text.textContent = `${label} ${task.progress}%`;
+
+    controller._timerId = setTimeout(() => {
+      controller._timerId = null;
+      runIteration();
+    }, POLL_INTERVAL_MS);
+  }
+
+  // Schedule the first iteration.
+  controller._timerId = setTimeout(() => {
+    controller._timerId = null;
+    runIteration();
+  }, POLL_INTERVAL_MS);
 }
 
 let taskPage = 1;
