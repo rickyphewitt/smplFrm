@@ -134,6 +134,8 @@ class LibraryService(TaskReportingService):
         Args:
             image: Image instance to extract metadata for
         """
+        from smplfrm.models import ImageMetadata
+
         tag_dict = self._extract_metadata(image.file_path)
         image_meta = {
             "image": image,
@@ -142,10 +144,12 @@ class LibraryService(TaskReportingService):
 
         try:
             existing_meta = image.meta
-            existing_meta.exif = image_meta["exif"]
-            self.image_metadata_service.update(existing_meta)
-        except Exception:
+        except ImageMetadata.DoesNotExist:
             self.image_metadata_service.create(image_meta)
+            return
+
+        existing_meta.exif = image_meta["exif"]
+        self.image_metadata_service.update(existing_meta)
 
     def _extract_metadata(self, image_path: str) -> Dict[str, Any]:
         """Extract EXIF metadata from an image file.
@@ -178,12 +182,16 @@ class LibraryService(TaskReportingService):
         Returns:
             JSON-compatible representation of the value
         """
+        from math import isfinite
+
         if isinstance(value, TiffImagePlugin.IFDRational):
-            return float(value)
-        elif isinstance(value, tuple):
+            value = float(value)
+        if isinstance(value, float) and not isfinite(value):
+            return None
+        if isinstance(value, tuple):
             return [self._cast_to_json_compatible(t) for t in value]
-        elif isinstance(value, bytes):
+        if isinstance(value, bytes):
             return value.decode(errors="replace")
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return {k: self._cast_to_json_compatible(v) for k, v in value.items()}
         return value
