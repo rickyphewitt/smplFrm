@@ -30,6 +30,17 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Validate release tag
+        if: github.event_name == 'release'
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Release tag '$TAG' does not match required format vMAJOR.MINOR.PATCH"
+            echo "Examples: v1.2.3, v10.0.0, v2.15.8"
+            exit 1
+          fi
+          echo "Release tag '$TAG' is valid"
+
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
@@ -44,8 +55,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ github.event.release.tag_name }},enable=${{ github.event_name == 'release' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
