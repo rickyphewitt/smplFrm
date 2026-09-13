@@ -68,10 +68,10 @@ class TestLibraryService(TestCase):
         )
 
     def test_cast_to_json_compatible_converts_tuples_to_lists(self):
-        """Test that EXIF tuple values are converted to lists for JSON compatibility.
+        """Normalize tuple-shaped EXIF values as JSON arrays.
 
-        This prevents IntegrityError from SQLite's JSON_VALID() constraint.
-        JSON spec does not support tuples, only arrays (lists).
+        Tuples are serializable by Python's JSON encoder, but explicit conversion
+        ensures nested EXIF values pass through the same normalization path.
         """
         from PIL.TiffImagePlugin import IFDRational
 
@@ -100,6 +100,78 @@ class TestLibraryService(TestCase):
         # Test bytes (another EXIF type)
         result = self.library_service._cast_to_json_compatible(b"test")
         self.assertEqual(result, "test")
+
+    def test_cast_to_json_compatible_replaces_non_finite_numbers(self):
+        """Replace non-finite EXIF numbers that SQLite rejects as invalid JSON."""
+        from PIL.TiffImagePlugin import IFDRational
+
+        result = self.library_service._cast_to_json_compatible(
+            {
+                "zero_denominator": IFDRational(0, 0),
+                "nested": (float("nan"), float("inf"), float("-inf")),
+            }
+        )
+
+        self.assertEqual(
+            result,
+            {
+                "zero_denominator": None,
+                "nested": [None, None, None],
+            },
+        )
+
+    def test_non_finite_exif_is_persisted_as_json_null(self):
+        """Persist undefined EXIF rationals as JSON null instead of invalid NaN."""
+        from PIL.TiffImagePlugin import IFDRational
+        from smplfrm.models import ImageMetadata
+
+        image = self.image_service.create(
+            {
+                "name": "non-finite-exif.jpg",
+                "file_path": "/library/non-finite-exif.jpg",
+                "file_name": "non-finite-exif.jpg",
+            }
+        )
+        exif = {
+            "DigitalZoomRatio": self.library_service._cast_to_json_compatible(
+                IFDRational(0, 0)
+            )
+        }
+
+        image_meta = ImageMetadata.objects.create(image=image, exif=exif)
+
+        image_meta.refresh_from_db()
+        self.assertIsNone(image_meta.exif["DigitalZoomRatio"])
+
+    def test_save_image_meta_propagates_update_errors(self):
+        """Do not treat an existing metadata write failure as a missing record."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from django.db import IntegrityError
+
+        image = SimpleNamespace(
+            file_path="/library/existing.jpg",
+            meta=SimpleNamespace(exif={}),
+        )
+        error = IntegrityError("invalid EXIF JSON")
+
+        with patch.object(
+            self.library_service,
+            "_extract_metadata",
+            return_value={"DateTime": "2024:01:01 00:00:00"},
+        ), patch.object(
+            self.library_service.image_metadata_service,
+            "update",
+            side_effect=error,
+        ), patch.object(
+            self.library_service.image_metadata_service,
+            "create",
+        ) as mock_create:
+            with self.assertRaises(IntegrityError):
+                self.library_service.save_image_meta(image)
+
+        mock_create.assert_not_called()
 
 
 @override_settings(SMPL_FRM_LIBRARY_DIRS=test_library)
