@@ -163,3 +163,36 @@ export async function resilientFetch(url, options = {}) {
   );
   return response;
 }
+
+/**
+ * Performs a single fetch for task-status polling without internal 429 retries.
+ *
+ * Unlike resilientFetch, this function does not build a retry chain on 429.
+ * The task poll controller owns all scheduling decisions; returning the 429
+ * response directly lets it apply the correct Retry-After backoff without
+ * creating duplicate in-flight requests.
+ *
+ * The global rate-limit toast is still shown/hidden via the shared _rateLimited
+ * flag so the general-purpose UI indicator remains accurate.
+ *
+ * @param {string} url - The task-status request URL
+ * @param {RequestInit} [options] - Standard fetch options
+ * @returns {Promise<Response>} - The response (any status, never retried)
+ */
+export async function taskPollFetch(url, options = {}) {
+  const response = await fetch(url, options);
+
+  if (response.status === 429) {
+    if (!_rateLimited) {
+      _rateLimited = true;
+      showRateLimitToast();
+    }
+    return response;
+  }
+
+  if (_rateLimited) {
+    _rateLimited = false;
+    hideRateLimitToast();
+  }
+  return response;
+}

@@ -299,7 +299,7 @@ describe('main.js', () => {
       });
 
       await startTask('rescan_library');
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(3000);
 
       const text = document.getElementById('task-toast-text');
       expect(text.textContent).toBe('Rescan Library 50%');
@@ -342,11 +342,12 @@ describe('main.js', () => {
       });
 
       await startTask('reset_image_count');
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(3000);
 
       expect(document.getElementById('task-toast-text').textContent).toBe(
         'Reset Image Count Done!',
       );
+      expect(document.getElementById('task-toast-bar').style.width).toBe('100%');
     });
 
     it('shows label with error on failure', async () => {
@@ -386,7 +387,7 @@ describe('main.js', () => {
       });
 
       await startTask('clear_cache');
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(3000);
 
       expect(document.getElementById('task-toast-text').textContent).toBe(
         'Clear Cache Failed: disk full',

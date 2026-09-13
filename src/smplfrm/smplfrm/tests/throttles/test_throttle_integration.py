@@ -22,6 +22,15 @@ TEST_THROTTLE_RATES = {
 }
 
 TEST_REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "smplfrm.jsonapi.exceptions.jsonapi_exception_handler",
+    "DEFAULT_RENDERER_CLASSES": [
+        "smplfrm.jsonapi.renderers.JsonApiRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "smplfrm.jsonapi.parsers.JsonApiParser",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "smplfrm.jsonapi.pagination.JsonApiPagination",
+    "DEFAULT_METADATA_CLASS": "rest_framework_json_api.metadata.JSONAPIMetadata",
     "DEFAULT_THROTTLE_CLASSES": [
         "smplfrm.throttles.GlobalAnonThrottle",
         "smplfrm.throttles.GlobalAuthenticatedThrottle",
@@ -138,51 +147,110 @@ class TestAuthenticatedThrottling:
 
 
 class TestTaskEndpointThrottling:
-    """Task endpoint applies a stricter rate limit via GlobalTaskThrottle."""
+    """Task creation applies a stricter rate limit via GlobalTaskThrottle.
+
+    List, detail, and delete actions are NOT subject to the task-specific bucket;
+    only POST (create) consumes the task-creation quota.
+    """
 
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
-    def test_task_endpoint_applies_stricter_limit(self, api_client):
-        """Task endpoint is throttled at 2/min (stricter than general 3/min)."""
-        # First 2 requests should succeed (task limit is 2/min)
+    def test_task_create_applies_task_bucket(self, api_client):
+        """POST /tasks consumes the task-specific bucket (limit 2/min).
+
+        DRF throttle checks run in initial() before body parsing, so even
+        requests with an invalid body are counted against the throttle bucket.
+        We send a minimal JSON:API document that passes parsing but fails
+        business validation (400) so we can count task-bucket consumption.
+        """
+        invalid_task_body = '{"data":{"type":"no_such_task_type","attributes":{}}}'
+
+        # First 2 POST requests count against the task bucket; body validation
+        # returns 400 but the throttle tick has already been recorded.
+        for _ in range(2):
+            response = api_client.post(
+                "/api/v1/tasks",
+                data=invalid_task_body,
+                content_type="application/vnd.api+json",
+            )
+            # Throttle passed → body validation runs → 400 or 409 expected
+            assert response.status_code in (201, 400, 409)
+
+        # 3rd POST must be rejected by the task-specific bucket (exhausted at 2)
+        response = api_client.post(
+            "/api/v1/tasks",
+            data=invalid_task_body,
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code == 429
+
+    @pytest.mark.django_db
+    @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
+    def test_task_list_does_not_consume_task_bucket(self, api_client):
+        """GET /tasks (list) does not consume the task-creation bucket.
+
+        We make exactly as many GET list requests as the task-creation limit
+        (2/min). If list requests consumed the task bucket, the subsequent POST
+        would return 429 from that bucket. Instead it must reach body validation
+        (returning 400), proving the task bucket was untouched.
+
+        We stay under the general anon limit (3/min) so the general throttle
+        cannot interfere with the result.
+        """
+        invalid_task_body = '{"data":{"type":"no_such_task_type","attributes":{}}}'
+
+        # Make exactly as many GET requests as the task-creation limit allows.
+        # If list consumed the task bucket, subsequent POST would be 429.
         for _ in range(2):
             response = api_client.get("/api/v1/tasks")
             assert response.status_code == 200
 
-        # 3rd request should be throttled by the task bucket
-        response = api_client.get("/api/v1/tasks")
-        assert response.status_code == 429
+        # A subsequent POST must NOT be rejected by the task bucket.
+        # 2 GETs consumed 2/3 of the general anon quota; this POST uses the 3rd.
+        # The task bucket must still be at full capacity.
+        response = api_client.post(
+            "/api/v1/tasks",
+            data=invalid_task_body,
+            content_type="application/vnd.api+json",
+        )
+        assert response.status_code != 429
 
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
-    def test_task_endpoint_counts_against_both_buckets(self, api_client):
-        """Requests to the task endpoint count against both task and general buckets."""
-        # Make 2 requests to the task endpoint (exhausts task bucket of 2)
-        for _ in range(2):
-            api_client.get("/api/v1/tasks")
+    def test_exhausting_task_creation_bucket_does_not_block_task_list(self, api_client):
+        """After exhausting the task-creation bucket, GET /tasks still succeeds."""
+        invalid_task_body = '{"data":{"type":"no_such_task_type","attributes":{}}}'
 
-        # The general anon bucket (limit 3) should have 2 counted against it
-        # So we should have 1 remaining request on the general bucket
-        response = api_client.get("/api/v1/configs")
+        # Exhaust the task-creation bucket with POST requests
+        for _ in range(2):
+            api_client.post(
+                "/api/v1/tasks",
+                data=invalid_task_body,
+                content_type="application/vnd.api+json",
+            )
+
+        # Task list should still work — it does not use the task-creation bucket
+        response = api_client.get("/api/v1/tasks")
         assert response.status_code == 200
 
     @pytest.mark.django_db
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
-    def test_exhausting_task_bucket_does_not_block_other_endpoints(self, api_client):
-        """Exhausting the task-specific bucket does not block non-task endpoints."""
-        # Exhaust the task bucket (2 requests).
+    def test_task_create_counts_against_both_buckets(self, api_client):
+        """POST /tasks counts against both the task-specific and general anon buckets."""
+        invalid_task_body = '{"data":{"type":"no_such_task_type","attributes":{}}}'
+
+        # Make 2 POST requests (exhausts task bucket of 2).
         # These also count against the general anon bucket (2 of 3 used).
         for _ in range(2):
-            api_client.get("/api/v1/tasks")
+            api_client.post(
+                "/api/v1/tasks",
+                data=invalid_task_body,
+                content_type="application/vnd.api+json",
+            )
 
-        # Other endpoints should still work — the general anon bucket has
-        # capacity remaining (1 of 3 left).
+        # General anon bucket has 1 remaining — a non-task request still works
         response = api_client.get("/api/v1/configs")
         assert response.status_code == 200
-
-        # Meanwhile the task endpoint is throttled (task bucket exhausted)
-        response = api_client.get("/api/v1/tasks")
-        assert response.status_code == 429
 
 
 class TestBucketIndependence:
