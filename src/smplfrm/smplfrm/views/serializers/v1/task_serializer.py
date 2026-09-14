@@ -13,6 +13,7 @@ TASK_TYPE_TO_JSONAPI_TYPE = {
     Task.TaskType.RESCAN_LIBRARY: "rescan_library_tasks",
     Task.TaskType.RESET_IMAGE_COUNT: "reset_image_count_tasks",
     Task.TaskType.CLEAR_CACHE: "clear_cache_tasks",
+    Task.TaskType.PRELOAD_IMAGE_CACHE: "preload_image_cache_tasks",
 }
 
 # Reverse mapping for parsing incoming requests

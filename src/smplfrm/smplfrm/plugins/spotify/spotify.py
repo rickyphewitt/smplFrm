@@ -135,7 +135,17 @@ class SpotifyPlugin(BasePlugin):
             item = results.get("item")
             playing_type = results.get("currently_playing_type")
 
+            # current_user_playing_track returns item=None for episodes
+            # Spotify API does not reliably provide episode metadata via this endpoint
             if not item:
+                if playing_type == "episode":
+                    # Use static labels for podcast episodes
+                    track = {
+                        "uri": None,
+                        "artist": "Awesome",
+                        "song": "Podcast",
+                    }
+                    return {"success": True, "is_playing": is_playing, "track": track}
                 return {"success": True, "is_playing": is_playing, "track": None}
 
             if playing_type == "track":
@@ -143,12 +153,6 @@ class SpotifyPlugin(BasePlugin):
                     "uri": item.get("uri"),
                     "artist": item.get("artists", [{}])[0].get("name", "Unknown"),
                     "song": item.get("name", "Unknown"),
-                }
-            elif playing_type == "episode":
-                track = {
-                    "uri": item.get("uri"),
-                    "artist": item.get("show", {}).get("name", "Podcast"),
-                    "song": item.get("name", "Episode"),
                 }
             else:
                 track = {

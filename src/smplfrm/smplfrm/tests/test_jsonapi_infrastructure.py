@@ -293,3 +293,210 @@ class TestStrictQueryMixin(TestCase):
             view.initial(request)
         except InvalidQueryParameterError:
             self.fail("Should not reject empty query string")
+
+    def test_sort_allowed_when_profile_configured(self):
+        """Allows sort parameter when route declares allowed profiles."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?sort=display_priority")
+
+        # Should not raise
+        try:
+            view.initial(request)
+        except InvalidQueryParameterError:
+            self.fail("Should not reject allowed sort profile")
+
+    def test_sort_rejects_unknown_profile(self):
+        """Rejects sort values not in the allowed profile set."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?sort=unknown")
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("sort", str(ctx.exception.detail))
+
+    def test_sort_rejects_blank_value(self):
+        """Rejects blank sort parameter."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?sort=")
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("sort", str(ctx.exception.detail))
+
+    def test_sort_rejects_comma_separated(self):
+        """Rejects comma-separated sort values."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority", "alphabetical"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?sort=display_priority,alphabetical")
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("sort", str(ctx.exception.detail))
+
+    def test_sort_rejects_direction_prefix(self):
+        """Rejects direction-prefixed sort values."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?sort=-display_priority")
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("sort", str(ctx.exception.detail))
+
+    def test_sort_rejects_duplicate_param(self):
+        """Rejects duplicate sort parameters."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = {"sort"}
+            allowed_sort_profiles = {"display_priority"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        # Django QueryDict allows multiple values for the same key
+        request = self._make_request(
+            "/test?sort=display_priority&sort=display_priority"
+        )
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("sort", str(ctx.exception.detail))
+
+    def test_exempt_actions_skip_validation(self):
+        """Actions in exempt_actions skip query validation."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = set()
+            exempt_actions = {"display_image"}
+            action = "display_image"
+
+            def initial(self, request, *args, **kwargs):
+                if self.action not in self.exempt_actions:
+                    self._validate_query_params(request)
+
+        view = TestView()
+        # Request has params that would normally be rejected
+        request = self._make_request("/test?width=100&height=200")
+
+        # Should not raise because action is exempt
+        try:
+            view.initial(request)
+        except InvalidQueryParameterError:
+            self.fail("Should not validate exempt actions")
+
+    def test_non_exempt_actions_still_validated(self):
+        """Actions not in exempt_actions are still validated."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = set()
+            exempt_actions = {"display_image"}
+            action = "list"  # Not exempt
+
+            def initial(self, request, *args, **kwargs):
+                if self.action not in self.exempt_actions:
+                    self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?unknown=value")
+
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+
+        self.assertIn("unknown", str(ctx.exception.detail))
+
+    def test_allows_filter_pattern_per_jsonapi_spec(self):
+        """Allows filter[] parameters per JSON:API spec."""
+        view = self._create_mixin_instance(allowed_params=set())
+        request = self._make_request("/test?filter[status]=active&filter[type]=image")
+
+        # Should not raise - filter[] is always allowed per JSON:API spec
+        try:
+            view.initial(request)
+        except InvalidQueryParameterError:
+            self.fail("Should allow filter[] parameters per JSON:API spec")
+
+    def test_allowed_filters_restricts_filter_fields(self):
+        """When allowed_filters is set, only those filter fields are accepted."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = set()
+            allowed_filters = {"status", "type"}
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        # Allowed filter
+        request = self._make_request("/test?filter[status]=active")
+        try:
+            view.initial(request)
+        except InvalidQueryParameterError:
+            self.fail("Should allow filter[status] when in allowed_filters")
+
+        # Disallowed filter
+        request = self._make_request("/test?filter[secret]=value")
+        with self.assertRaises(InvalidQueryParameterError) as ctx:
+            view.initial(request)
+        self.assertIn("filter[secret]", str(ctx.exception.detail))
+
+    def test_empty_allowed_filters_permits_all_filters(self):
+        """When allowed_filters is empty (default), all filter[] params pass."""
+
+        class TestView(StrictQueryMixin):
+            allowed_query_params = set()
+            allowed_filters = set()  # Empty = allow all
+
+            def initial(self, request, *args, **kwargs):
+                self._validate_query_params(request)
+
+        view = TestView()
+        request = self._make_request("/test?filter[any_field]=value&filter[other]=x")
+
+        try:
+            view.initial(request)
+        except InvalidQueryParameterError:
+            self.fail("Empty allowed_filters should permit all filter[] params")

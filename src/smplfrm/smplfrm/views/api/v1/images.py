@@ -14,27 +14,24 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from smplfrm.jsonapi import jsonapi_exception_handler
+from smplfrm.jsonapi import jsonapi_exception_handler, StrictQueryMixin
 from smplfrm.models import Image
 from smplfrm.services import CacheService, ImageService, ImageManipulationService
-from smplfrm.tasks import cache_images_task
 from smplfrm.views.serializers.v1.image_serializer import ImageSerializer
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_WIDTH = "100"
 DEFAULT_HEIGHT = "100"
-NEXT_IMAGE_COUNT = 5
 
 
-class Images(viewsets.ModelViewSet):
+class Images(StrictQueryMixin, viewsets.ModelViewSet):
     """JSON:API Image endpoint.
 
     Supports:
-    - GET /images - list all images (paginated)
+    - GET /images - list all images (paginated, with optional sort=display_priority)
     - GET /images/{external_id} - image detail
     - GET /images/{external_id}/display - binary image (EXEMPT from JSON:API)
-    - GET /images/next - next image for display cycle
 
     Forbidden:
     - POST (create)
@@ -52,6 +49,13 @@ class Images(viewsets.ModelViewSet):
     lookup_field = "external_id"
     resource_name = "images"
 
+    # Allow page[number], sort, and filter[] query parameters per JSON:API spec
+    allowed_query_params = {"page[number]", "sort"}
+    # Allow display_priority sort profile only
+    allowed_sort_profiles = {"display_priority"}
+    # Exempt display_image from JSON:API validation (uses filter[width]/filter[height] params)
+    exempt_actions = {"display_image"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = ImageService()
@@ -60,6 +64,18 @@ class Images(viewsets.ModelViewSet):
 
     def get_exception_handler(self):
         return jsonapi_exception_handler
+
+    def get_queryset(self):
+        """Return queryset with optional sort profile applied."""
+        sort_profile = self.request.query_params.get("sort")
+
+        try:
+            return self.service.get_ordered_images(sort_profile)
+        except ValueError as e:
+            # This should be caught by StrictQueryMixin validation,
+            # but handle defensively
+            logger.error(f"Invalid sort profile: {e}")
+            return Image.objects.filter(deleted=False).order_by("-created")
 
     def get_object(self):
         """Return 403 instead of 404 to prevent resource enumeration."""
@@ -135,7 +151,7 @@ class Images(viewsets.ModelViewSet):
         This endpoint is EXEMPT from JSON:API - returns binary image/jpeg.
 
         Args:
-            request: HTTP request with optional width/height parameters
+            request: HTTP request with optional filter[width]/filter[height] parameters
             external_id: External ID of the image
 
         Returns:
@@ -145,8 +161,8 @@ class Images(viewsets.ModelViewSet):
         if not image:
             return HttpResponse(status=404)
 
-        width = request.GET.get("width", DEFAULT_WIDTH)
-        height = request.GET.get("height", DEFAULT_HEIGHT)
+        width = request.GET.get("filter[width]", DEFAULT_WIDTH)
+        height = request.GET.get("filter[height]", DEFAULT_HEIGHT)
 
         result = ImageManipulationService.validate_dimensions(width, height)
         if result[0] is None:
@@ -177,57 +193,6 @@ class Images(viewsets.ModelViewSet):
         response = HttpResponse(status=200, headers={"Content-type": "image/jpeg"})
         response.write(cached_image.tobytes())
         return response
-
-    @action(methods=["get"], detail=False, url_path="next")
-    def next_image(self, request):
-        """Get the next image to display and preload upcoming images.
-
-        Args:
-            request: HTTP request with optional width/height parameters
-
-        Returns:
-            JSON:API formatted image resource
-        """
-        width = request.GET.get("width", DEFAULT_WIDTH)
-        height = request.GET.get("height", DEFAULT_HEIGHT)
-
-        result = ImageManipulationService.validate_dimensions(width, height)
-        if result[0] is None:
-            return Response(
-                {
-                    "errors": [
-                        {
-                            "status": "400",
-                            "code": "invalid_dimensions",
-                            "detail": result[1],
-                        }
-                    ]
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        images = self.service.get_next()[:NEXT_IMAGE_COUNT]
-        if not images:
-            return Response(
-                {
-                    "errors": [
-                        {
-                            "status": "404",
-                            "code": "not_found",
-                            "detail": "No images available",
-                        }
-                    ]
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        image = images[0]
-        serializer = self.get_serializer(image)
-
-        cache_image_list = [img.external_id for img in images]
-        cache_images_task.delay(cache_image_list, height, width)
-
-        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """Create image record from validated data."""

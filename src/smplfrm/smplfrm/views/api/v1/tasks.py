@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from smplfrm.jsonapi import jsonapi_exception_handler
 from smplfrm.models import Task
 from smplfrm.services.task_service import TaskService
+from smplfrm.services.preload_service import PreloadService, PreloadConflict
 from smplfrm.throttles import (
     GlobalAnonThrottle,
     GlobalAuthenticatedThrottle,
@@ -29,6 +30,9 @@ from smplfrm.views.serializers.v1.task_serializer import (
     TaskSerializer,
     JSONAPI_TYPE_TO_TASK_TYPE,
     TASK_TYPE_TO_JSONAPI_TYPE,
+)
+from smplfrm.views.serializers.v1.preload_serializer import (
+    PreloadImageCacheTaskSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,6 +86,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = TaskService()
+        self.preload_service = PreloadService()
 
     def get_exception_handler(self):
         return jsonapi_exception_handler
@@ -97,9 +102,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         """Create a new task and dispatch to Celery.
 
         The task_type is determined from the JSON:API type field.
+        Preload tasks are handled through PreloadService for admission control.
         """
         # Extract type from JSON:API document
-        # The parser flattens the document, but we need the original type
         jsonapi_type = request.data.get("type")
         if not jsonapi_type:
             return Response(
@@ -134,6 +139,11 @@ class TaskViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Handle preload tasks through PreloadService
+        if task_type == Task.TaskType.PRELOAD_IMAGE_CACHE:
+            return self._create_preload_task(request)
+
+        # Handle other task types with existing logic
         try:
             task = self.service.create({"task_type": task_type})
         except IntegrityError as e:
@@ -173,6 +183,73 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(task)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _create_preload_task(self, request):
+        """Create a preload task through PreloadService.
+
+        Validates input, checks admission control, and dispatches work.
+        """
+        # Validate preload-specific attributes
+        preload_serializer = PreloadImageCacheTaskSerializer(data=request.data)
+        if not preload_serializer.is_valid():
+            errors = []
+            for field, messages in preload_serializer.errors.items():
+                for message in messages if isinstance(messages, list) else [messages]:
+                    errors.append(
+                        {
+                            "status": "400",
+                            "code": "validation_error",
+                            "detail": str(message),
+                            "source": {"pointer": f"/data/attributes/{field}"},
+                        }
+                    )
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        validated_data = preload_serializer.validated_data
+
+        try:
+            task = self.preload_service.create_preload_task(
+                image_ids=validated_data["image_ids"],
+                width=validated_data["width"],
+                height=validated_data["height"],
+            )
+
+            if task is None:
+                # All images already cached - return 204 No Content
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+            serializer = self.get_serializer(task)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except PreloadConflict as e:
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "409",
+                            "code": e.code,
+                            "detail": e.detail,
+                        }
+                    ]
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        except Exception as e:
+            logger.error(
+                "Unexpected error during preload task creation: %s", e, exc_info=True
+            )
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "500",
+                            "code": "internal_error",
+                            "detail": "An internal error occurred",
+                        }
+                    ]
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def update(self, request, *args, **kwargs):
         return Response(

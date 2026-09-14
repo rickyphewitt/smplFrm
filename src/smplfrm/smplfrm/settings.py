@@ -243,11 +243,20 @@ REST_FRAMEWORK = {
 CELERY_BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:6379/0"
 CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:6379/0"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers.DatabaseScheduler"
+
+# Build beat schedule with core tasks and plugin tasks
+from smplfrm.plugins import get_beat_schedules  # noqa: E402
+
 CELERY_BEAT_SCHEDULE = {
     "clear-old-tasks": {
         "task": "clear_old_tasks",
         "schedule": crontab(hour=0, minute=0),
     },
+    "recover-stale-preload-tasks": {
+        "task": "recover_stale_preload_tasks",
+        "schedule": 300,  # Run every 5 minutes
+    },
+    **get_beat_schedules(),
 }
 
 

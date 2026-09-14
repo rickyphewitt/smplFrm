@@ -95,6 +95,46 @@ class TestSpotifyView(TestCase):
         self.assertEqual(data["errors"][0]["code"], "spotify_unavailable")
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
+    def test_status_with_podcast_episode(self, mock_spotify_service):
+        """Test status endpoint handles podcast episodes with null uri.
+
+        Regression test: Podcasts previously showed 'null' instead of show name.
+        Podcasts may have uri=None, so we generate ID from show+episode names.
+        """
+        mock_spotify_instance = Mock()
+        mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.get_now_playing.return_value = {
+            "success": True,
+            "is_playing": True,
+            "track": {
+                "uri": None,  # Podcasts may have null uri
+                "artist": "Awesome Podcast",
+                "song": "Episode 42",
+            },
+        }
+
+        response = self.client.get(f"{self.uri}/status")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Verify track relationship is present (not null)
+        track_rel = data["data"]["relationships"]["track"]["data"]
+        self.assertIsNotNone(
+            track_rel, "Track relationship should not be null for podcasts"
+        )
+        self.assertEqual(track_rel["type"], "spotify_tracks")
+
+        # Verify track has opaque ID generated from content
+        self.assertIsNotNone(track_rel["id"])
+
+        # Verify included track with podcast info
+        self.assertIn("included", data)
+        track = data["included"][0]
+        self.assertEqual(track["attributes"]["artist"], "Awesome Podcast")
+        self.assertEqual(track["attributes"]["song"], "Episode 42")
+
+    @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_status_authorization_required(self, mock_spotify_service):
         """Test status endpoint returns 401 when authorization required."""
         mock_spotify_instance = Mock()

@@ -81,23 +81,22 @@ class TestSpotifyService(TestCase):
         self.assertEqual(ret_value["track"]["song"], "not_supported")
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
-    def test_spotify_returns_success_unsupported_type_episode(self, mock_spotify):
+    def test_spotify_returns_success_episode_with_no_item(self, mock_spotify):
+        """Test that episodes return static labels when item is None."""
         mock_spotify_instance = Mock()
         mock_spotify.return_value = mock_spotify_instance
         mock_spotify_instance.current_user_playing_track.return_value = {
             "currently_playing_type": "episode",
             "is_playing": True,
-            "item": {
-                "uri": "spotify:episode:abc123",
-                "name": "Episode Title",
-                "show": {"name": "Show Name"},
-            },
+            "item": None,
         }
 
         ret_value = self.service.get_now_playing()
         self.assertTrue(ret_value["success"])
-        self.assertEqual(ret_value["track"]["artist"], "Show Name")
-        self.assertEqual(ret_value["track"]["song"], "Episode Title")
+        self.assertTrue(ret_value["is_playing"])
+        self.assertEqual(ret_value["track"]["artist"], "Awesome")
+        self.assertEqual(ret_value["track"]["song"], "Podcast")
+        self.assertIsNone(ret_value["track"]["uri"])
 
     @patch("smplfrm.plugins.spotify.spotify.Spotify")
     def test_spotify_returns_exception(self, mock_spotify):

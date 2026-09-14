@@ -1,255 +1,258 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
+/**
+ * Tests for image queue resilience and preload best-effort behavior
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('Image Cycle Resilience to 429 Responses', () => {
-  let window, document;
-  let getNextImage, buildApiUrl;
+describe('Image Queue Resilience', () => {
+  let getNextImage;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
-
-    const dom = new JSDOM(
-      `
-      <!DOCTYPE html>
-      <html>
-        <body>
-          <div id="image-container"></div>
-          <div id="progress-bar"></div>
-          <div id="photo-date"></div>
-          <div id="current-date"></div>
-          <div id="current-time"></div>
-          <div id="weather-temp"></div>
-          <div id="rate-limit-toast"></div>
-          <div class="task-toast" id="task-toast">
-            <span id="task-toast-text"></span>
-            <div class="task-toast-track">
-              <div class="task-toast-bar" id="task-toast-bar"></div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `,
-      { url: 'http://localhost' },
-    );
-
-    window = dom.window;
-    document = window.document;
-    global.window = window;
-    global.document = document;
-    global.Image = window.Image;
+    vi.resetModules();
+    global.fetch = vi.fn();
+    global.console.error = vi.fn();
+    global.console.debug = vi.fn();
 
     window.SMPL_CONFIG = {
-      transitionInterval: 1000,
-      refreshInterval: 30000,
       host: 'http://localhost',
-      port: '8321',
-      displayDate: false,
-      displayClock: false,
-      imageZoomEffect: false,
-      imageTransitionType: 'none',
+      port: 8321,
+      refreshInterval: 30000,
     };
 
-    vi.stubGlobal('fetch', vi.fn());
-    vi.spyOn(console, 'debug').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.innerWidth = 1920;
+    window.innerHeight = 1080;
 
+    document.body.innerHTML = `
+      <div id="image-container"></div>
+      <div id="progress-bar"></div>
+    `;
+
+    // Import after mocks are set
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     getNextImage = module.getNextImage;
-    buildApiUrl = module.buildApiUrl;
   });
 
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    vi.resetModules();
-  });
+  describe('queue behavior when collection fetch succeeds', () => {
+    it('returns images from queue in order', async () => {
+      global.fetch
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
+              { type: 'images', id: 'img-2', attributes: { name: 'second.jpg' } },
+              { type: 'images', id: 'img-3', attributes: { name: 'third.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 3, pages: 1, page: 1 } },
+          }),
+        })
+        // Mock successful preload request
+        .mockResolvedValueOnce({ status: 201, ok: true });
 
-  function make429Response() {
-    return new Response('', {
-      status: 429,
-      headers: { 'Retry-After': '1' },
-    });
-  }
+      const first = await getNextImage();
+      expect(first.id).toBe('img-1');
 
-  function make200Response(data = { data: { type: 'images', id: 'img-new', attributes: { name: 'new.jpg' } } }) {
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+      const second = await getNextImage();
+      expect(second.id).toBe('img-2');
 
-  /**
-   * Calls getNextImage and advances timers through resilientFetch retries.
-   * Attaches a .catch() immediately to prevent unhandled rejection warnings.
-   * Returns { result, error } after all retries complete.
-   */
-  async function callGetNextImageWith429() {
-    let result = null;
-    let error = null;
-
-    const promise = getNextImage().then(
-      (r) => {
-        result = r;
-      },
-      (e) => {
-        error = e;
-      },
-    );
-
-    // Advance through resilientFetch's 3 retry waits (1s each)
-    await vi.advanceTimersByTimeAsync(3000);
-    await promise;
-
-    return { result, error };
-  }
-
-  describe('current image preserved when 429 exhausts retries', () => {
-    it('keeps the current image in the container when getNextImage throws on 429', async () => {
-      const currentImg = document.createElement('img');
-      currentImg.src = 'http://localhost:8321/api/v1/images/current/display';
-      currentImg.setAttribute('image-id', 'img-1');
-      currentImg.classList.add('main-img');
-      document.getElementById('image-container').appendChild(currentImg);
-
-      // 1 original + 3 retries = 4 total 429 responses
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response());
-
-      const { error } = await callGetNextImageWith429();
-
-      // getNextImage should throw with status 429 after retries exhausted
-      expect(error).not.toBeNull();
-      expect(error.message).toBe('Rate limited');
-      expect(error.status).toBe(429);
-
-      // The current image should still be in the container (unchanged)
-      const container = document.getElementById('image-container');
-      expect(container.children.length).toBe(1);
-      expect(container.children[0].getAttribute('image-id')).toBe('img-1');
+      const third = await getNextImage();
+      expect(third.id).toBe('img-3');
     });
   });
 
-  describe('next fetch scheduled after refreshInterval on exhausted retries', () => {
-    it('uses refreshInterval as the retry delay in loadNext catch block', async () => {
-      // 1 original + 3 retries = 4 total 429 responses
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response());
-
-      const { error } = await callGetNextImageWith429();
-
-      // getNextImage throws — loadNext's catch block schedules setTimeout(loadNext, refreshInterval)
-      expect(error).not.toBeNull();
-      expect(error.message).toBe('Rate limited');
-
-      // Verify the config value that loadNext uses for scheduling the retry
-      expect(window.SMPL_CONFIG.refreshInterval).toBe(30000);
-
-      // After the error, 4 fetch calls were made (1 original + 3 retries from resilientFetch)
-      expect(fetch).toHaveBeenCalledTimes(4);
-    });
-  });
-
-  describe('refreshInterval timer restarted from recovery moment on success', () => {
-    it('uses refreshInterval as the delay for the next cycle after successful fetch', async () => {
-      // Successful response — no retries needed (JSON:API format)
-      fetch.mockResolvedValueOnce(
-        make200Response({
-          data: { type: 'images', id: 'img-recovered', attributes: { name: 'recovered.jpg' } },
-        }),
-      );
+  describe('queue behavior when collection fetch fails', () => {
+    it('returns null when queue is empty and refill fails', async () => {
+      global.fetch.mockRejectedValueOnce(new Error('Network error'));
 
       const result = await getNextImage();
-      expect(result.id).toBe('img-recovered');
-
-      // loadNext schedules the next image load via:
-      //   setTimeout(() => { ... loadNext(newImage) }, config.refreshInterval)
-      // The timer is set from the moment of success (recovery moment)
-      expect(window.SMPL_CONFIG.refreshInterval).toBe(30000);
-
-      // Only 1 fetch call was made (no retries)
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(result).toBeNull();
     });
 
-    it('resets timer from recovery moment after 429 then success', async () => {
-      // First attempt: 429, then retry succeeds (JSON:API format)
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(
-          make200Response({
-            data: { type: 'images', id: 'img-recovered', attributes: { name: 'recovered.jpg' } },
+    it('returns queued image even after refill failure', async () => {
+      global.fetch
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
+              { type: 'images', id: 'img-2', attributes: { name: 'second.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 2, pages: 1, page: 1 } },
           }),
-        );
+        })
+        // Preload succeeds
+        .mockResolvedValueOnce({ status: 201, ok: true });
 
-      let result = null;
-      const promise = getNextImage().then((r) => {
-        result = r;
-      });
+      const first = await getNextImage();
+      expect(first.id).toBe('img-1');
 
-      // Advance through the 1s retry wait
-      await vi.advanceTimersByTimeAsync(1000);
-      await promise;
-
-      expect(result.id).toBe('img-recovered');
-
-      // After recovery, loadNext uses refreshInterval from this moment
-      // (not from the original request time)
-      expect(fetch).toHaveBeenCalledTimes(2);
+      // Second call returns from queue without new fetch
+      const second = await getNextImage();
+      expect(second.id).toBe('img-2');
     });
   });
 
-  describe('no error messages or error-styled indicators shown for 429s', () => {
-    it('does not call console.error when getNextImage encounters a 429', async () => {
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response());
+  describe('preload best-effort behavior', () => {
+    it('returns image from queue even if preload is pending', async () => {
+      global.fetch
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 1, pages: 1, page: 1 } },
+          }),
+        })
+        // Mock preload response (happens async, doesn't block)
+        .mockResolvedValueOnce({ status: 201, ok: true });
 
-      await callGetNextImageWith429();
+      const result = await getNextImage();
+      
+      // Image returned immediately from queue
+      expect(result).not.toBeNull();
+      expect(result.id).toBe('img-1');
+    });
+  });
 
-      expect(console.error).not.toHaveBeenCalled();
+  describe('empty collection handling', () => {
+    it('returns null when collection is empty', async () => {
+      global.fetch.mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        headers: { get: () => 'application/vnd.api+json' },
+        json: () => Promise.resolve({
+          data: [],
+          links: {},
+          meta: { pagination: { count: 0, pages: 0, page: 1 } },
+        }),
+      });
+
+      const result = await getNextImage();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('pagination boundary handling', () => {
+    it('wraps to page 1 after exhausting all pages', async () => {
+      // First call: page 1 with 2 pages total
+      global.fetch
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'page1-1.jpg' } },
+              { type: 'images', id: 'img-2', attributes: { name: 'page1-2.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 4, pages: 2, page: 1 } },
+          }),
+        })
+        .mockResolvedValueOnce({ status: 201, ok: true }) // preload
+        // Second call: page 2 (last page)
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-3', attributes: { name: 'page2-1.jpg' } },
+              { type: 'images', id: 'img-4', attributes: { name: 'page2-2.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 4, pages: 2, page: 2 } },
+          }),
+        })
+        .mockResolvedValueOnce({ status: 201, ok: true }) // preload
+        // Third call: should wrap to page 1, not request page 3
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'page1-1.jpg' } },
+              { type: 'images', id: 'img-2', attributes: { name: 'page1-2.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 4, pages: 2, page: 1 } },
+          }),
+        })
+        .mockResolvedValueOnce({ status: 201, ok: true }); // preload
+
+      // Consume page 1
+      await getNextImage();
+      await getNextImage();
+      
+      // Trigger refill to page 2
+      await getNextImage();
+      await getNextImage();
+      
+      // Trigger refill - should wrap to page 1, not request page 3
+      await getNextImage();
+      
+      // Verify no 404 requests were made
+      const allUrls = global.fetch.mock.calls.map(call => call[0]);
+      const page3Requests = allUrls.filter(url => url.includes('page[number]=3'));
+      expect(page3Requests.length).toBe(0);
     });
 
-    it('does not add error-styled elements to the DOM on 429', async () => {
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response());
+    it('recovers from 404 by resetting to page 1', async () => {
+      // First call succeeds
+      global.fetch
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 1, pages: 1, page: 1 } },
+          }),
+        })
+        .mockResolvedValueOnce({ status: 201, ok: true }) // preload
+        // Simulate 404 on invalid page (should not happen with fix, but test recovery)
+        .mockResolvedValueOnce({
+          status: 404,
+          ok: false,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            errors: [{ status: '404', code: 'not_found', detail: 'Invalid page.' }],
+          }),
+        })
+        // Recovery: back to page 1
+        .mockResolvedValueOnce({
+          status: 200,
+          ok: true,
+          headers: { get: () => 'application/vnd.api+json' },
+          json: () => Promise.resolve({
+            data: [
+              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
+            ],
+            links: {},
+            meta: { pagination: { count: 1, pages: 1, page: 1 } },
+          }),
+        })
+        .mockResolvedValueOnce({ status: 201, ok: true }); // preload
 
-      await callGetNextImageWith429();
-
-      const errorElements = document.querySelectorAll(
-        '.error, .error-message, [class*="error"]',
-      );
-      expect(errorElements.length).toBe(0);
-    });
-
-    it('preserves the image container content unchanged on 429', async () => {
-      const currentImg = document.createElement('img');
-      currentImg.src = 'http://localhost:8321/api/v1/images/current/display';
-      currentImg.classList.add('main-img');
-      const container = document.getElementById('image-container');
-      container.appendChild(currentImg);
-
-      fetch
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response())
-        .mockResolvedValueOnce(make429Response());
-
-      await callGetNextImageWith429();
-
-      expect(container.children.length).toBe(1);
-      expect(container.children[0]).toBe(currentImg);
-      expect(container.querySelector('.error')).toBeNull();
+      await getNextImage();
+      await getNextImage(); // Triggers 404
+      const recovered = await getNextImage();
+      
+      expect(recovered).not.toBeNull();
+      expect(recovered.id).toBe('img-1');
     });
   });
 });

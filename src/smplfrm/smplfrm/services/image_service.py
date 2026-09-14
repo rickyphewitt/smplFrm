@@ -12,6 +12,12 @@ from smplfrm.models.task import TaskType
 logger = logging.getLogger(__name__)
 
 
+# Curated sort profiles map profile keys to complete ordering tuples
+SORT_PROFILES = {
+    "display_priority": ("view_count", "-created", "external_id"),
+}
+
+
 class ImageService(BaseService, TaskReportingService):
     """Service for managing image records and view tracking."""
 
@@ -135,6 +141,28 @@ class ImageService(BaseService, TaskReportingService):
         except Exception as e:
             logger.error(f"Failed to load next image: {e}")
             return None
+
+    def get_ordered_images(self, sort_profile: Optional[str]) -> QuerySet[Image]:
+        """Get images ordered by the specified sort profile.
+
+        Args:
+            sort_profile: Curated profile key, or None for default order
+
+        Returns:
+            QuerySet of non-deleted Image instances in requested order
+
+        Raises:
+            ValueError: If sort_profile is not in SORT_PROFILES
+        """
+        if sort_profile is None:
+            # Default behavior: newest first
+            return Image.objects.filter(deleted=False).order_by("-created")
+
+        if sort_profile not in SORT_PROFILES:
+            raise ValueError(f"Unknown sort profile: {sort_profile}")
+
+        ordering = SORT_PROFILES[sort_profile]
+        return Image.objects.filter(deleted=False).order_by(*ordering)
 
     def reset_all_view_count(self, task_id=None) -> None:
         """Reset view count for all images."""

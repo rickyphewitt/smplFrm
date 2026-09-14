@@ -701,4 +701,137 @@ describe('Plugins Tab', () => {
       'none',
     );
   });
+
+  it('should only validate coords field not all text inputs', async () => {
+    document.body.innerHTML += `<div id="error-message"></div>`;
+
+    // Load plugins list with Spotify
+    const mockListData = makeJsonApiListResponse([
+      { id: 'spotify', name: 'Spotify', description: 'Now playing' },
+    ]);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockListData),
+    });
+
+    const { loadPlugins } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
+    await loadPlugins();
+
+    // Mock detail view response with password fields
+    const spotifySchema = [
+      { key: 'client_id', label: 'Client ID', type: 'password' },
+      { key: 'client_secret', label: 'Client Secret', type: 'password' },
+    ];
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'spotify',
+            name: 'Spotify',
+            description: 'Now playing',
+            settings: { client_id: 'test_id', client_secret: 'test_secret' },
+            settings_schema: spotifySchema,
+          }),
+        ),
+    });
+
+    // Click configure button
+    const configBtn = document.querySelector('.plugin-configure-btn');
+    await configBtn.click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Fill in text values that are NOT coordinates
+    const clientIdInput = document.querySelector('[data-key="client_id"]');
+    const clientSecretInput = document.querySelector(
+      '[data-key="client_secret"]',
+    );
+    clientIdInput.value = 'my_client_id_123';
+    clientSecretInput.value = 'my_secret_456';
+
+    // Mock successful save
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({ data: { type: 'plugins', id: 'spotify' } }),
+    });
+
+    const saveBtn = document.getElementById('plugin-detail-save');
+    saveBtn.click();
+
+    // Wait for async handler
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Should NOT show coordinate validation error
+    const errorMsg = document.getElementById('error-message');
+    expect(errorMsg.textContent).not.toContain('Invalid coordinates');
+    expect(errorMsg.classList.contains('show')).toBe(false);
+
+    // Save should have been called (list + detail + save = 3)
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('should validate coords field when present', async () => {
+    document.body.innerHTML += `<div id="error-message"></div>`;
+
+    // Load plugins list with Weather
+    const mockListData = makeJsonApiListResponse([
+      { id: 'weather', name: 'Weather', description: 'Weather display' },
+    ]);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockListData),
+    });
+
+    const { loadPlugins } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
+    await loadPlugins();
+
+    // Mock detail view response with coords field
+    const weatherSchema = [
+      { key: 'coords', label: 'Coordinates', type: 'text' },
+      { key: 'temp_unit', label: 'Temperature Unit', type: 'select' },
+    ];
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'weather',
+            name: 'Weather',
+            description: 'Weather display',
+            settings: { coords: '', temp_unit: 'F' },
+            settings_schema: weatherSchema,
+          }),
+        ),
+    });
+
+    // Click configure button
+    const configBtn = document.querySelector('.plugin-configure-btn');
+    await configBtn.click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Fill in invalid coordinates
+    const coordsInput = document.querySelector('[data-key="coords"]');
+    coordsInput.value = 'invalid_coordinates';
+
+    const saveBtn = document.getElementById('plugin-detail-save');
+    saveBtn.click();
+
+    // Wait for async handler
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // SHOULD show coordinate validation error
+    const errorMsg = document.getElementById('error-message');
+    expect(errorMsg.textContent).toContain('Invalid coordinates');
+    expect(errorMsg.classList.contains('show')).toBe(true);
+
+    // Save should NOT have been called (only list + detail = 2)
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
 });

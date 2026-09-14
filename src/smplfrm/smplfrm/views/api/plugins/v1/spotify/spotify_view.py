@@ -109,7 +109,8 @@ class SpotifyView(viewsets.ViewSet):
             )
 
         serializer = SpotifyStatusSerializer()
-        return Response(serializer.to_representation(result))
+        response_data = serializer.to_representation(result)
+        return Response(response_data)
 
     @action(methods=["get"], detail=False, url_path="callback")
     def callback(self, request, **kwargs):
