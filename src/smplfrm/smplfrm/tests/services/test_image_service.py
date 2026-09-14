@@ -217,3 +217,126 @@ class TestImageService(TestCase):
         self.assertNotIn("connection pool", task.error)
         self.assertNotIn("connection.py", task.error)
         self.assertNotIn("max_connections", task.error)
+
+    def test_display_priority_sort_order(self):
+        """Test that display_priority profile orders by view_count ASC, created DESC, external_id ASC."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        now = timezone.now()
+
+        # Create images with varying view counts and creation times
+        img1 = self.image_service.create(
+            {
+                "name": "img1",
+                "file_path": "/test/",
+                "file_name": "img1.jpg",
+            }
+        )
+        img1.view_count = 5
+        img1.created = now - timedelta(hours=3)
+        img1.save()
+
+        img2 = self.image_service.create(
+            {
+                "name": "img2",
+                "file_path": "/test/",
+                "file_name": "img2.jpg",
+            }
+        )
+        img2.view_count = 2
+        img2.created = now - timedelta(hours=1)
+        img2.save()
+
+        img3 = self.image_service.create(
+            {
+                "name": "img3",
+                "file_path": "/test/",
+                "file_name": "img3.jpg",
+            }
+        )
+        img3.view_count = 2
+        img3.created = now - timedelta(hours=2)
+        img3.save()
+
+        # Get ordered images
+        ordered = list(self.image_service.get_ordered_images("display_priority"))
+
+        # Expected order: img2 (view=2, newer), img3 (view=2, older), img1 (view=5)
+        # If view counts are equal, newer (created DESC) comes first
+        self.assertEqual(len(ordered), 3)
+        self.assertEqual(ordered[0].external_id, img2.external_id)
+        self.assertEqual(ordered[1].external_id, img3.external_id)
+        self.assertEqual(ordered[2].external_id, img1.external_id)
+
+    def test_display_priority_deterministic_tiebreak(self):
+        """Test that display_priority uses external_id for deterministic tie-breaking."""
+        from django.utils import timezone
+
+        now = timezone.now()
+
+        # Create three images with identical view_count and created time
+        images = []
+        for i in range(3):
+            img = self.image_service.create(
+                {
+                    "name": f"img{i}",
+                    "file_path": "/test/",
+                    "file_name": f"img{i}.jpg",
+                }
+            )
+            img.view_count = 10
+            img.created = now
+            img.save()
+            images.append(img)
+
+        # Get ordered images
+        ordered = list(self.image_service.get_ordered_images("display_priority"))
+
+        # Should be ordered by external_id ascending (lexicographic)
+        self.assertEqual(len(ordered), 3)
+        ordered_ids = [img.external_id for img in ordered]
+        self.assertEqual(ordered_ids, sorted(ordered_ids))
+
+    def test_default_sort_backward_compat(self):
+        """Test that omitting sort profile uses the existing -created default."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        now = timezone.now()
+
+        img1 = self.image_service.create(
+            {
+                "name": "oldest",
+                "file_path": "/test/",
+                "file_name": "oldest.jpg",
+            }
+        )
+        img1.created = now - timedelta(hours=3)
+        img1.save()
+
+        img2 = self.image_service.create(
+            {
+                "name": "newest",
+                "file_path": "/test/",
+                "file_name": "newest.jpg",
+            }
+        )
+        img2.created = now
+        img2.save()
+
+        # Get images with no sort profile (default)
+        ordered = list(self.image_service.get_ordered_images(None))
+
+        # Should be newest first (default -created order)
+        self.assertEqual(ordered[0].external_id, img2.external_id)
+        self.assertEqual(ordered[1].external_id, img1.external_id)
+
+    def test_unknown_profile_raises(self):
+        """Test that unknown sort profile raises ValueError."""
+        self.image_service.create(self.full_image_data)
+
+        with self.assertRaises(ValueError) as ctx:
+            list(self.image_service.get_ordered_images("unknown_profile"))
+
+        self.assertIn("unknown_profile", str(ctx.exception))

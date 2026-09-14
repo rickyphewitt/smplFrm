@@ -13,10 +13,32 @@ const OPACITY_INCREMENT = 0.1;
 const OPACITY_MAX = 1.0;
 const CLOCK_REFRESH_MS = 1000;
 const SPOTIFY_REFRESH_MS = 5000;
+const IMAGE_QUEUE_TARGET = 5;
+const IMAGE_QUEUE_LOW_WATER = 2;
 
 const imageContainer = document.getElementById('image-container');
 const progressBar = document.getElementById('progress-bar');
 const config = window.SMPL_CONFIG;
+
+/**
+ * Browser-local queue of image objects for continuous display.
+ * Each entry contains { id: string, ...attributes }.
+ * @type {Array<{id: string, name: string, [key: string]: any}>}
+ */
+let imageQueue = [];
+
+/**
+ * Current page number for paginated image fetching (1-indexed).
+ * @type {number}
+ */
+let currentPage = 1;
+
+/**
+ * Total pages available from the last successful fetch, or null if unknown.
+ * Used to wrap pagination back to page 1 when exhausted.
+ * @type {number|null}
+ */
+let totalPages = null;
 
 export function getWindowDimensions() {
   return {
@@ -42,19 +64,128 @@ export function startProgress() {
 }
 
 export async function getNextImage() {
-  const { width, height } = getWindowDimensions();
-  const response = await resilientFetch(
-    buildApiUrl(`images/next?width=${width}&height=${height}`),
-  );
-  if (response.status === 429) {
-    const error = new Error('Rate limited');
-    error.status = 429;
-    throw error;
+  // Check if queue needs refilling
+  if (imageQueue.length <= IMAGE_QUEUE_LOW_WATER) {
+    await refillQueue();
   }
-  const data = await response.json();
-  // Unwrap JSON:API response: { data: { type, id, attributes } } -> { id, ...attributes }
-  const resource = unwrapResource(data);
-  return { id: resource.id, ...resource.attributes };
+
+  // Return next image from queue, or null if empty
+  if (imageQueue.length > 0) {
+    return imageQueue.shift();
+  }
+
+  return null;
+}
+
+async function refillQueue() {
+  try {
+    // Wrap to page 1 if we've exceeded known total pages
+    if (totalPages !== null && currentPage > totalPages) {
+      currentPage = 1;
+    }
+
+    // Fetch next page of images with display_priority sort
+    const response = await fetchJsonApi(
+      buildApiUrl(`images?sort=display_priority&page[number]=${currentPage}`)
+    );
+
+    const { resources, meta } = unwrapResourceList(response);
+    
+    // Update total pages from response
+    if (meta?.pagination?.pages) {
+      totalPages = meta.pagination.pages;
+    }
+    
+    if (resources.length === 0) {
+      // No more images - reset to first page
+      currentPage = 1;
+      return;
+    }
+
+    // Extract new image IDs not already in queue
+    const newImages = resources
+      .map(r => ({ id: r.id, ...r.attributes }))
+      .filter(img => !imageQueue.find(q => q.id === img.id));
+
+    if (newImages.length === 0) {
+      // All images already queued - advance or wrap to beginning
+      if (currentPage >= totalPages) {
+        currentPage = 1;
+      } else {
+        currentPage++;
+      }
+      return;
+    }
+
+    // Append new images to queue
+    imageQueue.push(...newImages);
+
+    // Request best-effort preload for newly appended images
+    const imageIds = newImages.map(img => img.id);
+    if (imageIds.length > 0) {
+      const { width, height } = getWindowDimensions();
+      await requestPreload(imageIds, width, height);
+    }
+
+    // Advance to next page, wrapping to 1 if we've reached the end
+    if (currentPage >= totalPages) {
+      currentPage = 1;
+    } else {
+      currentPage++;
+    }
+  } catch (error) {
+    // On fetch failure, keep existing queue and retry on next refill attempt
+    // If 404 (invalid page), reset to page 1
+    if (error?.status === 404) {
+      console.debug('Invalid page, resetting to page 1');
+      currentPage = 1;
+    } else {
+      console.debug('Queue refill failed, will retry:', error);
+    }
+  }
+}
+
+async function requestPreload(imageIds, width, height) {
+  try {
+    const payload = {
+      data: {
+        type: 'preload_image_cache_tasks',
+        attributes: {
+          image_ids: imageIds.slice(0, 5), // Max 5 per spec
+          width: Math.floor(width),
+          height: Math.floor(height),
+        },
+      },
+    };
+
+    const response = await resilientFetch(buildApiUrl('tasks'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // 409 (conflict or capacity) is non-critical - preload is best-effort
+    if (response.status === 409) {
+      console.debug('Preload conflict or capacity exceeded, continuing without preload');
+      return;
+    }
+
+    // 429 (rate limited) is non-critical - continue without preload
+    if (response.status === 429) {
+      console.debug('Preload rate limited, continuing without preload');
+      return;
+    }
+
+    if (!response.ok) {
+      console.debug('Preload request failed:', response.status);
+    }
+  } catch (error) {
+    // Non-critical failure - display continues with uncached images
+    console.debug('Preload request error:', error);
+  }
 }
 
 async function displayMetadata(imageId) {
@@ -100,10 +231,16 @@ async function displayMetadata(imageId) {
 
 async function buildImage() {
   const nextImage = await getNextImage();
+  
+  if (!nextImage) {
+    // Queue empty and refill failed - return null
+    return null;
+  }
+  
   const { width, height } = getWindowDimensions();
   const img = new Image();
   img.src = buildApiUrl(
-    `images/${nextImage.id}/display?width=${width}&height=${height}`,
+    `images/${nextImage.id}/display?filter[width]=${width}&filter[height]=${height}`,
   );
   img.setAttribute(IMAGE_ID_ATTR, nextImage.id);
   return img;
@@ -168,6 +305,15 @@ export function fadeInImage(image, onComplete) {
 async function loadNext(currentImage) {
   try {
     const newImage = await buildImage();
+    
+    if (!newImage) {
+      // No image available - keep current image, retry after refresh interval
+      setTimeout(() => {
+        loadNext(currentImage);
+      }, config.refreshInterval);
+      return;
+    }
+    
     newImage.classList.add('main-img');
 
     newImage.onload = () => {
@@ -183,7 +329,7 @@ async function loadNext(currentImage) {
       }, config.refreshInterval);
     };
   } catch (error) {
-    // On 429 exhausted or fetch failure: keep current image, retry after refreshInterval
+    // On fetch failure: keep current image, retry after refreshInterval
     setTimeout(() => {
       loadNext(currentImage);
     }, config.refreshInterval);
@@ -193,6 +339,15 @@ async function loadNext(currentImage) {
 async function startImages() {
   try {
     const newImage = await buildImage();
+    
+    if (!newImage) {
+      // No images available - retry after refresh interval
+      setTimeout(() => {
+        startImages();
+      }, config.refreshInterval);
+      return;
+    }
+    
     newImage.onload = () => {
       newImage.classList.add('main-img');
       imageContainer.appendChild(newImage);
@@ -203,7 +358,7 @@ async function startImages() {
       loadNext(newImage);
     };
   } catch (error) {
-    // On 429 exhausted or fetch failure: retry after refreshInterval
+    // On fetch failure: retry after refreshInterval
     setTimeout(() => {
       startImages();
     }, config.refreshInterval);
@@ -951,22 +1106,19 @@ async function openPluginDetail(pluginId) {
   const newSave = saveBtn.cloneNode(true);
   saveBtn.parentNode.replaceChild(newSave, saveBtn);
   newSave.addEventListener('click', async () => {
-    // Validate coordinates before saving
-    const coordInputs = formEl.querySelectorAll('.plugin-setting-input');
-    for (const el of coordInputs) {
-      if (el.type === 'checkbox' || el.type === 'select-one') continue;
-      if (!validateCoordinates(el.value)) {
-        const errorMessage = document.getElementById('error-message');
-        errorMessage.textContent =
-          'Invalid coordinates. Use lat,long format (e.g. 40.7128,-74.0060)';
-        errorMessage.classList.add('show');
-        newSave.disabled = true;
-        setTimeout(() => {
-          errorMessage.classList.remove('show');
-          newSave.disabled = false;
-        }, 3000);
-        return;
-      }
+    // Validate coordinates field if present (weather plugin)
+    const coordInput = formEl.querySelector('[data-key="coords"]');
+    if (coordInput && !validateCoordinates(coordInput.value)) {
+      const errorMessage = document.getElementById('error-message');
+      errorMessage.textContent =
+        'Invalid coordinates. Use lat,long format (e.g. 40.7128,-74.0060)';
+      errorMessage.classList.add('show');
+      newSave.disabled = true;
+      setTimeout(() => {
+        errorMessage.classList.remove('show');
+        newSave.disabled = false;
+      }, 3000);
+      return;
     }
 
     const settings = {};

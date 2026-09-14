@@ -14,6 +14,7 @@ class TaskType(models.TextChoices):
     RESET_IMAGE_COUNT = "reset_image_count"
     CLEAR_CACHE = "clear_cache"
     RESCAN_LIBRARY = "rescan_library"
+    PRELOAD_IMAGE_CACHE = "preload_image_cache"
 
 
 class Task(ModelBase):
@@ -29,6 +30,7 @@ class Task(ModelBase):
     )
     progress = models.PositiveIntegerField(default=0)
     error = models.TextField(blank=True, default="")
+    payload = models.JSONField(blank=True, null=True)
 
     class Meta:
         db_table = "task"

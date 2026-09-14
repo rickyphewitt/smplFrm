@@ -145,34 +145,6 @@ class TestImagesView(TestCase):
         self.image_service.update(image)
 
         response = self.client.get(
-            f"{self.uri}/{image.external_id}/display?width=1&height=2"
+            f"{self.uri}/{image.external_id}/display?filter[width]=1&filter[height]=2"
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-    def test_next_image(self):
-        """Test that next returns JSON:API formatted image."""
-        LibraryService().scan()
-
-        response = self.client.get(f"{self.uri}/next")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        body = response.json()
-        self.assertIn("data", body)
-        self.assertEqual(body["data"]["type"], "images")
-        self.assertIn("id", body["data"])
-        self.assertIn("attributes", body["data"])
-
-    def test_next_image_with_dimensions(self):
-        """Test that next accepts width/height parameters."""
-        LibraryService().scan()
-
-        response = self.client.get(f"{self.uri}/next?width=800&height=600")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_next_image_invalid_dimensions(self):
-        """Test that next returns 400 for invalid dimensions."""
-        LibraryService().scan()
-
-        response = self.client.get(f"{self.uri}/next?width=abc&height=100")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        body = response.json()
-        self.assertIn("errors", body)

@@ -40,3 +40,28 @@ class TestTask(TestCase):
         self.assertIsNotNone(task.created)
         self.assertIsNotNone(task.updated)
         self.assertFalse(task.deleted)
+
+    def test_preload_task_type_exists(self):
+        """Test that preload_image_cache task type is available."""
+        task = Task.objects.create(task_type=Task.TaskType.PRELOAD_IMAGE_CACHE)
+        task.refresh_from_db()
+        self.assertEqual(task.task_type, "preload_image_cache")
+
+    def test_payload_nullable(self):
+        """Test that payload can store structured task data and defaults to None."""
+        # Create task without payload
+        task_without_payload = Task.objects.create(task_type=Task.TaskType.CLEAR_CACHE)
+        self.assertIsNone(task_without_payload.payload)
+
+        # Create task with payload
+        payload = {
+            "width": 1920,
+            "height": 1080,
+            "image_ids": ["abc123", "def456"],
+        }
+        task_with_payload = Task.objects.create(
+            task_type=Task.TaskType.PRELOAD_IMAGE_CACHE, payload=payload
+        )
+        task_with_payload.refresh_from_db()
+        self.assertEqual(task_with_payload.payload, payload)
+        self.assertEqual(task_with_payload.payload["width"], 1920)

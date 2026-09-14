@@ -12,6 +12,12 @@ describe('main.js', () => {
     startTask;
 
   beforeEach(async () => {
+    // Reset modules to force fresh import with new fetch mock
+    vi.resetModules();
+    
+    // Mock fetch BEFORE importing main.js so module closure captures the mock
+    global.fetch = vi.fn();
+
     const dom = new JSDOM(
       `
       <!DOCTYPE html>
@@ -54,7 +60,7 @@ describe('main.js', () => {
       imageTransitionType: 'fade',
     };
 
-    // Import functions after setting up globals
+    // Import functions after setting up globals and fetch mock
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
     buildApiUrl = module.buildApiUrl;
     getWindowDimensions = module.getWindowDimensions;
@@ -123,20 +129,33 @@ describe('main.js', () => {
   });
 
   describe('getNextImage', () => {
-    it('fetches next image with window dimensions and unwraps JSON:API', async () => {
+    it('fetches from collection and returns first queued image', async () => {
       window.innerWidth = 1920;
       window.innerHeight = 1080;
 
       global.fetch = vi.fn(() =>
         Promise.resolve({
           status: 200,
+          ok: true,
+          headers: {
+            get: () => 'application/vnd.api+json',
+          },
           json: () =>
             Promise.resolve({
-              data: {
-                type: 'images',
-                id: 'test-123',
-                attributes: { name: 'test.jpg', view_count: 5 },
-              },
+              data: [
+                {
+                  type: 'images',
+                  id: 'test-123',
+                  attributes: { name: 'test.jpg', view_count: 5 },
+                },
+                {
+                  type: 'images',
+                  id: 'test-456',
+                  attributes: { name: 'test2.jpg', view_count: 3 },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 2, pages: 1, page: 1 } },
             }),
         }),
       );
@@ -144,10 +163,15 @@ describe('main.js', () => {
       const result = await getNextImage();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8321/api/v1/images/next?width=1920&height=1080',
-        {},
+        'http://localhost:8321/api/v1/images?sort=display_priority&page[number]=1',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Accept: 'application/vnd.api+json',
+          }),
+        }),
       );
-      // Should unwrap JSON:API to flat object
+      
+      // Should return first image from queue
       expect(result).toEqual({ id: 'test-123', name: 'test.jpg', view_count: 5 });
     });
   });
