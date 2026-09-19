@@ -2,7 +2,6 @@ import logging
 import secrets
 
 from django.conf import settings
-from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -36,19 +35,60 @@ class SpotifyView(viewsets.ViewSet):
 
         return jsonapi_exception_handler
 
-    @action(methods=["get"], detail=False, url_path="auth")
+    @action(
+        methods=["get"],
+        detail=False,
+        url_path="auth",
+        renderer_classes=[JsonApiPassthroughRenderer],
+    )
     def auth(self, request, **kwargs):
+        """Create a state-bound Spotify authorization URL.
+
+        Returns JSON:API formatted spotify_auth resource with auth_url attribute.
+        """
         try:
             auth_result = SpotifyPlugin().auth()
         except Exception:
             logger.error("Failed to create Spotify authorization URL", exc_info=True)
-            return JsonResponse({"error": "spotify_unavailable"}, status=500)
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "500",
+                            "code": "spotify_unavailable",
+                            "detail": "Failed to create authorization URL",
+                        }
+                    ]
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         if not auth_result.get("success"):
-            return JsonResponse({"error": "spotify_not_configured"}, status=412)
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "412",
+                            "code": "spotify_not_configured",
+                            "detail": "Spotify plugin is not configured",
+                        }
+                    ]
+                },
+                status=status.HTTP_412_PRECONDITION_FAILED,
+            )
 
         request.session[SPOTIFY_OAUTH_STATE_SESSION_KEY] = auth_result["state"]
-        return JsonResponse({"auth_url": auth_result["auth_url"]})
+        return Response(
+            {
+                "data": {
+                    "type": "spotify_auth",
+                    "id": "current",
+                    "attributes": {
+                        "auth_url": auth_result["auth_url"],
+                    },
+                }
+            }
+        )
 
     @action(
         methods=["get"],
@@ -60,9 +100,28 @@ class SpotifyView(viewsets.ViewSet):
         """Get current Spotify playback status.
 
         Returns JSON:API formatted spotify_status resource with track relationship.
+        Returns configured: false when plugin is not configured (200 OK).
+        Returns 401 when configured but authorization is required.
         """
+        plugin = SpotifyPlugin()
+
+        # Check if plugin is configured before making any API calls
+        if not plugin.is_ready:
+            return Response(
+                {
+                    "data": {
+                        "type": "spotify_status",
+                        "id": "current",
+                        "attributes": {
+                            "configured": False,
+                            "is_playing": False,
+                        },
+                    }
+                }
+            )
+
         try:
-            result = SpotifyPlugin().get_now_playing()
+            result = plugin.get_now_playing()
         except Exception:
             logger.error("Failed to retrieve Spotify status", exc_info=True)
             return Response(
@@ -94,22 +153,11 @@ class SpotifyView(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if not result.get("success"):
-            return Response(
-                {
-                    "errors": [
-                        {
-                            "status": "412",
-                            "code": "spotify_unavailable",
-                            "detail": "Spotify plugin not configured",
-                        }
-                    ]
-                },
-                status=status.HTTP_412_PRECONDITION_FAILED,
-            )
-
+        # Plugin is configured and returned data successfully
         serializer = SpotifyStatusSerializer()
         response_data = serializer.to_representation(result)
+        # Add configured: true to attributes
+        response_data["data"]["attributes"]["configured"] = True
         return Response(response_data)
 
     @action(methods=["get"], detail=False, url_path="callback")

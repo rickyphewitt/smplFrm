@@ -33,6 +33,7 @@ class TestSpotifyView(TestCase):
         """Test status endpoint returns JSON:API format with track."""
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.is_ready = True
         mock_spotify_instance.get_now_playing.return_value = self.status_success
 
         response = self.client.get(f"{self.uri}/status")
@@ -45,6 +46,7 @@ class TestSpotifyView(TestCase):
         self.assertEqual(data["data"]["type"], "spotify_status")
         self.assertEqual(data["data"]["id"], "current")
         self.assertTrue(data["data"]["attributes"]["is_playing"])
+        self.assertTrue(data["data"]["attributes"]["configured"])
 
         # Verify relationship
         self.assertIn("relationships", data["data"])
@@ -69,6 +71,7 @@ class TestSpotifyView(TestCase):
         """Test status endpoint when nothing is playing."""
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.is_ready = True
         mock_spotify_instance.get_now_playing.return_value = self.status_not_playing
 
         response = self.client.get(f"{self.uri}/status")
@@ -77,22 +80,24 @@ class TestSpotifyView(TestCase):
         data = response.json()
 
         self.assertFalse(data["data"]["attributes"]["is_playing"])
+        self.assertTrue(data["data"]["attributes"]["configured"])
         self.assertIsNone(data["data"]["relationships"]["track"]["data"])
         self.assertNotIn("included", data)
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
-    def test_status_failure(self, mock_spotify_service):
-        """Test status endpoint returns JSON:API error on failure."""
+    def test_status_not_configured(self, mock_spotify_service):
+        """Test status endpoint returns 200 with configured: false when not configured."""
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
-        mock_spotify_instance.get_now_playing.return_value = self.success_false
+        mock_spotify_instance.is_ready = False
 
         response = self.client.get(f"{self.uri}/status")
 
-        self.assertEqual(response.status_code, 412)
+        self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn("errors", data)
-        self.assertEqual(data["errors"][0]["code"], "spotify_unavailable")
+        self.assertIn("data", data)
+        self.assertFalse(data["data"]["attributes"]["configured"])
+        self.assertFalse(data["data"]["attributes"]["is_playing"])
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_status_with_podcast_episode(self, mock_spotify_service):
@@ -103,6 +108,7 @@ class TestSpotifyView(TestCase):
         """
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.is_ready = True
         mock_spotify_instance.get_now_playing.return_value = {
             "success": True,
             "is_playing": True,
@@ -139,6 +145,7 @@ class TestSpotifyView(TestCase):
         """Test status endpoint returns 401 when authorization required."""
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.is_ready = True
         mock_spotify_instance.get_now_playing.return_value = {
             "success": False,
             "error": "authorization_required",
@@ -157,6 +164,7 @@ class TestSpotifyView(TestCase):
         """Test status endpoint returns 401 when reauth required."""
         mock_spotify_instance = Mock()
         mock_spotify_service.return_value = mock_spotify_instance
+        mock_spotify_instance.is_ready = True
         mock_spotify_instance.get_now_playing.return_value = {
             "success": False,
             "error": "reauth_required",

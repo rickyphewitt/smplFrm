@@ -13,7 +13,7 @@ class TestSpotifyOAuthView(TestCase):
         session.save()
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
-    def test_auth_stores_state_and_returns_only_authorize_url(self, plugin_class):
+    def test_auth_stores_state_and_returns_jsonapi_response(self, plugin_class):
         plugin_class.return_value.auth.return_value = {
             "success": True,
             "state": "generated-state-with-at-least-32-characters",
@@ -23,9 +23,13 @@ class TestSpotifyOAuthView(TestCase):
         response = self.client.get(f"{SPOTIFY_URI}/auth")
 
         self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("data", data)
+        self.assertEqual(data["data"]["type"], "spotify_auth")
+        self.assertEqual(data["data"]["id"], "current")
         self.assertEqual(
-            response.json(),
-            {"auth_url": ("https://accounts.spotify.com/authorize?state=generated")},
+            data["data"]["attributes"]["auth_url"],
+            "https://accounts.spotify.com/authorize?state=generated",
         )
         self.assertEqual(
             self.client.session[STATE_SESSION_KEY],
@@ -131,6 +135,7 @@ class TestSpotifyOAuthView(TestCase):
 class TestSpotifyAuthorizationResponses(TestCase):
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_expired_token_returns_typed_unauthorized_response(self, plugin_class):
+        plugin_class.return_value.is_ready = True
         plugin_class.return_value.get_now_playing.return_value = {
             "success": False,
             "error": "reauth_required",
@@ -146,6 +151,7 @@ class TestSpotifyAuthorizationResponses(TestCase):
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
     def test_missing_token_returns_typed_unauthorized_response(self, plugin_class):
+        plugin_class.return_value.is_ready = True
         plugin_class.return_value.get_now_playing.return_value = {
             "success": False,
             "error": "authorization_required",
@@ -160,12 +166,13 @@ class TestSpotifyAuthorizationResponses(TestCase):
         self.assertIn("missing", data["errors"][0]["detail"])
 
     @patch("smplfrm.views.api.plugins.v1.spotify.spotify_view.SpotifyPlugin")
-    def test_generic_failure_remains_precondition_failed(self, plugin_class):
-        plugin_class.return_value.get_now_playing.return_value = {"success": False}
+    def test_unconfigured_plugin_returns_200_with_configured_false(self, plugin_class):
+        plugin_class.return_value.is_ready = False
 
         response = self.client.get(f"{SPOTIFY_URI}/status")
 
-        self.assertEqual(response.status_code, 412)
+        self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn("errors", data)
-        self.assertEqual(data["errors"][0]["code"], "spotify_unavailable")
+        self.assertIn("data", data)
+        self.assertEqual(data["data"]["attributes"]["configured"], False)
+        self.assertEqual(data["data"]["attributes"]["is_playing"], False)

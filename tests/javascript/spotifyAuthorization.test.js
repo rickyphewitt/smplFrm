@@ -11,7 +11,7 @@ function makeResponse(status, body = {}) {
 }
 
 // Helper to create JSON:API status response
-function createStatusResponse(isPlaying, artist, song, trackUri) {
+function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
   const trackId = trackUri
     ? Array.from(new TextEncoder().encode(trackUri))
         .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
@@ -23,7 +23,7 @@ function createStatusResponse(isPlaying, artist, song, trackUri) {
     data: {
       type: 'spotify_status',
       id: 'current',
-      attributes: { is_playing: isPlaying },
+      attributes: { configured, is_playing: isPlaying },
       relationships: {
         track: {
           data: trackId ? { type: 'spotify_tracks', id: trackId } : null,
@@ -117,7 +117,13 @@ describe('Spotify authorization recovery', () => {
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
-          auth_url: 'https://accounts.spotify.com/authorize?state=first',
+          data: {
+            type: 'spotify_auth',
+            id: 'current',
+            attributes: {
+              auth_url: 'https://accounts.spotify.com/authorize?state=first',
+            },
+          },
         }),
       );
     const { getNowPlaying } = await import(
@@ -147,7 +153,13 @@ describe('Spotify authorization recovery', () => {
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
-          auth_url: 'https://accounts.spotify.com/authorize?state=reconnect',
+          data: {
+            type: 'spotify_auth',
+            id: 'current',
+            attributes: {
+              auth_url: 'https://accounts.spotify.com/authorize?state=reconnect',
+            },
+          },
         }),
       );
     const { getNowPlaying } = await import(
@@ -183,7 +195,13 @@ describe('Spotify authorization recovery', () => {
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
-          auth_url: 'https://accounts.spotify.com/authorize?state=stable',
+          data: {
+            type: 'spotify_auth',
+            id: 'current',
+            attributes: {
+              auth_url: 'https://accounts.spotify.com/authorize?state=stable',
+            },
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -209,9 +227,9 @@ describe('Spotify authorization recovery', () => {
     );
   });
 
-  it('does not initiate OAuth for an unrelated Spotify failure', async () => {
+  it('does not initiate OAuth for an unconfigured plugin', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce(
-      makeResponse(412, createErrorResponse(412, 'spotify_unavailable', 'Plugin not configured')),
+      makeResponse(200, createStatusResponse(false, null, null, null, false)),
     );
     const { getNowPlaying } = await import(
       '../../src/smplfrm/smplfrm/static/main.js'
@@ -245,7 +263,13 @@ describe('Spotify authorization recovery', () => {
       )
       .mockResolvedValueOnce(
         makeResponse(200, {
-          auth_url: 'https://accounts.spotify.com/authorize?state=new',
+          data: {
+            type: 'spotify_auth',
+            id: 'current',
+            attributes: {
+              auth_url: 'https://accounts.spotify.com/authorize?state=new',
+            },
+          },
         }),
       );
     const { getNowPlaying } = await import(

@@ -151,7 +151,6 @@ The following routes retain their native protocol and bypass JSON:API negotiatio
 | Route | Protocol | Reason |
 |-------|----------|--------|
 | `/api/v1/images/{id}/display` | Binary `image/jpeg` | Frame image delivery with resize parameters |
-| `/api/v1/plugins/spotify/auth` | JSON (non-JSON:API) | OAuth2 authorization flow initiation |
 | `/api/v1/plugins/spotify/callback` | OAuth2 redirect/HTML | OAuth code/state exchange and error recovery |
 | Any `204` response | Empty body | Delete confirmations and similar |
 
@@ -678,6 +677,7 @@ Accept: application/vnd.api+json
     "type": "spotify_status",
     "id": "current",
     "attributes": {
+      "configured": true,
       "is_playing": true
     },
     "relationships": {
@@ -706,6 +706,7 @@ Accept: application/vnd.api+json
     "type": "spotify_status",
     "id": "current",
     "attributes": {
+      "configured": true,
       "is_playing": false
     },
     "relationships": {
@@ -717,15 +718,29 @@ Accept: application/vnd.api+json
 }
 ```
 
+**Response (200 OK) — Not Configured:**
+```json
+{
+  "data": {
+    "type": "spotify_status",
+    "id": "current",
+    "attributes": {
+      "configured": false,
+      "is_playing": false
+    }
+  }
+}
+```
+
 **Error Responses:**
 - `401 Unauthorized` — Spotify authorization missing or expired
-- `412 Precondition Failed` — Spotify plugin not configured
 - `500 Internal Server Error` — Failed to retrieve Spotify status
 
 #### Spotify Status Attributes
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
+| `configured` | boolean | Whether the plugin has credentials configured |
 | `is_playing` | boolean | Whether music is currently playing |
 
 #### Relationships
@@ -747,34 +762,52 @@ When a track is playing, the response includes the track resource:
 - Spotify status is a **singleton resource** with fixed ID `"current"`
 - Track ID is an opaque 16-character hex string derived from the Spotify URI
 - Spotify status is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
-- OAuth endpoints (`/auth`, `/callback`) are protocol-exempt and documented separately
+- When `configured: false`, the frontend should not attempt OAuth authorization
 
 
 
-### Spotify OAuth (Protocol Exempt)
+### Spotify Authorization
 
-OAuth2 endpoints for Spotify authorization. **Not JSON:API endpoints.**
+Authorization endpoint for initiating Spotify OAuth flow. Returns a JSON:API resource with the authorization URL.
 
-**Base path:** `/api/v1/plugins/spotify/`
+**Endpoint:** `/api/v1/plugins/spotify/auth`
 
 #### Initiate Authorization (GET)
 
 ```http
 GET /api/v1/plugins/spotify/auth
+Accept: application/vnd.api+json
 ```
 
 **Response (200 OK):**
 ```json
 {
-  "auth_url": "https://accounts.spotify.com/authorize?..."
+  "data": {
+    "type": "spotify_auth",
+    "id": "current",
+    "attributes": {
+      "auth_url": "https://accounts.spotify.com/authorize?..."
+    }
+  }
 }
 ```
 
 **Error Responses:**
-- `412 Precondition Failed` — Spotify not configured
+- `412 Precondition Failed` — Spotify plugin not configured
 - `500 Internal Server Error` — Failed to create authorization URL
 
-#### OAuth Callback (GET)
+#### Notes
+
+- The authorization URL includes a server-generated state parameter for CSRF protection
+- The state is stored in the user's session and validated on callback
+- Frontend should only call this endpoint after receiving `configured: true` from `/status`
+
+
+### Spotify OAuth Callback (Protocol Exempt)
+
+OAuth2 callback handler for Spotify authorization. **Not a JSON:API endpoint.**
+
+**Endpoint:** `/api/v1/plugins/spotify/callback`
 
 ```http
 GET /api/v1/plugins/spotify/callback?code=...&state=...
