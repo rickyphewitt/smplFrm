@@ -8,7 +8,7 @@ describe('spotify bar visibility', () => {
   let document, getNowPlaying;
 
   // Helper to create JSON:API status response
-  function createStatusResponse(isPlaying, artist, song, trackUri) {
+  function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
     const trackId = trackUri
       ? Array.from(new TextEncoder().encode(trackUri))
           .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
@@ -20,7 +20,7 @@ describe('spotify bar visibility', () => {
       data: {
         type: 'spotify_status',
         id: 'current',
-        attributes: { is_playing: isPlaying },
+        attributes: { configured, is_playing: isPlaying },
         relationships: {
           track: {
             data: trackId
@@ -178,7 +178,13 @@ describe('spotify bar visibility', () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            auth_url: 'https://accounts.spotify.com/authorize',
+            data: {
+              type: 'spotify_auth',
+              id: 'current',
+              attributes: {
+                auth_url: 'https://accounts.spotify.com/authorize',
+              },
+            },
           }),
       });
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');

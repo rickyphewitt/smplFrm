@@ -452,18 +452,19 @@ async function showSpotifyAuthorization(reason) {
 
   spotifyAuthRequestInFlight = true;
   try {
-    const authResponse = await resilientFetch(
-      buildApiUrl('plugins/spotify/auth'),
-    );
+    const response = await fetchJsonApi(buildApiUrl('plugins/spotify/auth'));
+    const resource = unwrapResource(response);
 
-    if (authResponse.status === 429 || !authResponse.ok) {
+    if (!resource || !resource.attributes.auth_url) {
       showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
       return;
     }
 
-    const authData = await authResponse.json();
-    showSpotifyAuthLink(authData.auth_url, reason);
+    showSpotifyAuthLink(resource.attributes.auth_url, reason);
     spotifyAuthLinkActive = true;
+  } catch (error) {
+    // On any error (429, 500, 503): show icon only
+    showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
   } finally {
     spotifyAuthRequestInFlight = false;
   }
@@ -476,8 +477,14 @@ export async function getNowPlaying() {
 
     spotifyAuthLinkActive = false;
 
+    // Check if plugin is configured
+    if (!resource || !resource.attributes.configured) {
+      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      return;
+    }
+
     // Check if anything is playing
-    if (!resource || !resource.attributes.is_playing) {
+    if (!resource.attributes.is_playing) {
       showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
       return;
     }

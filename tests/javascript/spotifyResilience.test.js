@@ -5,7 +5,7 @@ describe('Spotify polling resilience to 429 responses', () => {
   let getNowPlaying;
 
   // Helper to create JSON:API status response
-  function createStatusResponse(isPlaying, artist, song, trackUri) {
+  function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
     const trackId = trackUri
       ? Array.from(new TextEncoder().encode(trackUri))
           .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
@@ -17,7 +17,7 @@ describe('Spotify polling resilience to 429 responses', () => {
       data: {
         type: 'spotify_status',
         id: 'current',
-        attributes: { is_playing: isPlaying },
+        attributes: { configured, is_playing: isPlaying },
         relationships: {
           track: {
             data: trackId ? { type: 'spotify_tracks', id: trackId } : null,
@@ -98,7 +98,7 @@ describe('Spotify polling resilience to 429 responses', () => {
     vi.restoreAllMocks();
   });
 
-  it('preserves last Spotify data when 429 exhausts retries', async () => {
+  it('shows only Spotify icon when 429 exhausts retries (graceful degradation)', async () => {
     setupDOM();
 
     // First call succeeds with artist/song data

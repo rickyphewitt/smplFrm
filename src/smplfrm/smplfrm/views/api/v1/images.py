@@ -166,10 +166,17 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
 
         result = ImageManipulationService.validate_dimensions(width, height)
         if result[0] is None:
-            return HttpResponse(
-                content_type="application/json",
-                content=f'{{"error": "{result[1]}"}}',
-                status=400,
+            return Response(
+                {
+                    "errors": [
+                        {
+                            "status": "400",
+                            "code": "validation_error",
+                            "detail": result[1],
+                        }
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
         validated_width, validated_height = result
 
