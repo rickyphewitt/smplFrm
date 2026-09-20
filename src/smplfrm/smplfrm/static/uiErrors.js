@@ -89,8 +89,12 @@ export const ACTION_TOAST_DURATION_MS = 5000;
  */
 export const FORM_ERROR_DURATION_MS = 3000;
 
-/** Class marking a placeholder this module owns, so it can be replaced/cleared. */
-export const PLACEHOLDER_CLASS = 'ui-error-placeholder';
+/**
+ * Class stamped on every failure placeholder this module renders. Callers use
+ * it to find and remove those nodes on a recovery path without touching
+ * surrounding content.
+ */
+export const ERROR_PLACEHOLDER_CLASS = 'ui-error-placeholder';
 
 const LOG_PREFIX = '[uiErrors]';
 
@@ -246,7 +250,7 @@ export function showViewPlaceholder(target, message, colspan = 1) {
 
   if (isTableSection) {
     const row = document.createElement('tr');
-    row.className = PLACEHOLDER_CLASS;
+    row.className = ERROR_PLACEHOLDER_CLASS;
     const cell = document.createElement('td');
     cell.setAttribute('colspan', String(colspan));
     cell.textContent = message;
@@ -256,7 +260,7 @@ export function showViewPlaceholder(target, message, colspan = 1) {
   }
 
   const placeholder = document.createElement('div');
-  placeholder.className = PLACEHOLDER_CLASS;
+  placeholder.className = ERROR_PLACEHOLDER_CLASS;
   placeholder.textContent = message;
   target.prepend(placeholder);
   return true;
@@ -274,7 +278,7 @@ export function clearViewPlaceholder(target) {
     return;
   }
   target
-    .querySelectorAll(`.${PLACEHOLDER_CLASS}`)
+    .querySelectorAll(`.${ERROR_PLACEHOLDER_CLASS}`)
     .forEach((node) => node.remove());
 }
 

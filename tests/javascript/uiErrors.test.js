@@ -312,7 +312,7 @@ describe('uiErrors', () => {
       uiErrors.showViewPlaceholder(target, 'Second');
 
       const placeholders = target.querySelectorAll(
-        `.${uiErrors.PLACEHOLDER_CLASS}`,
+        `.${uiErrors.ERROR_PLACEHOLDER_CLASS}`,
       );
       expect(placeholders.length).toBe(1);
       expect(placeholders[0].textContent).toBe('Second');
@@ -327,7 +327,7 @@ describe('uiErrors', () => {
       uiErrors.clearViewPlaceholder(target);
 
       expect(
-        target.querySelectorAll(`.${uiErrors.PLACEHOLDER_CLASS}`).length,
+        target.querySelectorAll(`.${uiErrors.ERROR_PLACEHOLDER_CLASS}`).length,
       ).toBe(0);
       expect(document.getElementById('setting-date')).not.toBeNull();
     });

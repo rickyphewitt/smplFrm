@@ -835,3 +835,209 @@ describe('Plugins Tab', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });
+
+
+describe('Plugin detail failure handling', () => {
+  const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
+  let rejections;
+  let rejectionListener;
+
+  function setupModal() {
+    document.body.innerHTML = `
+            <div id="settings-modal" data-config-id="abc123" data-config-name="custom-test" data-config-plugins='["weather"]'>
+                <div class="tab-content active" id="tab-plugins">
+                    <div class="settings-section" id="plugin-list-view">
+                        <table><tbody id="plugin-list-body"></tbody></table>
+                    </div>
+                    <div class="settings-section" id="plugin-detail-view" style="display: none;">
+                        <h3 id="plugin-detail-name"></h3>
+                        <div id="plugin-detail-form"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" id="plugin-detail-actions" style="display: none;">
+                <button class="btn btn-primary" id="plugin-detail-save">Save</button>
+                <button class="btn btn-secondary" id="plugin-detail-back">Back</button>
+            </div>
+            <div class="modal-actions" id="main-actions">
+                <button id="save-settings">Save</button>
+                <button id="cancel-settings" class="btn-secondary">Cancel</button>
+            </div>
+            <button id="plugin-page-prev" disabled></button>
+            <span id="plugin-page-info"></span>
+            <button id="plugin-page-next" disabled></button>
+            <div class="error-message" id="error-message"></div>
+        `;
+  }
+
+  function listResponse() {
+    return {
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [
+            {
+              type: 'plugins',
+              id: 'p1',
+              attributes: {
+                name: 'weather',
+                description: 'Weather data',
+                settings: {},
+                settings_schema: [],
+              },
+            },
+          ],
+          meta: { pagination: { count: 1, page_size: 5 } },
+          links: {},
+        }),
+    };
+  }
+
+  function detailResponse() {
+    return {
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: {
+            type: 'plugins',
+            id: 'p1',
+            attributes: {
+              name: 'weather',
+              description: 'Weather data',
+              settings: { api_key: 'abc' },
+              settings_schema: [
+                { key: 'api_key', label: 'API Key', type: 'text' },
+              ],
+            },
+          },
+        }),
+    };
+  }
+
+  function errorResponse(status, detail) {
+    return {
+      ok: false,
+      status,
+      json: () =>
+        Promise.resolve({ errors: [{ status: String(status), detail }] }),
+    };
+  }
+
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    delete global.location;
+    global.location = { reload: vi.fn() };
+    setupModal();
+    global.window = Object.assign(global.window || {}, {
+      SMPL_CONFIG: {
+        host: 'http://localhost',
+        port: '8321',
+        refreshInterval: 30000,
+        transitionInterval: 10000,
+      },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    rejections = [];
+    // jsdom does not emit window 'unhandledrejection', so the Node-level event
+    // is what actually proves a promise rejection escaped a handler.
+    rejectionListener = (reason) => rejections.push(reason);
+    process.on('unhandledRejection', rejectionListener);
+  });
+
+  afterEach(() => {
+    process.off('unhandledRejection', rejectionListener);
+    vi.restoreAllMocks();
+  });
+
+  async function openDetail(detailMock) {
+    global.fetch.mockResolvedValueOnce(listResponse());
+    const mod = await import(MAIN);
+    await mod.loadPlugins();
+
+    global.fetch.mockResolvedValueOnce(detailMock);
+    document.querySelector('.plugin-configure-btn').click();
+    await settle();
+    return mod;
+  }
+
+  it('reports a failed plugin detail fetch without an unhandled rejection', async () => {
+    await openDetail(errorResponse(503, 'Plugin unavailable'));
+
+    const form = document.getElementById('plugin-detail-form');
+    expect(form.querySelectorAll('.ui-error-placeholder').length).toBe(1);
+    expect(form.textContent).toContain('Failed to load plugin settings');
+    expect(rejections.length).toBe(0);
+    expect(document.getElementById('settings-modal')).not.toBeNull();
+  });
+
+  it('surfaces the 4xx detail from a failed plugin detail fetch', async () => {
+    await openDetail(errorResponse(403, 'Plugin is not installed'));
+
+    expect(document.getElementById('plugin-detail-form').textContent).toContain(
+      'Plugin is not installed',
+    );
+  });
+
+  it('does not label the button Saved! when the plugin save fails', async () => {
+    await openDetail(detailResponse());
+
+    global.fetch.mockResolvedValueOnce(errorResponse(400, 'API key is invalid'));
+    const saveBtn = document.getElementById('plugin-detail-save');
+    saveBtn.click();
+    await settle();
+
+    expect(saveBtn.textContent).not.toBe('Saved!');
+    expect(saveBtn.textContent).toBe('Save');
+  });
+
+  it('shows the server detail in the form error region when the plugin save fails', async () => {
+    await openDetail(detailResponse());
+
+    global.fetch.mockResolvedValueOnce(errorResponse(400, 'API key is invalid'));
+    document.getElementById('plugin-detail-save').click();
+    await settle();
+
+    const errorMessage = document.getElementById('error-message');
+    expect(errorMessage.textContent).toBe('API key is invalid');
+    expect(errorMessage.classList.contains('show')).toBe(true);
+  });
+
+  it('does not mark changes saved when the plugin save fails', async () => {
+    await openDetail(detailResponse());
+
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+    document.getElementById('plugin-detail-save').click();
+    await settle();
+
+    const modal = document.getElementById('settings-modal');
+    expect(modal.dataset.changesSaved).not.toBe('true');
+    expect(document.getElementById('cancel-settings').textContent).toBe(
+      'Cancel',
+    );
+    expect(rejections.length).toBe(0);
+  });
+
+  it('marks changes saved when the plugin save succeeds', async () => {
+    await openDetail(detailResponse());
+
+    global.fetch.mockResolvedValueOnce(detailResponse());
+    const saveBtn = document.getElementById('plugin-detail-save');
+    saveBtn.click();
+    await settle();
+
+    expect(saveBtn.textContent).toBe('Saved!');
+    expect(document.getElementById('settings-modal').dataset.changesSaved).toBe(
+      'true',
+    );
+    expect(document.getElementById('cancel-settings').textContent).toBe(
+      'Reload Now',
+    );
+  });
+});
