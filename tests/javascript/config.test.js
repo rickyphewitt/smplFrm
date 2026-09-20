@@ -471,3 +471,256 @@ describe('Task Progress UI', () => {
     vi.useRealTimers();
   });
 });
+
+
+describe('Settings load failure and save guard', () => {
+  const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
+
+  function setupSettingsModal() {
+    document.body.innerHTML = `
+            <div class="settings-modal open" id="settings-modal" data-config-id="cfg1" data-config-name="custom-test">
+                <div class="modal-content">
+                    <div class="modal-tabs">
+                        <button class="tab-btn active" data-tab="display">Display</button>
+                        <button class="tab-btn" data-tab="tasks">Tasks</button>
+                    </div>
+                    <div class="tab-content active" id="tab-display">
+                        <div class="settings-section">
+                            <input type="checkbox" id="setting-date">
+                            <input type="checkbox" id="setting-force-date-path">
+                            <input type="checkbox" id="setting-clock">
+                            <input type="text" id="setting-timezone">
+                            <input type="number" id="setting-refresh">
+                            <input type="number" id="setting-transition">
+                            <input type="number" id="setting-cache-timeout">
+                            <input type="checkbox" id="setting-zoom">
+                            <select id="setting-transition-type"><option value="fade">fade</option></select>
+                            <select id="setting-fill-mode"><option value="cover">cover</option></select>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="tab-tasks">
+                        <div class="settings-section">
+                            <table><tbody id="task-list-body"></tbody></table>
+                        </div>
+                        <div class="task-pagination">
+                            <button id="task-page-prev"></button>
+                            <span id="task-page-info"></span>
+                            <button id="task-page-next"></button>
+                        </div>
+                    </div>
+                    <div class="modal-actions" id="main-actions">
+                        <button id="save-settings">Save Changes</button>
+                        <button id="cancel-settings" class="btn-secondary">Cancel</button>
+                    </div>
+                    <div class="error-message" id="error-message"></div>
+                </div>
+            </div>
+        `;
+  }
+
+  function configResponse(overrides = {}) {
+    return {
+      data: {
+        type: 'configs',
+        id: 'cfg1',
+        attributes: {
+          name: 'custom-test',
+          plugins: ['weather'],
+          display_date: true,
+          display_clock: true,
+          image_refresh_interval: 45000,
+          image_transition_interval: 15000,
+          image_zoom_effect: true,
+          image_transition_type: 'fade',
+          image_cache_timeout: 3600,
+          timezone: 'UTC',
+          image_fill_mode: 'cover',
+          force_date_from_path: false,
+          ...overrides,
+        },
+      },
+    };
+  }
+
+  function okResponse(body) {
+    return { ok: true, status: 200, json: () => Promise.resolve(body) };
+  }
+
+  function errorResponse(status, detail) {
+    return {
+      ok: false,
+      status,
+      json: () => Promise.resolve({ errors: [{ status: String(status), detail }] }),
+    };
+  }
+
+  function placeholders() {
+    return document.querySelectorAll('.ui-error-placeholder');
+  }
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    delete global.location;
+    global.location = { reload: vi.fn() };
+    setupSettingsModal();
+    global.window = Object.assign(global.window || {}, {
+      SMPL_CONFIG: {
+        host: 'http://localhost',
+        port: '8321',
+        refreshInterval: 30000,
+        transitionInterval: 10000,
+      },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders an inline placeholder in the settings body when the config fetch fails', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+
+    const { loadConfig } = await import(MAIN);
+    await loadConfig();
+
+    expect(placeholders().length).toBe(1);
+    expect(document.getElementById('tab-display').textContent).toContain(
+      'Failed to load settings',
+    );
+  });
+
+  it('disables the save button and marks the config unloaded on failure', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+
+    const { loadConfig } = await import(MAIN);
+    await loadConfig();
+
+    expect(document.getElementById('save-settings').disabled).toBe(true);
+    expect(
+      document.getElementById('settings-modal').dataset.configLoaded,
+    ).toBe('false');
+  });
+
+  it('enables the save button and marks the config loaded on success', async () => {
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+
+    const { loadConfig } = await import(MAIN);
+    await loadConfig();
+
+    expect(document.getElementById('save-settings').disabled).toBe(false);
+    expect(
+      document.getElementById('settings-modal').dataset.configLoaded,
+    ).toBe('true');
+    expect(placeholders().length).toBe(0);
+  });
+
+  it('leaves the modal open and other tabs working after a failed load', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(503, 'Unavailable'));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+
+    expect(
+      document.getElementById('settings-modal').classList.contains('open'),
+    ).toBe(true);
+
+    global.fetch.mockResolvedValueOnce(
+      okResponse({
+        data: [
+          {
+            type: 'rescan_library_tasks',
+            id: 't1',
+            attributes: {
+              label: 'Rescan Library',
+              status: 'completed',
+              progress: 100,
+              created: '2026-08-05T10:30:00Z',
+            },
+          },
+        ],
+        meta: { pagination: { pages: 1, page: 1 } },
+        links: {},
+      }),
+    );
+    await mod.loadTasks();
+
+    expect(
+      document.getElementById('task-list-body').querySelectorAll('tr').length,
+    ).toBe(1);
+  });
+
+  it('issues no request at all when saving after a failed load', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+    const callsAfterLoad = global.fetch.mock.calls.length;
+
+    const result = await mod.saveConfig();
+
+    expect(global.fetch.mock.calls.length).toBe(callsAfterLoad);
+    const bodies = global.fetch.mock.calls
+      .map((call) => call[1]?.body)
+      .filter(Boolean);
+    expect(bodies.some((body) => body.includes('"plugins":[]'))).toBe(false);
+    expect(bodies.some((body) => body.includes('"is_active":true'))).toBe(false);
+    expect(
+      global.fetch.mock.calls.some((call) => call[1]?.method === 'POST'),
+    ).toBe(false);
+    expect(result).toBe(false);
+  });
+
+  it('shows an inline form error when saving after a failed load', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+    const result = await mod.saveConfig();
+
+    const errorMessage = document.getElementById('error-message');
+    expect(errorMessage.classList.contains('show')).toBe(true);
+    expect(errorMessage.textContent.length).toBeGreaterThan(0);
+    expect(result).toBe(false);
+  });
+
+  it('recovers on reopen without a page reload', async () => {
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Internal error'));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+    expect(placeholders().length).toBe(1);
+
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+    await mod.loadConfig();
+
+    expect(placeholders().length).toBe(0);
+    expect(document.getElementById('save-settings').disabled).toBe(false);
+    expect(
+      document.getElementById('settings-modal').dataset.configLoaded,
+    ).toBe('true');
+    expect(global.location.reload).not.toHaveBeenCalled();
+    expect(document.getElementById('setting-timezone').value).toBe('UTC');
+  });
+
+  it('saves normally once the config has loaded', async () => {
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+    const result = await mod.saveConfig();
+
+    expect(result).toBe(true);
+    const putCall = global.fetch.mock.calls.find(
+      (call) => call[1]?.method === 'PUT',
+    );
+    expect(putCall).toBeDefined();
+    expect(JSON.parse(putCall[1].body).data.attributes.plugins).toEqual([
+      'weather',
+    ]);
+  });
+});

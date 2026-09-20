@@ -7,6 +7,11 @@ import {
   buildResourceDocument,
   formatWeatherTemp,
 } from './jsonApiClient.js';
+import {
+  ERROR_PLACEHOLDER_CLASS,
+  installGlobalRejectionHandler,
+  reportError,
+} from './uiErrors.js';
 
 const IMAGE_ID_ATTR = 'image-id';
 const OPACITY_INCREMENT = 0.1;
@@ -537,6 +542,8 @@ function refreshSpotify() {
 }
 
 export function init() {
+  // Installed first so a rejection from anything below still reaches the user.
+  installGlobalRejectionHandler();
   initSettingsModal();
   startImages();
 
@@ -591,9 +598,34 @@ export function updateSeparators() {
   }
 }
 
-async function loadConfig() {
+/**
+ * The region the settings form occupies, used as the failure target for a
+ * config load. Falls back to the modal itself if no tab is active.
+ *
+ * @param {Element} modal - The settings modal
+ * @returns {Element} - The element a load failure renders into
+ */
+function settingsBody(modal) {
+  return modal.querySelector('.tab-content.active') || modal;
+}
+
+/**
+ * Removes a config-load placeholder from whichever tab it was rendered into.
+ * Scoped to direct children of a tab so it cannot disturb the placeholder rows
+ * the plugin, preset, and task lists render inside their tables.
+ *
+ * @param {Element} modal - The settings modal
+ */
+function clearSettingsPlaceholder(modal) {
+  modal
+    .querySelectorAll(`.tab-content > .${ERROR_PLACEHOLDER_CLASS}`)
+    .forEach((node) => node.remove());
+}
+
+export async function loadConfig() {
   const modal = document.getElementById('settings-modal');
   const configId = modal.dataset.configId;
+  const saveBtn = document.getElementById('save-settings');
 
   try {
     const doc = await fetchJsonApi(buildApiUrl(`configs/${configId}`));
@@ -619,17 +651,41 @@ async function loadConfig() {
     document.getElementById('setting-fill-mode').value = config.image_fill_mode;
     document.getElementById('setting-force-date-path').checked =
       config.force_date_from_path;
+
+    clearSettingsPlaceholder(modal);
+    modal.dataset.configLoaded = 'true';
+    if (saveBtn) saveBtn.disabled = false;
   } catch (error) {
-    console.error('Error loading config:', error);
+    // No settings input carries a server-rendered value, so a failed load
+    // leaves every field blank. Saving from that state would submit an empty
+    // plugin list and null intervals, so the form is marked unloaded and
+    // saving stays blocked until a load succeeds.
+    modal.dataset.configLoaded = 'false';
+    if (saveBtn) saveBtn.disabled = true;
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load settings. Close and reopen settings to retry.',
+      target: settingsBody(modal),
+    });
   }
 }
 
-async function saveConfig() {
+export async function saveConfig() {
   const modal = document.getElementById('settings-modal');
   let configId = modal.dataset.configId;
   const configName = modal.dataset.configName;
   const errorMessage = document.getElementById('error-message');
   const cancelBtn = document.getElementById('cancel-settings');
+
+  // Blank fields from a failed load must never be submitted: the save button is
+  // already disabled, and this guard also covers a programmatic call.
+  if (modal.dataset.configLoaded === 'false') {
+    reportError(new Error('Settings were never loaded'), {
+      channel: 'form',
+      fallback: 'Settings could not be loaded, so they cannot be saved.',
+    });
+    return false;
+  }
 
   const configAttributes = {
     display_date: document.getElementById('setting-date').checked,
@@ -1034,12 +1090,44 @@ async function openPluginDetail(pluginId) {
   const detailView = document.getElementById('plugin-detail-view');
   const nameEl = document.getElementById('plugin-detail-name');
   const formEl = document.getElementById('plugin-detail-form');
+  const saveBtn = document.getElementById('plugin-detail-save');
 
-  const doc = await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`));
+  // Reveals the detail region and wires its Back button. Both the loaded form
+  // and a load failure need this, so a failure is visible and still escapable.
+  const showDetailView = () => {
+    listView.style.display = 'none';
+    detailView.style.display = '';
+    document.getElementById('main-actions').style.display = 'none';
+    document.getElementById('plugin-detail-actions').style.display = '';
+
+    const backBtn = document.getElementById('plugin-detail-back');
+    const newBack = backBtn.cloneNode(true);
+    backBtn.parentNode.replaceChild(newBack, backBtn);
+    newBack.addEventListener('click', () => loadPlugins(pluginPage));
+  };
+
+  let doc;
+  try {
+    doc = await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`));
+  } catch (error) {
+    nameEl.textContent = '';
+    formEl.replaceChildren();
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load plugin settings.',
+      target: formEl,
+    });
+    // Nothing to submit without the schema and current values.
+    saveBtn.disabled = true;
+    showDetailView();
+    return;
+  }
+
   const resource = unwrapResource(doc);
   if (!resource) return;
   const plugin = { id: resource.id, ...resource.attributes };
 
+  saveBtn.disabled = false;
   nameEl.textContent = plugin.name;
   formEl.innerHTML = '';
 
@@ -1109,7 +1197,6 @@ async function openPluginDetail(pluginId) {
   });
 
   // Save handler
-  const saveBtn = document.getElementById('plugin-detail-save');
   const newSave = saveBtn.cloneNode(true);
   saveBtn.parentNode.replaceChild(newSave, saveBtn);
   newSave.addEventListener('click', async () => {
@@ -1134,10 +1221,20 @@ async function openPluginDetail(pluginId) {
     });
 
     const requestDoc = buildResourceDocument('plugins', pluginId, { settings });
-    await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`), {
-      method: 'PUT',
-      body: JSON.stringify(requestDoc),
-    });
+    try {
+      await fetchJsonApi(buildApiUrl(`plugins/${pluginId}`), {
+        method: 'PUT',
+        body: JSON.stringify(requestDoc),
+      });
+    } catch (error) {
+      reportError(error, {
+        channel: 'form',
+        fallback: 'Failed to save plugin settings.',
+        disable: newSave,
+      });
+      return;
+    }
+
     newSave.textContent = 'Saved!';
     setTimeout(() => {
       newSave.textContent = 'Save';
@@ -1151,16 +1248,7 @@ async function openPluginDetail(pluginId) {
     cancelBtn.classList.add('btn-primary');
   });
 
-  listView.style.display = 'none';
-  detailView.style.display = '';
-  document.getElementById('main-actions').style.display = 'none';
-  document.getElementById('plugin-detail-actions').style.display = '';
-
-  // Back button
-  const backBtn = document.getElementById('plugin-detail-back');
-  const newBack = backBtn.cloneNode(true);
-  backBtn.parentNode.replaceChild(newBack, backBtn);
-  newBack.addEventListener('click', () => loadPlugins(pluginPage));
+  showDetailView();
 }
 
 export async function loadPresets(page = 1) {
