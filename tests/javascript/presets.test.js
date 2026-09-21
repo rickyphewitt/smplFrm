@@ -194,7 +194,13 @@ describe('Presets Tab', () => {
       'http://localhost:8321/api/v1/configs/p2',
       expect.objectContaining({
         method: 'PUT',
-        headers: { 'Content-Type': 'application/vnd.api+json' },
+        // The activate PUT goes through the JSON:API client, which sends Accept
+        // alongside Content-Type, so the headers are matched by content rather
+        // than as an exact object.
+        headers: expect.objectContaining({
+          'Content-Type': 'application/vnd.api+json',
+          Accept: 'application/vnd.api+json',
+        }),
       }),
     );
     expect(global.location.reload).toHaveBeenCalled();
@@ -306,5 +312,288 @@ describe('saveConfig copy-on-write', () => {
     const modal = document.getElementById('settings-modal');
     expect(modal.dataset.configName).toBe('smplFrm Default');
     expect(modal.dataset.configName.startsWith('smplFrm ')).toBe(true);
+  });
+});
+
+
+describe('Preset and task action failures', () => {
+  const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    delete global.location;
+    global.location = { reload: vi.fn() };
+
+    document.body.innerHTML = `
+            <div id="settings-modal" data-config-id="abc123" data-config-name="custom-active">
+                <table><tbody id="preset-list-body"></tbody></table>
+                <button id="preset-page-prev" disabled></button>
+                <span id="preset-page-info"></span>
+                <button id="preset-page-next" disabled></button>
+                <table><tbody id="task-list-body"></tbody></table>
+                <button id="task-page-prev" disabled></button>
+                <span id="task-page-info"></span>
+                <button id="task-page-next" disabled></button>
+                <div class="error-message" id="error-message"></div>
+            </div>
+        `;
+
+    global.window = Object.assign(global.window || {}, {
+      SMPL_CONFIG: {
+        host: 'http://localhost',
+        port: '8321',
+        refreshInterval: 30000,
+        transitionInterval: 10000,
+      },
+    });
+
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    document.getElementById('app-toast')?.remove();
+    vi.restoreAllMocks();
+  });
+
+  function ok(body) {
+    return { ok: true, status: 200, json: () => Promise.resolve(body) };
+  }
+
+  function noContent() {
+    return {
+      ok: true,
+      status: 204,
+      headers: { get: () => null },
+      // A real 204 has no body, so parsing it rejects.
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    };
+  }
+
+  function failure(status, detail) {
+    return {
+      ok: false,
+      status,
+      json: () =>
+        Promise.resolve({ errors: [{ status: String(status), detail }] }),
+    };
+  }
+
+  function presetList() {
+    return ok({
+      data: [
+        {
+          type: 'configs',
+          id: 'c1',
+          attributes: {
+            name: 'custom-one',
+            description: 'A custom config',
+            is_active: false,
+          },
+        },
+      ],
+      links: {},
+      meta: { pagination: { count: 1, page: 1, pages: 1 } },
+    });
+  }
+
+  function taskList() {
+    return ok({
+      data: [
+        {
+          type: 'rescan_library_tasks',
+          id: 't1',
+          attributes: {
+            label: 'Rescan Library',
+            status: 'completed',
+            progress: 100,
+            created: '2026-08-05T10:30:00Z',
+          },
+        },
+      ],
+      links: {},
+      meta: { pagination: { pages: 1, page: 1 } },
+    });
+  }
+
+  function toast() {
+    return document.getElementById('app-toast');
+  }
+
+  it('reports a failed preset delete and leaves the list untouched', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    global.fetch.mockResolvedValueOnce(failure(500, 'Internal error'));
+    document.querySelector('.preset-delete-btn').click();
+    await settle();
+
+    expect(toast()).not.toBeNull();
+    expect(toast().style.opacity).toBe('1');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(
+      document.getElementById('preset-list-body').querySelectorAll('tr').length,
+    ).toBe(1);
+  });
+
+  it('surfaces the server reason for a rejected preset delete', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    global.fetch.mockResolvedValueOnce(
+      failure(409, 'The active config cannot be deleted'),
+    );
+    document.querySelector('.preset-delete-btn').click();
+    await settle();
+
+    expect(toast().textContent).toBe('The active config cannot be deleted');
+  });
+
+  it('reloads the preset list after a 204 delete without a parse error', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    global.fetch
+      .mockResolvedValueOnce(noContent())
+      .mockResolvedValueOnce(presetList());
+    document.querySelector('.preset-delete-btn').click();
+    await settle();
+
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch.mock.calls[2][0]).toContain('configs?page[number]=1');
+    expect(toast()).toBeNull();
+  });
+
+  it('reports a failed task delete and leaves the list untouched', async () => {
+    global.fetch.mockResolvedValueOnce(taskList());
+    const mod = await import(MAIN);
+    await mod.loadTasks();
+
+    global.fetch.mockResolvedValueOnce(failure(500, 'Internal error'));
+    document.querySelector('#task-list-body .task-delete-btn').click();
+    await settle();
+
+    expect(toast()).not.toBeNull();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(
+      document.getElementById('task-list-body').querySelectorAll('tr').length,
+    ).toBe(1);
+  });
+
+  it('reloads the task list after a 204 delete', async () => {
+    global.fetch.mockResolvedValueOnce(taskList());
+    const mod = await import(MAIN);
+    await mod.loadTasks();
+
+    global.fetch
+      .mockResolvedValueOnce(noContent())
+      .mockResolvedValueOnce(taskList());
+    document.querySelector('#task-list-body .task-delete-btn').click();
+    await settle();
+
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch.mock.calls[2][0]).toContain('tasks?page[number]=1');
+    expect(toast()).toBeNull();
+  });
+
+  it('reports a failed preset activate, restores the button, and does not reload', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    global.fetch
+      .mockResolvedValueOnce(
+        ok({
+          data: {
+            type: 'configs',
+            id: 'c1',
+            attributes: { name: 'custom-one', is_active: false },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(failure(500, 'Internal error'));
+
+    const btn = document.querySelector('.preset-activate-btn');
+    btn.click();
+    await settle();
+
+    expect(toast()).not.toBeNull();
+    expect(btn.textContent).toBe('Activate');
+    expect(btn.disabled).toBe(false);
+    expect(global.location.reload).not.toHaveBeenCalled();
+  });
+
+  it('reverts an inline edit and shows the reason when the save fails', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    const cell = document.querySelector('[data-field="name"]');
+    expect(cell.dataset.original).toBe('custom-one');
+    cell.textContent = 'renamed-config';
+
+    global.fetch
+      .mockResolvedValueOnce(
+        ok({
+          data: {
+            type: 'configs',
+            id: 'c1',
+            attributes: {
+              name: 'custom-one',
+              description: 'A custom config',
+              is_active: false,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(failure(400, 'Name is already taken'));
+
+    cell.dispatchEvent(new Event('blur'));
+    await settle();
+
+    expect(cell.textContent).toBe('custom-one');
+    expect(cell.dataset.original).toBe('custom-one');
+    const errorMessage = document.getElementById('error-message');
+    expect(errorMessage.textContent).toBe('Name is already taken');
+    expect(errorMessage.classList.contains('show')).toBe(true);
+  });
+
+  it('keeps an inline edit that saved successfully', async () => {
+    global.fetch.mockResolvedValueOnce(presetList());
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    const cell = document.querySelector('[data-field="description"]');
+    cell.textContent = 'Updated description';
+
+    global.fetch
+      .mockResolvedValueOnce(
+        ok({
+          data: {
+            type: 'configs',
+            id: 'c1',
+            attributes: {
+              name: 'custom-one',
+              description: 'A custom config',
+              is_active: false,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(ok({ data: { type: 'configs', id: 'c1' } }));
+
+    cell.dispatchEvent(new Event('blur'));
+    await settle();
+
+    expect(cell.textContent).toBe('Updated description');
+    expect(cell.dataset.original).toBe('Updated description');
+    expect(document.getElementById('error-message').classList.contains('show')).toBe(
+      false,
+    );
   });
 });

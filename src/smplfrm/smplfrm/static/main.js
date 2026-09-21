@@ -1304,14 +1304,19 @@ export async function loadPresets(page = 1) {
           config[field] = value;
           delete config.id;
           delete config.is_active;
-          await resilientFetch(buildApiUrl(`configs/${id}`), {
+          await fetchJsonApi(buildApiUrl(`configs/${id}`), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/vnd.api+json' },
             body: JSON.stringify(buildResourceDocument('configs', id, config)),
           });
           cell.dataset.original = value;
-        } catch (e) {
-          console.error('Failed to save:', e);
+        } catch (error) {
+          // The cell holds the rejected text, so it has to go back to the last
+          // value the server accepted or the row would misreport the config.
+          cell.textContent = cell.dataset.original;
+          reportError(error, {
+            channel: 'form',
+            fallback: 'Failed to save the change.',
+          });
         }
       };
       cell.addEventListener('blur', save);
@@ -1334,9 +1339,8 @@ export async function loadPresets(page = 1) {
           const resource = unwrapResource(getDoc);
           if (!resource) throw new Error('Config not found');
           const { id, is_active, ...attrs } = resource.attributes;
-          const resp = await resilientFetch(buildApiUrl(`configs/${configId}`), {
+          await fetchJsonApi(buildApiUrl(`configs/${configId}`), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/vnd.api+json' },
             body: JSON.stringify(
               buildResourceDocument('configs', configId, {
                 ...attrs,
@@ -1344,20 +1348,33 @@ export async function loadPresets(page = 1) {
               }),
             ),
           });
-          if (!resp.ok) throw new Error('Failed to activate');
           location.reload();
-        } catch {
+        } catch (error) {
           btn.disabled = false;
           btn.textContent = 'Activate';
+          reportError(error, {
+            channel: 'action',
+            fallback: 'Failed to activate the preset.',
+          });
         }
       });
     });
 
     body.querySelectorAll('.preset-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await resilientFetch(buildApiUrl(`configs/${btn.dataset.id}`), {
-          method: 'DELETE',
-        });
+        try {
+          await fetchJsonApi(buildApiUrl(`configs/${btn.dataset.id}`), {
+            method: 'DELETE',
+          });
+        } catch (error) {
+          // Reloading here would redraw the same row and imply the delete
+          // worked, so the list is left as-is on failure.
+          reportError(error, {
+            channel: 'action',
+            fallback: 'Failed to delete the preset.',
+          });
+          return;
+        }
         loadPresets(presetPage);
       });
     });
@@ -1395,9 +1412,19 @@ export async function loadTasks(page = 1) {
 
     body.querySelectorAll('.task-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await resilientFetch(buildApiUrl(`tasks/${btn.dataset.id}`), {
-          method: 'DELETE',
-        });
+        try {
+          await fetchJsonApi(buildApiUrl(`tasks/${btn.dataset.id}`), {
+            method: 'DELETE',
+          });
+        } catch (error) {
+          // Same reasoning as preset delete: no reload on failure, or the row
+          // reappears and looks like a successful delete that did not happen.
+          reportError(error, {
+            channel: 'action',
+            fallback: 'Failed to delete the task.',
+          });
+          return;
+        }
         loadTasks(taskPage);
       });
     });
