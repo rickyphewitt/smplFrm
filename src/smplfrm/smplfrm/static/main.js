@@ -674,7 +674,6 @@ export async function saveConfig() {
   const modal = document.getElementById('settings-modal');
   let configId = modal.dataset.configId;
   const configName = modal.dataset.configName;
-  const errorMessage = document.getElementById('error-message');
   const cancelBtn = document.getElementById('cancel-settings');
 
   // Blank fields from a failed load must never be submitted: the save button is
@@ -741,20 +740,12 @@ export async function saveConfig() {
 
     configAttributes.name = modal.dataset.configName;
 
-    const response = await resilientFetch(buildApiUrl(`configs/${configId}`), {
+    await fetchJsonApi(buildApiUrl(`configs/${configId}`), {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/vnd.api+json',
-      },
       body: JSON.stringify(
         buildResourceDocument('configs', configId, configAttributes),
       ),
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to save settings');
-    }
 
     console.log('Settings saved successfully');
 
@@ -768,17 +759,11 @@ export async function saveConfig() {
 
     return true;
   } catch (error) {
-    console.error('Error saving config:', error);
-    errorMessage.textContent = error.message;
-    errorMessage.classList.add('show');
-
-    const saveBtn = document.getElementById('save-settings');
-    saveBtn.disabled = true;
-
-    setTimeout(() => {
-      errorMessage.classList.remove('show');
-      saveBtn.disabled = false;
-    }, 3000);
+    reportError(error, {
+      channel: 'form',
+      fallback: 'Failed to save settings.',
+      disable: document.getElementById('save-settings'),
+    });
 
     return false;
   }
@@ -798,9 +783,8 @@ export async function startTask(taskType) {
   const jsonApiType = typeMapping[taskType] || taskType;
 
   try {
-    const response = await resilientFetch(buildApiUrl('tasks'), {
+    const data = await fetchJsonApi(buildApiUrl('tasks'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/vnd.api+json' },
       body: JSON.stringify({
         data: {
           type: jsonApiType,
@@ -808,27 +792,24 @@ export async function startTask(taskType) {
         },
       }),
     });
-    if (response.status === 429) return null;
-    if (response.status === 409) {
-      const data = await response.json();
-      toast.classList.add('show');
-      bar.style.width = '0%';
-      text.textContent =
-        data.errors?.[0]?.detail || data.detail || 'Task already running';
-      setTimeout(() => toast.classList.remove('show'), 3000);
-      return null;
-    }
-    if (!response.ok) throw new Error('Failed to start task');
-    const data = await response.json();
     const task = data.data;
     pollTask(task.id, task.attributes.label);
     return task;
   } catch (error) {
-    console.error('Error starting task:', error);
-    toast.classList.add('show');
-    bar.style.width = '0%';
-    text.textContent = 'Failed to start task';
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    // A conflict means a task of this type is already pending or running, so
+    // the reason belongs on the task toast next to that task's progress.
+    if (error instanceof JsonApiError && error.status === 409) {
+      toast.classList.add('show');
+      bar.style.width = '0%';
+      text.textContent = error.errors?.[0]?.detail || 'Task already running';
+      setTimeout(() => toast.classList.remove('show'), 3000);
+      return null;
+    }
+
+    reportError(error, {
+      channel: 'action',
+      fallback: 'Failed to start task',
+    });
     return null;
   }
 }
@@ -1043,8 +1024,13 @@ export async function loadPlugins(page = 1) {
     info.textContent = `Page ${page} of ${totalPages}`;
     prev.disabled = !links.prev;
     next.disabled = !links.next;
-  } catch {
-    body.innerHTML = '<tr><td colspan="4">Failed to load plugins</td></tr>';
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load plugins',
+      target: body,
+      colspan: 4,
+    });
   }
 }
 
@@ -1384,8 +1370,13 @@ export async function loadPresets(page = 1) {
     info.textContent = `Page ${page} of ${totalPages}`;
     prev.disabled = !doc.links?.prev;
     next.disabled = !doc.links?.next;
-  } catch {
-    body.innerHTML = '<tr><td colspan="4">Failed to load presets</td></tr>';
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load presets',
+      target: body,
+      colspan: 4,
+    });
   }
 }
 
@@ -1397,11 +1388,7 @@ export async function loadTasks(page = 1) {
   const info = document.getElementById('task-page-info');
 
   try {
-    const response = await resilientFetch(
-      buildApiUrl(`tasks?page[number]=${page}`),
-    );
-    if (!response.ok) throw new Error('Failed to load tasks');
-    const data = await response.json();
+    const data = await fetchJsonApi(buildApiUrl(`tasks?page[number]=${page}`));
 
     body.innerHTML = data.data
       .map((t) => {
@@ -1434,8 +1421,13 @@ export async function loadTasks(page = 1) {
     info.textContent = `Page ${currentPage} of ${totalPages}`;
     prev.disabled = !data.links?.prev;
     next.disabled = !data.links?.next;
-  } catch {
-    body.innerHTML = '<tr><td colspan="5">Failed to load tasks</td></tr>';
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load tasks',
+      target: body,
+      colspan: 5,
+    });
   }
 }
 

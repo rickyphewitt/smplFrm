@@ -453,9 +453,58 @@ describe('main.js', () => {
       const result = await startTask('clear_cache');
 
       expect(result).toBeNull();
-      expect(document.getElementById('task-toast-text').textContent).toBe(
-        'Failed to start task',
+      // A failed start is reported through the shared action toast rather than
+      // the task toast, which belongs to the poll controller for the lifetime
+      // of a task it owns.
+      const appToast = document.getElementById('app-toast');
+      expect(appToast).not.toBeNull();
+      expect(appToast.textContent).toBe('Failed to start task');
+      expect(
+        document.getElementById('task-toast').classList.contains('show'),
+      ).toBe(false);
+    });
+
+    it('shows the server reason when a start is rejected', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 400,
+          json: () =>
+            Promise.resolve({
+              errors: [{ status: '400', detail: 'Library path is not set' }],
+            }),
+        }),
       );
+
+      const result = await startTask('rescan_library');
+
+      expect(result).toBeNull();
+      expect(document.getElementById('app-toast').textContent).toBe(
+        'Library path is not set',
+      );
+    });
+
+    it('stays silent when a start is rate limited', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 429,
+          headers: { get: () => '1' },
+          json: () => Promise.resolve({ errors: [{ status: '429' }] }),
+        }),
+      );
+
+      const pending = startTask('clear_cache');
+      // Let resilientFetch exhaust its retry chain.
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await pending;
+
+      expect(result).toBeNull();
+      // The rate-limit toast already reports this globally.
+      expect(document.getElementById('app-toast')).toBeNull();
+      expect(
+        document.getElementById('task-toast').classList.contains('show'),
+      ).toBe(false);
     });
   });
 });

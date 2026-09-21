@@ -723,4 +723,51 @@ describe('Settings load failure and save guard', () => {
       'weather',
     ]);
   });
+
+  it('shows the server reason when a save is rejected', async () => {
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+
+    global.fetch.mockResolvedValueOnce(errorResponse(400, 'Timezone is invalid'));
+    const result = await mod.saveConfig();
+
+    expect(result).toBe(false);
+    const errorMessage = document.getElementById('error-message');
+    expect(errorMessage.textContent).toBe('Timezone is invalid');
+    expect(errorMessage.classList.contains('show')).toBe(true);
+    expect(document.getElementById('save-settings').disabled).toBe(true);
+  });
+
+  it('falls back to a static message when a save fails without a usable reason', async () => {
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+
+    global.fetch.mockResolvedValueOnce(errorResponse(500, 'Traceback leaked'));
+    const result = await mod.saveConfig();
+
+    expect(result).toBe(false);
+    const errorMessage = document.getElementById('error-message');
+    expect(errorMessage.textContent).toBe('Failed to save settings.');
+    expect(errorMessage.textContent).not.toContain('Traceback');
+  });
+
+  it('does not mark changes saved when a save is rejected', async () => {
+    global.fetch.mockResolvedValueOnce(okResponse(configResponse()));
+
+    const mod = await import(MAIN);
+    await mod.loadConfig();
+
+    global.fetch.mockResolvedValueOnce(errorResponse(400, 'Timezone is invalid'));
+    await mod.saveConfig();
+
+    const modal = document.getElementById('settings-modal');
+    expect(modal.dataset.changesSaved).not.toBe('true');
+    expect(document.getElementById('cancel-settings').textContent).toBe(
+      'Cancel',
+    );
+  });
 });
