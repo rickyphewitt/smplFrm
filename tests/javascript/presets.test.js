@@ -597,3 +597,106 @@ describe('Preset and task action failures', () => {
     );
   });
 });
+
+
+describe('List failure placeholders', () => {
+  const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    delete global.location;
+    global.location = { reload: vi.fn() };
+
+    document.body.innerHTML = `
+            <div id="settings-modal" data-config-id="abc123" data-config-name="custom-active">
+                <table><tbody id="preset-list-body"></tbody></table>
+                <button id="preset-page-prev" disabled></button>
+                <span id="preset-page-info"></span>
+                <button id="preset-page-next" disabled></button>
+                <table><tbody id="task-list-body"></tbody></table>
+                <button id="task-page-prev" disabled></button>
+                <span id="task-page-info"></span>
+                <button id="task-page-next" disabled></button>
+            </div>
+        `;
+
+    global.window = Object.assign(global.window || {}, {
+      SMPL_CONFIG: {
+        host: 'http://localhost',
+        port: '8321',
+        refreshInterval: 30000,
+        transitionInterval: 10000,
+      },
+    });
+
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the preset failure row with a four column span', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    const rows = document
+      .getElementById('preset-list-body')
+      .querySelectorAll('tr.ui-error-placeholder');
+    expect(rows.length).toBe(1);
+    expect(rows[0].querySelector('td').getAttribute('colspan')).toBe('4');
+    expect(rows[0].textContent).toBe('Failed to load presets');
+  });
+
+  it('renders the task failure row with a five column span', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const mod = await import(MAIN);
+    await mod.loadTasks();
+
+    const rows = document
+      .getElementById('task-list-body')
+      .querySelectorAll('tr.ui-error-placeholder');
+    expect(rows.length).toBe(1);
+    expect(rows[0].querySelector('td').getAttribute('colspan')).toBe('5');
+    expect(rows[0].textContent).toBe('Failed to load tasks');
+  });
+
+  it('surfaces the server reason when a list load is rejected', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: () =>
+        Promise.resolve({
+          errors: [{ status: '403', detail: 'Presets are not available' }],
+        }),
+    });
+
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    expect(
+      document.getElementById('preset-list-body').textContent,
+    ).toBe('Presets are not available');
+  });
+
+  it('renders a hostile detail as literal text in a failure row', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () =>
+        Promise.resolve({
+          errors: [{ status: '400', detail: '<img src=x onerror=alert(1)>' }],
+        }),
+    });
+
+    const mod = await import(MAIN);
+    await mod.loadPresets();
+
+    const body = document.getElementById('preset-list-body');
+    expect(body.querySelector('img')).toBeNull();
+    expect(body.textContent).toBe('<img src=x onerror=alert(1)>');
+  });
+});

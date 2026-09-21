@@ -251,6 +251,21 @@ describe('Plugins Tab', () => {
     expect(body.innerHTML).toContain('Failed to load plugins');
   });
 
+  it('should render the plugin failure row through the shared placeholder', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const { loadPlugins } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
+    await loadPlugins();
+
+    const body = document.getElementById('plugin-list-body');
+    const rows = body.querySelectorAll('tr.ui-error-placeholder');
+    expect(rows.length).toBe(1);
+    const cell = rows[0].querySelector('td');
+    expect(cell.getAttribute('colspan')).toBe('4');
+    expect(cell.textContent).toBe('Failed to load plugins');
+  });
+
   it('should set pagination controls correctly', async () => {
     const plugins = [
       { id: 'p1', name: 'a', description: '' },
