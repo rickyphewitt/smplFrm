@@ -36,7 +36,7 @@ export class JsonApiError extends Error {
  *
  * @param {string} url - The request URL
  * @param {RequestInit} [options] - Standard fetch options (headers will be merged)
- * @returns {Promise<Object>} - Parsed JSON response
+ * @returns {Promise<Object|null>} - Parsed JSON response, or null for an empty body
  * @throws {JsonApiError} - On non-ok responses with JSON:API errors
  */
 export async function fetchJsonApi(url, options = {}) {
@@ -55,6 +55,16 @@ export async function fetchJsonApi(url, options = {}) {
     headers,
   });
 
+  // DELETE endpoints answer 204 with no body at all, which response.json()
+  // cannot parse. A successful empty response resolves as null; a failed one
+  // still raises, just without a detail to carry.
+  if (isEmptyBody(response)) {
+    if (!response.ok) {
+      throw new JsonApiError(response.status, []);
+    }
+    return null;
+  }
+
   // Parse JSON body
   const data = await response.json();
 
@@ -65,6 +75,19 @@ export async function fetchJsonApi(url, options = {}) {
   }
 
   return data;
+}
+
+/**
+ * True when a response carries no body to parse.
+ *
+ * @param {Response} response - The response to inspect
+ * @returns {boolean}
+ */
+function isEmptyBody(response) {
+  if (response.status === 204 || response.status === 205) {
+    return true;
+  }
+  return response.headers?.get?.('Content-Length') === '0';
 }
 
 /**
