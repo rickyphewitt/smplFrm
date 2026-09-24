@@ -2,6 +2,20 @@
 
 The settings modal can be accessed by clicking the SmplFrm icon in the top-right corner of the display. It contains tabs for Display, Images, Library, Presets, Plugins, Tasks, and About.
 
+## Error Messages
+
+When something fails, smplFrm reports it rather than failing quietly:
+
+- A failed save shows the reason in a message bar below the modal buttons.
+- A section that could not load shows a message in place of its content.
+- A failed action, such as deleting or activating a preset, shows a brief message in the bottom-right corner. The list is left as it was, so it never implies a change that did not happen.
+
+If your current settings could not be loaded, Save is disabled and the form says so. This is deliberate: the form would otherwise be blank, and saving it would overwrite your real settings. Close and reopen the modal to try loading again.
+
+Where the server explains why a request was rejected, that explanation is shown as-is. Unexpected server faults show a generic message instead.
+
+Requests are also rate-limited. When that happens a separate notice appears explaining how to [raise the limit](Environment-Variables#security), and no other error message is shown for the same request.
+
 ## Display
 
 The Display tab controls what information is shown on the photo frame overlay.
@@ -119,6 +133,8 @@ Spotify refresh tokens expire six months after authorization. When a token expir
 | Wind Speed | Wind speed unit: mph, kmh, kn, or ms. |
 
 [Weather data by Open-Meteo.com](https://open-meteo.com)
+
+If weather data cannot be retrieved, the weather slot on the frame shows `🌡️ ⚠️` rather than going blank, so an unavailable plugin is distinguishable from a disabled one. The indicator clears when the page next reloads.
 
 ## Tasks
 

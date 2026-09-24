@@ -142,11 +142,12 @@ async function refillQueue() {
     // On fetch failure, keep existing queue and retry on next refill attempt
     // If 404 (invalid page), reset to page 1
     if (error?.status === 404) {
-      console.debug('Invalid page, resetting to page 1');
       currentPage = 1;
-    } else {
-      console.debug('Queue refill failed, will retry:', error);
     }
+    reportError(error, {
+      channel: 'silent',
+      fallback: 'Image queue refill failed, will retry.',
+    });
   }
 }
 
@@ -172,24 +173,20 @@ async function requestPreload(imageIds, width, height) {
       body: JSON.stringify(payload),
     });
 
-    // 409 (conflict or capacity) is non-critical - preload is best-effort
-    if (response.status === 409) {
-      console.debug('Preload conflict or capacity exceeded, continuing without preload');
-      return;
-    }
-
-    // 429 (rate limited) is non-critical - continue without preload
-    if (response.status === 429) {
-      console.debug('Preload rate limited, continuing without preload');
-      return;
-    }
-
+    // Preload is best-effort: a conflict, a capacity limit, a rate limit, or any
+    // other rejection all mean the display carries on with uncached images.
     if (!response.ok) {
-      console.debug('Preload request failed:', response.status);
+      reportError(new JsonApiError(response.status, []), {
+        channel: 'silent',
+        fallback: 'Preload request failed, continuing without preload.',
+      });
     }
   } catch (error) {
     // Non-critical failure - display continues with uncached images
-    console.debug('Preload request error:', error);
+    reportError(error, {
+      channel: 'silent',
+      fallback: 'Preload request failed, continuing without preload.',
+    });
   }
 }
 
@@ -201,9 +198,10 @@ async function displayMetadata(imageId) {
       buildApiUrl(`images_metadata?filter[image]=${imageId}`),
     );
     if (!response.ok) {
-      // Silently ignore 429 responses — don't show error for rate limiting
+      // Rate limiting is already reported globally, and the date is left as-is
+      // so the next image can try again.
       if (response.status === 429) return;
-      throw new Error(`Network response was not ok: ${response.statusText}`);
+      throw new JsonApiError(response.status, []);
     }
 
     const data = await response.json();
@@ -226,10 +224,10 @@ async function displayMetadata(imageId) {
       document.getElementById('photo-date').innerHTML = `📷 ${prettyDate}`;
     }
   } catch (error) {
-    // Don't log 429 errors — they're handled silently
-    if (error && error.status !== 429) {
-      console.error('Fetch error:', error);
-    }
+    reportError(error, {
+      channel: 'silent',
+      fallback: 'Image metadata unavailable.',
+    });
     document.getElementById('photo-date').innerHTML = `📷`;
   }
 }
@@ -392,7 +390,7 @@ function displayClock() {
   setTimeout(displayClock, CLOCK_REFRESH_MS);
 }
 
-function displayWeather() {
+export function displayWeather() {
   const weatherGroup = document.getElementById('weather-group');
   if (!config.plugins || !config.plugins.includes('weather')) {
     weatherGroup.style.display = 'none';
@@ -405,10 +403,22 @@ function displayWeather() {
       if (resource && resource.attributes) {
         const { temperature, temperature_scale } = resource.attributes;
         const formatted = formatWeatherTemp(temperature, temperature_scale);
-        document.getElementById('weather-temp').innerHTML = `🌡️ ${formatted}`;
+        document.getElementById('weather-temp').textContent = `🌡️ ${formatted}`;
       }
     })
-    .catch(() => {});
+    .catch((error) => {
+      // There is no weather refresh loop, so a failure here lasts for the life
+      // of the page. The slot shows an unavailable state rather than staying
+      // blank, which is indistinguishable from the plugin being disabled. The
+      // group stays visible for the same reason.
+      reportError(error, {
+        channel: 'indicator',
+        fallback: 'Weather is unavailable.',
+        onDegrade: () => {
+          document.getElementById('weather-temp').textContent = '🌡️ ⚠️';
+        },
+      });
+    });
 }
 
 function showSpotifyBar(content) {
@@ -468,7 +478,13 @@ async function showSpotifyAuthorization(reason) {
     showSpotifyAuthLink(resource.attributes.auth_url, reason);
     spotifyAuthLinkActive = true;
   } catch (error) {
-    // On any error (429, 500, 503): show icon only
+    // Any failure here (429, 500, 503) leaves the bar in its icon-only state.
+    // The render is unconditional rather than driven by the reporter, because a
+    // suppressed 429 must not leave stale track text on the bar.
+    reportError(error, {
+      channel: 'indicator',
+      fallback: 'Spotify authorization is unavailable.',
+    });
     showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
   } finally {
     spotifyAuthRequestInFlight = false;
@@ -529,10 +545,15 @@ export async function getNowPlaying() {
       }
     }
 
-    console.error('Spotify error:', error);
-    if (!spotifyAuthLinkActive) {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
-    }
+    reportError(error, {
+      channel: 'indicator',
+      fallback: 'Spotify is unavailable.',
+      onDegrade: () => {
+        if (!spotifyAuthLinkActive) {
+          showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+        }
+      },
+    });
   }
 }
 

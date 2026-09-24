@@ -350,3 +350,208 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
   });
 });
+
+
+describe('Weather degraded indicator', () => {
+  const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  function setupBottomBar() {
+    document.body.innerHTML = `
+            <div id="bottom-bar">
+                <div class="info-group" id="photo-date-group"><span id="photo-date"></span></div>
+                <div class="group-separator"></div>
+                <div class="info-group" id="current-date-group"><span id="current-date"></span></div>
+                <div class="group-separator"></div>
+                <div class="info-group" id="weather-group"><span id="weather-temp"></span></div>
+            </div>
+        `;
+  }
+
+  async function importMain() {
+    vi.resetModules();
+    global.window = Object.assign(global.window || {}, {
+      SMPL_CONFIG: {
+        host: 'http://localhost',
+        port: '8321',
+        refreshInterval: 30000,
+        transitionInterval: 10000,
+        plugins: ['weather'],
+      },
+    });
+    return import(MAIN);
+  }
+
+  function weatherTemp() {
+    return document.getElementById('weather-temp');
+  }
+
+  function separatorBeforeWeather() {
+    return document.getElementById('weather-group').previousElementSibling;
+  }
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    setupBottomBar();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    document.getElementById('app-toast')?.remove();
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('renders the degraded indicator when the weather fetch fails', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: () =>
+        Promise.resolve({
+          errors: [{ status: '500', detail: 'An unexpected error occurred' }],
+        }),
+    });
+
+    const mod = await importMain();
+    mod.displayWeather();
+    await settle();
+
+    expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+    expect(document.getElementById('app-toast')).toBeNull();
+  });
+
+  it('renders the degraded indicator on a network rejection', async () => {
+    global.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const mod = await importMain();
+    mod.displayWeather();
+    await settle();
+
+    expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+  });
+
+  it('never renders a placeholder row or toast for a weather failure', async () => {
+    global.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const mod = await importMain();
+    mod.displayWeather();
+    await settle();
+
+    expect(document.getElementById('app-toast')).toBeNull();
+    expect(document.querySelectorAll('.ui-error-placeholder').length).toBe(0);
+  });
+
+  it('leaves the weather slot untouched when rate limited', async () => {
+    vi.useFakeTimers();
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => '1' },
+      json: () => Promise.resolve({ errors: [{ status: '429' }] }),
+    });
+
+    const mod = await importMain();
+    mod.displayWeather();
+    // Let resilientFetch exhaust its retry chain.
+    await vi.advanceTimersByTimeAsync(30000);
+
+    expect(weatherTemp().textContent).toBe('');
+    expect(document.getElementById('app-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('keeps the weather group and its separator visible on failure', async () => {
+    global.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const mod = await importMain();
+    mod.displayWeather();
+    mod.updateSeparators();
+    await settle();
+
+    expect(document.getElementById('weather-group').style.display).not.toBe(
+      'none',
+    );
+    expect(separatorBeforeWeather().style.display).toBe('');
+  });
+
+  it('matches the success path for group and separator visibility', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: {
+            type: 'weather',
+            id: 'current',
+            attributes: { temperature: '72', temperature_scale: 'F' },
+          },
+        }),
+    });
+
+    const mod = await importMain();
+    mod.displayWeather();
+    mod.updateSeparators();
+    await settle();
+
+    const successDisplay = document.getElementById('weather-group').style.display;
+    const successSeparator = separatorBeforeWeather().style.display;
+
+    setupBottomBar();
+    global.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    mod.displayWeather();
+    mod.updateSeparators();
+    await settle();
+
+    expect(document.getElementById('weather-group').style.display).toBe(
+      successDisplay,
+    );
+    expect(separatorBeforeWeather().style.display).toBe(successSeparator);
+  });
+
+  it('renders a temperature containing markup as literal text', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: {
+            type: 'weather',
+            id: 'current',
+            attributes: {
+              temperature: '<img src=x onerror=alert(1)>',
+              temperature_scale: 'F',
+            },
+          },
+        }),
+    });
+
+    const mod = await importMain();
+    mod.displayWeather();
+    await settle();
+
+    expect(weatherTemp().querySelector('img')).toBeNull();
+    expect(weatherTemp().textContent).toBe('🌡️ <img src=x onerror=alert(1)>°F');
+  });
+
+  it('shows the temperature on the success path', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: {
+            type: 'weather',
+            id: 'current',
+            attributes: { temperature: '72', temperature_scale: 'F' },
+          },
+        }),
+    });
+
+    const mod = await importMain();
+    mod.displayWeather();
+    await settle();
+
+    expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+  });
+});
