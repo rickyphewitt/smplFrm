@@ -63,6 +63,12 @@
  * | `getNowPlaying`             | `indicator` |
  * | `showSpotifyAuthorization`  | `indicator` |
  *
+ * `pollTask` is the one site that does not call `reportError`. It already meets
+ * the silent contract — console only, no DOM change on failure — and its
+ * scheduling, terminal-state, and stale-continuation logic owns the task toast,
+ * so routing it through the reporter would couple error presentation to task
+ * state for no behavioral gain.
+ *
  * The global `unhandledrejection` listener installed by
  * `installGlobalRejectionHandler` reports through `action`. It is a safety net,
  * not a substitute for call-site handling.
