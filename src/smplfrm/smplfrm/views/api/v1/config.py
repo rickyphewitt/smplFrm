@@ -12,8 +12,16 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 
 from smplfrm.jsonapi import jsonapi_exception_handler
+from smplfrm.jsonapi.exceptions import (
+    format_jsonapi_error,
+    format_jsonapi_errors_response,
+)
 from smplfrm.models import Config
-from smplfrm.services.config_service import ConfigService, PRESET_PREFIX
+from smplfrm.services.config_service import (
+    ConfigLimitExceeded,
+    ConfigService,
+    PRESET_PREFIX,
+)
 from smplfrm.views.serializers.v1.config_serializer import (
     ConfigSerializer,
 )
@@ -72,19 +80,27 @@ class ConfigViewSet(viewsets.ModelViewSet):
 
         try:
             config = self.service.create(data)
-        except ValueError as e:
-            logger.error("Config create error: %s", e, exc_info=True)
+        except ConfigLimitExceeded as e:
+            logger.warning("Config create rejected: %s", e)
             return Response(
-                {
-                    "errors": [
-                        {
-                            "status": "400",
-                            "code": "validation_error",
-                            "detail": str(e),
-                        }
-                    ]
-                },
+                format_jsonapi_errors_response(
+                    [format_jsonapi_error(400, e.code, e.detail)]
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.error(
+                "Unexpected error during config creation: %s", e, exc_info=True
+            )
+            return Response(
+                format_jsonapi_errors_response(
+                    [
+                        format_jsonapi_error(
+                            500, "internal_error", "An internal error occurred"
+                        )
+                    ]
+                ),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         serializer = self.get_serializer(config)

@@ -28,6 +28,17 @@ PRESETS_DIR = Path(__file__).resolve().parent.parent / "presets"
 PRESET_PREFIX = "smplFrm "
 CONFIG_LIMIT = 10
 
+
+class ConfigLimitExceeded(Exception):
+    """Raised when creating a config would exceed CONFIG_LIMIT."""
+
+    code = "config_limit_exceeded"
+    detail = (
+        f"Configuration limit of {CONFIG_LIMIT} reached. "
+        "Delete an existing configuration first."
+    )
+
+
 # Fields to copy when applying a preset
 _PRESET_FIELDS = [
     "display_date",
@@ -60,13 +71,10 @@ class ConfigService(BaseService):
             The new Config instance
 
         Raises:
-            ValueError: If config limit exceeded
+            ConfigLimitExceeded: If config limit exceeded
         """
         if Config.objects.filter(deleted=False).count() >= CONFIG_LIMIT:
-            raise ValueError(
-                f"Config limit of {CONFIG_LIMIT} reached. "
-                "Delete an existing config first."
-            )
+            raise ConfigLimitExceeded()
 
         # Generate name server-side (ignore any client-provided name)
         data.pop("name", None)

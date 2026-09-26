@@ -126,16 +126,18 @@ class TestImageDimensionBoundsPreservation(TestCase):
         self.assertEqual(response["Content-type"], "image/jpeg")
         self.assertGreater(len(response.content), 0)
 
-    def test_display_image_file_not_found_returns_404(self):
-        """Test that a missing file on disk returns 404."""
+    def test_display_image_file_not_found_returns_403(self):
+        """Test that a missing file on disk returns an empty-body 403 (anti-enumeration)."""
         missing_image = Image.objects.create(
             name="missing", file_path="/does/not/exist/", file_name="gone.jpg"
         )
         response = self.client.get(
             f"{self.uri}/{missing_image.external_id}/display?filter[width]=100&filter[height]=100"
         )
-        # Note: FileNotFoundError in image_manipulation triggers 404
-        self.assertEqual(response.status_code, 404)
+        # FileNotFoundError in image_manipulation is collapsed into the same
+        # empty-body 403 as an unknown external_id, per anti-enumeration policy.
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.content, b"")
 
     def test_display_image_with_filter_syntax(self):
         """Test that filter[width]/filter[height] syntax works for consistency."""

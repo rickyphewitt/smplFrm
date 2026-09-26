@@ -151,6 +151,7 @@ The following routes retain their native protocol and bypass JSON:API negotiatio
 | Route | Protocol | Reason |
 |-------|----------|--------|
 | `/api/v1/images/{id}/display` | Binary `image/jpeg` | Frame image delivery with resize parameters |
+| `/api/v1/images/{id}/display` (`403`) | Empty body | Anti-enumeration: unknown `external_id` and a missing source file are collapsed into one indistinguishable, bodyless `403` because the route is consumed as an `<img>` source that cannot read a response body. The `400` dimension-validation response on this same route remains JSON:API (`errors` array, `application/vnd.api+json`) and is not exempt. |
 | `/api/v1/plugins/spotify/callback` | OAuth2 redirect/HTML | OAuth code/state exchange and error recovery |
 | Any `204` response | Empty body | Delete confirmations and similar |
 

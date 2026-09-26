@@ -148,19 +148,39 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
     def display_image(self, request, external_id=None):
         """Display an image with optional resizing.
 
-        This endpoint is EXEMPT from JSON:API - returns binary image/jpeg.
+        Response protocol by path (only the first two are JSON:API):
+
+        - `400` JSON:API errors array — `filter[width]`/`filter[height]` failed
+          validation. NOT exempt.
+        - `200` binary `image/jpeg` — success. EXEMPT (documented in
+          `docs/API.md` Protocol Exemptions).
+        - `403` empty body — the `external_id` has no matching image, or the
+          matching image's file is missing on disk (`FileNotFoundError`).
+          EXEMPT (documented in `docs/API.md` Protocol Exemptions). Both
+          causes are deliberately collapsed into one indistinguishable
+          response to prevent an unauthenticated caller from enumerating
+          valid `external_id` values; the distinguishing cause is logged
+          server-side at `WARNING` instead. A present-but-corrupt image file
+          is NOT covered by this path — it raises an unhandled exception
+          (e.g. `PIL.UnidentifiedImageError`) and falls through as a
+          sanitized `500`, not this `403`.
+
+        Ordering requirement: dimension validation MUST run before the image
+        lookup. If the lookup ran first, a request with invalid dimensions
+        would answer `400` for a known id and `403` for an unknown one,
+        reopening the same id-existence oracle the `403` response is meant to
+        close (merely relocated to the invalid-dimension path). Validating
+        first also avoids a database query for malformed input.
 
         Args:
             request: HTTP request with optional filter[width]/filter[height] parameters
             external_id: External ID of the image
 
         Returns:
-            HTTP response with image data or 404 if not found
+            HTTP response with image data (200), a JSON:API errors array (400),
+            an empty-body 403 if the id is unknown or the file is missing, or
+            a sanitized 500 if the file is present but unreadable/corrupt.
         """
-        image = self.service.read(ext_id=external_id)
-        if not image:
-            return HttpResponse(status=404)
-
         width = request.GET.get("filter[width]", DEFAULT_WIDTH)
         height = request.GET.get("filter[height]", DEFAULT_HEIGHT)
 
@@ -180,6 +200,14 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
             )
         validated_width, validated_height = result
 
+        try:
+            image = self.service.read(ext_id=external_id)
+        except Image.DoesNotExist:
+            image = None
+        if not image:
+            logger.warning("Display denied: no image for external_id=%s", external_id)
+            return HttpResponse(status=403)
+
         cache_key = self.cache_service.get_image_cache_key(
             image.external_id, height, width
         )
@@ -191,7 +219,11 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
                     image, validated_height, validated_width
                 )
             except FileNotFoundError:
-                return HttpResponse(status=404)
+                logger.warning(
+                    "Display denied: source file missing for external_id=%s",
+                    image.external_id,
+                )
+                return HttpResponse(status=403)
 
             self.cache_service.upsert(cache_key=cache_key, cache_data=cached_image)
 

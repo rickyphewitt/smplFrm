@@ -137,8 +137,8 @@ class TestImagesView(TestCase):
         response = self.client.get(f"{self.uri}/{image.external_id}/display")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_display_image_not_found(self):
-        """Test that display returns 404 for missing file."""
+    def test_display_image_missing_file_returns_403(self):
+        """Test that display returns an empty-body 403 for a file missing on disk."""
         LibraryService().scan()
         image = self.image_service.list()[0]
         image.file_path = "/does/Not/Exist.jpg"
@@ -147,4 +147,103 @@ class TestImagesView(TestCase):
         response = self.client.get(
             f"{self.uri}/{image.external_id}/display?filter[width]=1&filter[height]=2"
         )
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.content, b"")
+
+    def test_display_image_unknown_id_returns_403(self):
+        """Test that display returns an empty-body 403 for an unknown external_id."""
+        response = self.client.get(
+            f"{self.uri}/nonexistent123456/display?filter[width]=100&filter[height]=100"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.content, b"")
+
+    def test_display_image_not_found_responses_are_indistinguishable(self):
+        """Unknown-id and missing-file 403s must be byte-identical in status and body."""
+        LibraryService().scan()
+        image = self.image_service.list()[0]
+        image.file_path = "/does/Not/Exist.jpg"
+        self.image_service.update(image)
+
+        missing_file_response = self.client.get(
+            f"{self.uri}/{image.external_id}/display?filter[width]=1&filter[height]=2"
+        )
+        unknown_id_response = self.client.get(
+            f"{self.uri}/nonexistent123456/display?filter[width]=1&filter[height]=2"
+        )
+
+        self.assertEqual(
+            missing_file_response.status_code, unknown_id_response.status_code
+        )
+        self.assertEqual(missing_file_response.content, unknown_id_response.content)
+        self.assertEqual(missing_file_response.content, b"")
+
+    def test_display_image_never_returns_404(self):
+        """No path on display returns 404 — unknown ids and missing files both map to 403."""
+        response = self.client.get(
+            f"{self.uri}/nonexistent123456/display?filter[width]=abc"
+        )
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_display_image_invalid_dimensions_independent_of_id_existence(self):
+        """filter[width]=abc must answer identically for a known and an unknown id."""
+        LibraryService().scan()
+        image = self.image_service.list()[0]
+
+        known_id_response = self.client.get(
+            f"{self.uri}/{image.external_id}/display?filter[width]=abc&filter[height]=100"
+        )
+        unknown_id_response = self.client.get(
+            f"{self.uri}/nonexistent123456/display?filter[width]=abc&filter[height]=100"
+        )
+
+        self.assertEqual(known_id_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(known_id_response.status_code, unknown_id_response.status_code)
+        self.assertEqual(known_id_response.json(), unknown_id_response.json())
+
+    def test_display_image_invalid_dimensions_issues_no_image_query(self):
+        """An invalid-dimension request must not query the Image table."""
+        from unittest.mock import patch
+
+        with patch("smplfrm.views.api.v1.images.ImageService.read") as mock_read:
+            response = self.client.get(
+                f"{self.uri}/nonexistent123456/display?filter[width]=abc"
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            mock_read.assert_not_called()
+
+    def test_display_image_unknown_id_logs_warning_without_file_details(self):
+        """The unknown-id 403 emits exactly one WARNING naming the external_id only."""
+        with self.assertLogs(
+            "smplfrm.views.api.v1.images", level="WARNING"
+        ) as captured:
+            response = self.client.get(
+                f"{self.uri}/nonexistent123456/display?filter[width]=100&filter[height]=100"
+            )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(len(captured.records), 1)
+        message = captured.records[0].getMessage()
+        self.assertIn("nonexistent123456", message)
+        self.assertNotIn("file_path", message)
+        self.assertNotIn("file_name", message)
+
+    def test_display_image_missing_file_logs_warning_without_file_details(self):
+        """The missing-file 403 emits exactly one WARNING naming the external_id only,
+        and never the file_path or file_name."""
+        LibraryService().scan()
+        image = self.image_service.list()[0]
+        image.file_path = "/does/Not/Exist.jpg"
+        self.image_service.update(image)
+
+        with self.assertLogs(
+            "smplfrm.views.api.v1.images", level="WARNING"
+        ) as captured:
+            response = self.client.get(
+                f"{self.uri}/{image.external_id}/display?filter[width]=1&filter[height]=2"
+            )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(len(captured.records), 1)
+        message = captured.records[0].getMessage()
+        self.assertIn(image.external_id, message)
+        self.assertNotIn(image.file_path, message)
+        self.assertNotIn("Exist.jpg", message)
