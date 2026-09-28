@@ -18,6 +18,14 @@ const OPACITY_INCREMENT = 0.1;
 const OPACITY_MAX = 1.0;
 const CLOCK_REFRESH_MS = 1000;
 const SPOTIFY_REFRESH_MS = 5000;
+// Weather cadence. The backend refreshes on a 1800s beat and get_for_display()
+// selects the sample for the current hour, so 5 minutes bounds hour-boundary
+// lag, backend-refresh lag, and recovery from the degraded indicator to five
+// minutes each. That is 12 attempts per hour per frame: one request each, or up
+// to four while the endpoint is rate limited and resilientFetch retries
+// internally. Doubles as the abort deadline for a single attempt, which is far
+// longer than any retry chain a healthy backend produces.
+export const WEATHER_REFRESH_MS = 300000;
 const IMAGE_QUEUE_TARGET = 5;
 const IMAGE_QUEUE_LOW_WATER = 2;
 
@@ -390,14 +398,27 @@ function displayClock() {
   setTimeout(displayClock, CLOCK_REFRESH_MS);
 }
 
-export function displayWeather() {
+/**
+ * Performs one weather fetch and renders the result.
+ *
+ * Returns the underlying promise so a caller can wait for the attempt to
+ * settle before scheduling another one. Resolves either way: a failure is
+ * reported through the indicator channel rather than propagated.
+ *
+ * @param {Object} [options]
+ * @param {AbortSignal} [options.signal] - Cancels the in-flight request. An
+ *   abort is reported like any other failure, so the slot degrades.
+ * @returns {Promise<void>|undefined} Settles when the attempt completes;
+ *   undefined when the weather plugin is disabled and no request is made.
+ */
+export function displayWeather({ signal } = {}) {
   const weatherGroup = document.getElementById('weather-group');
   if (!config.plugins || !config.plugins.includes('weather')) {
     weatherGroup.style.display = 'none';
     return;
   }
   // Fetch weather data from plugin API (JSON:API format)
-  fetchJsonApi(buildApiUrl('plugins/weather/current'))
+  return fetchJsonApi(buildApiUrl('plugins/weather/current'), { signal })
     .then((jsonApiDoc) => {
       const resource = unwrapResource(jsonApiDoc);
       if (resource && resource.attributes) {
@@ -407,10 +428,10 @@ export function displayWeather() {
       }
     })
     .catch((error) => {
-      // There is no weather refresh loop, so a failure here lasts for the life
-      // of the page. The slot shows an unavailable state rather than staying
-      // blank, which is indistinguishable from the plugin being disabled. The
-      // group stays visible for the same reason.
+      // A failure leaves the slot in an unavailable state rather than blank,
+      // which is indistinguishable from the plugin being disabled. The refresh
+      // loop clears it on the next successful attempt. The group stays visible
+      // for the same reason.
       reportError(error, {
         channel: 'indicator',
         fallback: 'Weather is unavailable.',
@@ -419,6 +440,59 @@ export function displayWeather() {
         },
       });
     });
+}
+
+// Whether a refresh chain already owns the weather slot. Since a chain
+// schedules its next attempt only after the current one settles, this flag is
+// the whole guard: without it, two synchronous entries would each fire an
+// immediate request and leave two permanent chains.
+let _weatherLoopRunning = false;
+
+/**
+ * Starts the weather refresh loop, or does nothing if it is already running.
+ *
+ * Self-scheduling and non-overlapping: the next attempt is scheduled only once
+ * the current one settles, so resilientFetch's internal 429 retry chain is
+ * never outrun and a failing endpoint is never amplified. Because settlement
+ * drives scheduling, an attempt that never settles on its own would stall the
+ * loop for the life of the page; each attempt is therefore aborted after
+ * WEATHER_REFRESH_MS, which caps the gap a stalled request can open at two
+ * intervals rather than forever. Failures, including that abort, do not end the
+ * loop. Does not start when the weather plugin is disabled, in which case the
+ * single displayWeather() call still hides the group before updateSeparators()
+ * measures it.
+ */
+export function refreshWeather() {
+  if (_weatherLoopRunning) {
+    return;
+  }
+
+  const controller = new AbortController();
+  const attempt = displayWeather({ signal: controller.signal });
+  if (!attempt) {
+    // Plugin disabled: the group is hidden and there is nothing to poll.
+    return;
+  }
+
+  _weatherLoopRunning = true;
+
+  const deadlineId = setTimeout(() => controller.abort(), WEATHER_REFRESH_MS);
+
+  const scheduleNext = () => {
+    clearTimeout(deadlineId);
+    setTimeout(() => {
+      _weatherLoopRunning = false;
+      refreshWeather();
+    }, WEATHER_REFRESH_MS);
+  };
+
+  // Both settlement paths schedule. displayWeather resolves even on failure, so
+  // a rejection here means its own reporting threw; the loop has to outlive
+  // that, and the rejection must not reach the global handler as a user toast.
+  attempt.then(scheduleNext, (error) => {
+    console.debug('[weather] refresh attempt rejected unexpectedly', error);
+    scheduleNext();
+  });
 }
 
 function showSpotifyBar(content) {
@@ -579,7 +653,7 @@ export function init() {
     document.getElementById('photo-date-group').style.display = 'none';
   }
 
-  displayWeather();
+  refreshWeather();
 
   // Hide separators between hidden groups
   updateSeparators();

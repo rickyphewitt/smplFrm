@@ -368,7 +368,7 @@ describe('Weather degraded indicator', () => {
         `;
   }
 
-  async function importMain() {
+  async function importMain(plugins = ['weather']) {
     vi.resetModules();
     global.window = Object.assign(global.window || {}, {
       SMPL_CONFIG: {
@@ -376,7 +376,7 @@ describe('Weather degraded indicator', () => {
         port: '8321',
         refreshInterval: 30000,
         transitionInterval: 10000,
-        plugins: ['weather'],
+        plugins,
       },
     });
     return import(MAIN);
@@ -553,5 +553,272 @@ describe('Weather degraded indicator', () => {
     await settle();
 
     expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+  });
+
+  describe('refresh loop', () => {
+    // Read from the module under test so the cadence cannot drift from main.js.
+    let REFRESH_MS;
+
+    async function importLoop(plugins) {
+      const mod = await importMain(plugins);
+      REFRESH_MS = mod.WEATHER_REFRESH_MS;
+      return mod;
+    }
+
+    function okResponse(temperature = '72') {
+      return {
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            data: {
+              type: 'weather',
+              id: 'current',
+              attributes: { temperature, temperature_scale: 'F' },
+            },
+          }),
+      };
+    }
+
+    function serverErrorResponse() {
+      return {
+        ok: false,
+        status: 500,
+        json: () =>
+          Promise.resolve({
+            errors: [{ status: '500', detail: 'An unexpected error occurred' }],
+          }),
+      };
+    }
+
+    function rateLimitedResponse() {
+      return {
+        ok: false,
+        status: 429,
+        headers: { get: () => '1' },
+        json: () => Promise.resolve({ errors: [{ status: '429' }] }),
+      };
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+      document.getElementById('rate-limit-toast')?.remove();
+    });
+
+    it('requests once immediately and once per interval thereafter', async () => {
+      global.fetch.mockResolvedValue(okResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 3);
+      expect(global.fetch).toHaveBeenCalledTimes(5);
+    });
+
+    it('does not start a second request while one is still pending', async () => {
+      // Settles well inside the abort deadline, so settlement is the only thing
+      // that can start the next attempt.
+      const settlesAfterMs = 60000;
+      global.fetch.mockImplementation(() => {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(okResponse()), settlesAfterMs);
+        });
+      });
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // The interval is measured from settlement, not from the request.
+      await vi.advanceTimersByTimeAsync(settlesAfterMs + 1);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('abandons a stalled request at the deadline and keeps polling', async () => {
+      const abortedUrls = [];
+      global.fetch.mockImplementation((url, options) => {
+        return new Promise((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            abortedUrls.push(url);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
+
+      // Nothing overlaps the in-flight request before the deadline.
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(abortedUrls).toHaveLength(0);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The abort settles the attempt and is reported like any other failure.
+      expect(abortedUrls).toHaveLength(1);
+      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expect(document.getElementById('app-toast')).toBeNull();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Settling is what matters: the loop resumes one interval later instead
+      // of hanging on the abandoned request for the life of the page.
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('measures the interval from settlement of a rate-limited retry chain', async () => {
+      global.fetch.mockResolvedValue(rateLimitedResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      // Two intervals: each retry chain is one initial request plus the
+      // retries resilientFetch performs internally, and the next chain only
+      // starts once the previous one has settled.
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
+
+      const requests = global.fetch.mock.calls.length;
+      expect(requests).toBeGreaterThan(4);
+      expect(requests).toBeLessThanOrEqual(8);
+    });
+
+    it('replaces the degraded indicator once a later attempt succeeds', async () => {
+      global.fetch
+        .mockResolvedValueOnce(serverErrorResponse())
+        .mockResolvedValue(okResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+
+      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+    });
+
+    it('keeps polling and keeps the indicator across consecutive failures', async () => {
+      global.fetch
+        .mockResolvedValueOnce(serverErrorResponse())
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce(serverErrorResponse())
+        .mockResolvedValue(okResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(document.getElementById('app-toast')).toBeNull();
+      expect(document.querySelectorAll('.ui-error-placeholder').length).toBe(0);
+      expect(console.error).not.toHaveBeenCalled();
+
+      // A fourth attempt is still scheduled after three failures.
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(global.fetch).toHaveBeenCalledTimes(4);
+    });
+
+    it('retains the last good reading while rate limited', async () => {
+      global.fetch
+        .mockResolvedValueOnce(okResponse())
+        .mockResolvedValue(rateLimitedResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
+
+      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+      expect(global.fetch.mock.calls.length).toBeGreaterThan(1);
+    });
+
+    it('leaves the slot unchanged and keeps polling on an attribute-less response', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({ data: { type: 'weather', id: 'current' } }),
+      });
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(weatherTemp().textContent).toBe('');
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+
+      expect(weatherTemp().textContent).toBe('');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('never requests weather when the plugin is disabled', async () => {
+      const mod = await importLoop(['spotify']);
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 4);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(document.getElementById('weather-group').style.display).toBe(
+        'none',
+      );
+    });
+
+    it('does not double the request rate when started twice', async () => {
+      global.fetch.mockResolvedValue(okResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      const oneHourMs = 3600000;
+      await vi.advanceTimersByTimeAsync(oneHourMs);
+
+      expect(global.fetch.mock.calls.length).toBeLessThanOrEqual(
+        1 + oneHourMs / REFRESH_MS,
+      );
+    });
+
+    it('does not shorten the interval when started twice', async () => {
+      global.fetch.mockResolvedValue(okResponse());
+
+      const mod = await importLoop();
+      mod.refreshWeather();
+      await vi.advanceTimersByTimeAsync(0);
+      mod.refreshWeather();
+
+      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
   });
 });
