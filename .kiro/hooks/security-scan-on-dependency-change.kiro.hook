@@ -9,7 +9,8 @@
       "package.json",
       "package-lock.json",
       "yarn.lock",
-      "requirements.txt",
+      "pyproject.toml",
+      "uv.lock",
       "poetry.lock",
       "Pipfile.lock"
     ]

@@ -15,10 +15,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      # Pinned by SHA (v10.2.0). Keep `version` in sync with pyproject.toml
+      # ([tool.uv] required-version) and docker/images/Dockerfile.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
         with:
+          version: "0.12.20"
           python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

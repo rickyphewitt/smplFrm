@@ -1,0 +1,4 @@
+# Host virtual environments; the image builds its own from uv.lock.
+# Do not exclude .git: scripts/generate_version.sh reads it at container start.
+.venv
+local_venv
