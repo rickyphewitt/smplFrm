@@ -15,12 +15,13 @@ ___
 
 ## Run
 ### Native
-* After downloading this repo create a python virtual environment                                                    
+* Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (see [Python](#python) below)
+* After downloading this repo create the Python virtual environment (`.venv`)
   * `make packages`
 * Run the required docker services
   * `make docker-services`
 * Run the server
-  * `python main.py`
+  * `make run`
 * Browse to `http://localhost:8321`
 * Add your own assets to the `assets` folder and re-run the server to display your own photos
 
@@ -108,14 +109,30 @@ npm run format:check      # Check formatting without writing
 **Test location:** Tests are in `tests/javascript/` to avoid Django static bundling.
 
 ### Python
-This repo uses python 3.14. Ensure you download the following dependencies
-* python3.14, pyton3.14-dev
-  * You may need to get this from [deadsnakes](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) 
-* pip3.14
-  * This can be dowloaded after downloading python3.14 using get-pip
-  * `curl -sS https://bootstrap.pypa.io/get-pip.py | python3.14 `
-* python3.14-venv
-  * Same note about deadsnakes above
+This repo uses Python 3.14 and [uv](https://docs.astral.sh/uv/) to manage the interpreter, virtual environment, and dependencies. `pyproject.toml` declares dependencies and `uv.lock` pins exact versions.
+
+**Install uv** (0.12.20 or newer) using one of the [official methods](https://docs.astral.sh/uv/getting-started/installation/):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # standalone installer
+pipx install uv                                   # or pipx
+brew install uv                                   # or Homebrew
+```
+uv downloads Python 3.14 automatically if it is not already installed (version set in `.python-version`).
+
+**Setup and run:**
+```bash
+make packages             # Create .venv from uv.lock (includes dev tools)
+make run                  # Collect static files, migrate, and run the dev server on :8321
+make test                 # Run the Python test suite
+```
+
+**Dependencies:**
+* Add or change dependencies in `pyproject.toml` (dev-only tools go in `[dependency-groups] dev`), then run `make lock` and commit both `pyproject.toml` and `uv.lock`
+* `make packages` and the other Python targets fail if `uv.lock` is out of date with `pyproject.toml`
+* `make packages-clean` removes `.venv` (and the virtualenv left by the previous pip-based setup)
+* Set `UV=/path/to/uv` to use a uv binary that is not on `PATH` (e.g. `make UV=/opt/uv/bin/uv packages`)
+
+**Migrating from the previous pip-based setup:** install uv, then run `make packages-clean packages pre-commit`.
 
 ### Code Formating
 * This repo uses [black](https://pypi.org/project/black/) to format the code

@@ -21,8 +21,8 @@
 - Log errors with appropriate detail
 
 ## Code Organization
-- Use virtual environments for dependencies
-- Create requirements.txt or use poetry/pipenv
+- Manage the interpreter, virtual environment (`.venv`), and dependencies with uv
+- Declare dependencies in `pyproject.toml` (dev-only tools in `[dependency-groups] dev`) and commit the regenerated `uv.lock` (`make lock`)
 - Organize code into modules and packages
 - Use `__init__.py` files appropriately
 

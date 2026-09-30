@@ -17,13 +17,13 @@
 make test
 
 # Python — quiet mode (preferred for AI agents)
-. ./local_venv/bin/activate; cd ./src/smplfrm; pytest -q --tb=short
+cd ./src/smplfrm; uv run pytest -q --tb=short
 
 # Python — single file
-. ./local_venv/bin/activate; cd ./src/smplfrm; pytest smplfrm/tests/test_secret_key.py -q --tb=short
+cd ./src/smplfrm; uv run pytest smplfrm/tests/test_secret_key.py -q --tb=short
 
 # Python — filter by name
-. ./local_venv/bin/activate; cd ./src/smplfrm; pytest -k "test_specific" -q --tb=short
+cd ./src/smplfrm; uv run pytest -k "test_specific" -q --tb=short
 
 # JavaScript — full suite
 make test-js
