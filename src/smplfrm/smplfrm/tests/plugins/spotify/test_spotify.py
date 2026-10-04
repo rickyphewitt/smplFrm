@@ -6,7 +6,6 @@ from smplfrm.plugins.spotify import SpotifyPlugin
 
 
 class TestSpotifyService(TestCase):
-
     @patch("smplfrm.plugins.spotify.spotify.SpotifyOAuth")
     def setUp(self, mock_spotify_oauth):
         from smplfrm.services.config_service import ConfigService

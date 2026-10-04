@@ -7,7 +7,6 @@ def set_existing_config_defaults(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("smplfrm", "0008_config_image_cache_timeout"),
     ]

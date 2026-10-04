@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("smplfrm", "0009_config_add_name_and_is_active"),
     ]

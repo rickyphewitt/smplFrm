@@ -5,3 +5,13 @@ from .cache_service import CacheService
 from .image_manipulation_service import ImageManipulationService
 from .task_service import TaskService
 from .task_reporting_service import TaskReportingService
+
+__all__ = [
+    "LibraryService",
+    "ImageService",
+    "ImageMetadataService",
+    "CacheService",
+    "ImageManipulationService",
+    "TaskService",
+    "TaskReportingService",
+]

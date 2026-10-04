@@ -2,7 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from spotipy.exceptions import SpotifyOauthError
 
 from smplfrm.models import Plugin

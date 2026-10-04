@@ -12,7 +12,6 @@ test_library = [
 
 @override_settings(SMPL_FRM_LIBRARY_DIRS=test_library)
 class TestCacheImagesTask(TestCase):
-
     def setUp(self):
         super().setUpClass()
         self.cache_service = CacheService()

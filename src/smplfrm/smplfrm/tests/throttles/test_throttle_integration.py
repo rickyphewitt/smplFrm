@@ -6,8 +6,6 @@ response headers, response body format, bucket independence, and rate
 window recovery.
 """
 
-from unittest.mock import patch
-
 import pytest
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -330,7 +328,6 @@ class TestRateWindowRecovery:
     @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK)
     def test_requests_succeed_after_window_elapses(self, api_client):
         """After the rate window expires, the throttle resets and allows requests."""
-        import time
 
         # Exhaust the anonymous bucket
         for _ in range(3):

@@ -5,7 +5,6 @@ JSON:API compliant error responses with the errors array format.
 """
 
 import logging
-from typing import Any
 
 from rest_framework import status
 from rest_framework.exceptions import APIException

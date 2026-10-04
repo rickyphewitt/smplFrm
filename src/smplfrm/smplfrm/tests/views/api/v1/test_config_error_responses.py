@@ -63,9 +63,7 @@ class TestConfigCreateErrorResponses(TestCase):
             }
         }
 
-        response = self.client.post(
-            self.url, create_data, content_type="application/vnd.api+json"
-        )
+        self.client.post(self.url, create_data, content_type="application/vnd.api+json")
 
         mock_logger.warning.assert_called_once()
         mock_logger.error.assert_not_called()

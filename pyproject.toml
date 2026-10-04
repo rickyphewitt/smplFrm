@@ -29,23 +29,29 @@ dependencies = [
 dev = [
     "pytest-django~=4.14.0",
     "pre-commit~=4.6.2",
+    "ruff~=0.16.10",
 ]
 
 [tool.uv]
 package = false
-# Minimum uv version. Keep in sync with the exact pins in
+# Minimum uv version, deliberately lower than the exact pins in
 # .github/workflows/ci.yml (setup-uv `version`) and docker/images/Dockerfile.
-# A minimum (not exact) pin lets developers and Dependabot run newer uv releases.
-required-version = ">=0.12.20"
+# Dependabot runs its own bundled uv, which lags upstream releases; a floor above
+# that version makes every Dependabot update fail with `tool_version_not_supported`.
+# Raise this only when a newer uv feature is required, and only once Dependabot's
+# bundled uv supports it.
+required-version = ">=0.12.18"
 
-# Temporary: remove together with Black when Ruff replaces it.
-# Black infers its target from `requires-python` (py314 only), which switches it
-# to 3.14-only syntax (unparenthesized `except A, B:`, parenthesized `with`) and
-# breaks the Black GitHub Action, which runs on the runner's Python 3.12.
-# Listing every version reproduces Black's per-file auto-detection, i.e. the
-# formatting it produced before pyproject.toml existed.
-[tool.black]
-target-version = [
-    "py33", "py34", "py35", "py36", "py37", "py38", "py39",
-    "py310", "py311", "py312", "py313", "py314",
-]
+# Ruff formatter and linter (https://docs.astral.sh/ruff/configuration/).
+# target-version is inferred from `requires-python` (3.14).
+[tool.ruff]
+line-length = 88
+# Ruff also formats Python code blocks in Markdown. Kiro specs and reviews are
+# local, untracked working documents and are not held to the formatter.
+extend-exclude = [".kiro"]
+
+[tool.ruff.lint]
+# Pinned to the classic default rule set (pycodestyle E4/E7/E9 + Pyflakes).
+# Ruff 0.16 expanded its built-in default to several hundred rules; this keeps
+# lint scope to correctness errors only. https://docs.astral.sh/ruff/rules/
+select = ["E4", "E7", "E9", "F"]

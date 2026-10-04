@@ -34,6 +34,17 @@ packages-js-clean:
 lock: check-uv
 	$(UV) lock
 
+# Ruff (version from uv.lock). `lint` only reports; `format` rewrites files.
+# `format` always runs the formatter, then exits non-zero if lint findings that
+# need a manual fix remain.
+lint: check-uv
+	$(UV_RUN) ruff check .
+	$(UV_RUN) ruff format --check .
+
+format: check-uv
+	$(UV_RUN) ruff check --fix .; status=$$?; \
+	$(UV_RUN) ruff format . && exit $$status
+
 run: staticfiles migrations
 	cd ./src/smplfrm; $(UV_RUN) python manage.py runserver 0.0.0.0:8321
 

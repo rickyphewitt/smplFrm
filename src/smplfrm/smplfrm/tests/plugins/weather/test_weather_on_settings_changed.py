@@ -5,7 +5,6 @@ from smplfrm.plugins.weather.weather import WeatherPlugin
 
 
 class TestWeatherOnSettingsChanged(TestCase):
-
     @patch("smplfrm.plugins.base.BasePlugin.dispatch_task")
     def test_on_settings_changed_dispatches_refresh(self, mock_dispatch):
         """WeatherPlugin.on_settings_changed should trigger a weather refresh."""

@@ -16,7 +16,6 @@ import requests
 
 from utils.rate_limit_tester import (
     AnonThrottleTester,
-    AuthThrottleTester,
     TaskThrottleTester,
     RecoveryTester,
 )

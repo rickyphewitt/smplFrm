@@ -12,7 +12,6 @@ def generate_external_id():
 
 
 class ModelBase(models.Model):
-
     # the id to serialize out for apis
     external_id = models.CharField(max_length=16, default=generate_external_id)
 

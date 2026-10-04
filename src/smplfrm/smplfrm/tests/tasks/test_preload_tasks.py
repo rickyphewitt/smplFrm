@@ -4,7 +4,6 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 
 from django.test import TestCase
-from django.utils import timezone
 
 from smplfrm.celery import app
 from smplfrm.models import Image, Task
@@ -58,12 +57,13 @@ class TestPreloadImageCache(TestCase):
 
         fake_image_data = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageManipulationService"
-        ) as mock_img_svc_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch(
+                "smplfrm.tasks.preload_tasks.ImageManipulationService"
+            ) as mock_img_svc_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = None  # Nothing cached
@@ -97,12 +97,13 @@ class TestPreloadImageCache(TestCase):
             },
         )
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageManipulationService"
-        ) as mock_img_svc_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch(
+                "smplfrm.tasks.preload_tasks.ImageManipulationService"
+            ) as mock_img_svc_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = b"already_cached"
@@ -140,12 +141,13 @@ class TestPreloadImageCache(TestCase):
 
         fake_image_data = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageManipulationService"
-        ) as mock_img_svc_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch(
+                "smplfrm.tasks.preload_tasks.ImageManipulationService"
+            ) as mock_img_svc_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = None
@@ -192,12 +194,13 @@ class TestPreloadImageCache(TestCase):
             task.refresh_from_db()
             progress_values.append(task.progress)
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageManipulationService"
-        ) as mock_img_svc_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch(
+                "smplfrm.tasks.preload_tasks.ImageManipulationService"
+            ) as mock_img_svc_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = None
@@ -236,12 +239,13 @@ class TestPreloadImageCache(TestCase):
 
         fake_image_data = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageManipulationService"
-        ) as mock_img_svc_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch(
+                "smplfrm.tasks.preload_tasks.ImageManipulationService"
+            ) as mock_img_svc_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = None
@@ -272,10 +276,10 @@ class TestPreloadImageCache(TestCase):
             },
         )
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.side_effect = RuntimeError(
@@ -309,12 +313,11 @@ class TestPreloadImageCache(TestCase):
 
         original_error = RuntimeError("Internal connection pool error")
 
-        with patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls, patch(
-            "smplfrm.tasks.preload_tasks.ImageService"
-        ) as mock_img_lookup_cls, patch(
-            "smplfrm.services.task_reporting_service.logger"
-        ) as mock_logger:
-
+        with (
+            patch("smplfrm.tasks.preload_tasks.CacheService") as mock_cache_cls,
+            patch("smplfrm.tasks.preload_tasks.ImageService") as mock_img_lookup_cls,
+            patch("smplfrm.services.task_reporting_service.logger") as mock_logger,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.side_effect = original_error

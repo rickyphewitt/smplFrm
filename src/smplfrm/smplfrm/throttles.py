@@ -45,13 +45,13 @@ class _FailOpenThrottleMixin:
         try:
             rates = api_settings.DEFAULT_THROTTLE_RATES or {}
             return rates[self.scope]
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return _DEFAULT_RATES.get(self.scope)
 
     def allow_request(self, request, view):
         try:
             return super().allow_request(request, view)
-        except (ConnectionError, TimeoutError):
+        except ConnectionError, TimeoutError:
             logger.warning(
                 "Redis unavailable during %s throttle check, allowing request",
                 self.scope,

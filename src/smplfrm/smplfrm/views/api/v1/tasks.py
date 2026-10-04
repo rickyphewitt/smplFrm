@@ -29,7 +29,6 @@ from smplfrm.throttles import (
 from smplfrm.views.serializers.v1.task_serializer import (
     TaskSerializer,
     JSONAPI_TYPE_TO_TASK_TYPE,
-    TASK_TYPE_TO_JSONAPI_TYPE,
 )
 from smplfrm.views.serializers.v1.preload_serializer import (
     PreloadImageCacheTaskSerializer,

@@ -4,13 +4,11 @@ The handler produces JSON:API compliant error responses for all exceptions,
 sanitizes internal details, and logs unexpected errors exactly once.
 """
 
-import logging
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from django.test import TestCase, RequestFactory
 from rest_framework import status
 from rest_framework.exceptions import (
-    APIException,
     NotFound,
     PermissionDenied,
     ValidationError,
@@ -19,7 +17,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from smplfrm.jsonapi.exceptions import (
-    JsonApiError,
     WeatherUnavailableError,
     InvalidQueryParameterError,
     jsonapi_exception_handler,

@@ -18,5 +18,5 @@ class VersionService:
         """
         try:
             return self._version_file.read_text().strip()
-        except (FileNotFoundError, PermissionError, OSError):
+        except FileNotFoundError, PermissionError, OSError:
             return FALLBACK_VERSION

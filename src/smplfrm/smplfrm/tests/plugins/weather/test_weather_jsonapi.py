@@ -371,7 +371,7 @@ class TestWeatherJsonApiErrors(TestCase):
         mock_plugin = mock_plugin_cls.return_value
         mock_plugin.get_for_display.side_effect = RuntimeError("Unexpected failure")
 
-        response = self.client.get(self.url)
+        self.client.get(self.url)
 
         # Find ERROR level calls
         error_calls = [
@@ -492,7 +492,7 @@ class TestWeatherJsonApiQueryPolicy(TestCase):
         """Query validation must run before calling plugin (domain access)."""
         mock_plugin = mock_plugin_cls.return_value
 
-        response = self.client.get(f"{self.url}?invalid=param")
+        self.client.get(f"{self.url}?invalid=param")
 
         # Plugin should never be called when query is invalid
         mock_plugin.get_for_display.assert_not_called()

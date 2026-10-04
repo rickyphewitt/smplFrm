@@ -3,9 +3,7 @@ import os
 from django.test import TestCase
 from django.test.utils import override_settings
 from smplfrm.models.task import Task, TaskType
-from smplfrm.models.task import TaskType
 from smplfrm.services import ImageService, LibraryService, TaskService
-from smplfrm.services import LibraryService
 
 test_library = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "library"))
@@ -49,9 +47,7 @@ class TestLibraryService(TestCase):
         self.assertFalse(created_image.deleted, "Image should not be deleted")
 
         self.library_service.scan()
-        deleted_image = self.image_service.read(
-            ext_id=created_image.external_id, deleted=True
-        )
+        self.image_service.read(ext_id=created_image.external_id, deleted=True)
         undeleted_image = self.image_service.read(ext_id=valid_image.external_id)
 
         # verify metadata exif
@@ -156,18 +152,22 @@ class TestLibraryService(TestCase):
         )
         error = IntegrityError("invalid EXIF JSON")
 
-        with patch.object(
-            self.library_service,
-            "_extract_metadata",
-            return_value={"DateTime": "2024:01:01 00:00:00"},
-        ), patch.object(
-            self.library_service.image_metadata_service,
-            "update",
-            side_effect=error,
-        ), patch.object(
-            self.library_service.image_metadata_service,
-            "create",
-        ) as mock_create:
+        with (
+            patch.object(
+                self.library_service,
+                "_extract_metadata",
+                return_value={"DateTime": "2024:01:01 00:00:00"},
+            ),
+            patch.object(
+                self.library_service.image_metadata_service,
+                "update",
+                side_effect=error,
+            ),
+            patch.object(
+                self.library_service.image_metadata_service,
+                "create",
+            ) as mock_create,
+        ):
             with self.assertRaises(IntegrityError):
                 self.library_service.save_image_meta(image)
 
@@ -184,9 +184,11 @@ class TestLibraryScanProgress(TestCase):
 
         service = LibraryService()
 
-        with patch.object(service, "initiate_task") as mock_init, patch.object(
-            service, "report_task"
-        ) as mock_report, patch.object(service, "complete_task") as mock_complete:
+        with (
+            patch.object(service, "initiate_task") as mock_init,
+            patch.object(service, "report_task") as mock_report,
+            patch.object(service, "complete_task") as mock_complete,
+        ):
             service.scan(task_id="test-id")
 
             # initiate_task called once with task_id and total file count
@@ -204,7 +206,7 @@ class TestLibraryScanProgress(TestCase):
         task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
         service = LibraryService()
 
-        from unittest.mock import patch, call
+        from unittest.mock import patch
 
         statuses = []
 
@@ -246,11 +248,14 @@ class TestLibraryScanProgress(TestCase):
         task = Task.objects.create(task_type=TaskType.RESCAN_LIBRARY)
         service = LibraryService()
 
-        with patch.object(
-            service.image_service,
-            "create",
-            side_effect=RuntimeError("db write failed"),
-        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+        with (
+            patch.object(
+                service.image_service,
+                "create",
+                side_effect=RuntimeError("db write failed"),
+            ),
+            patch("smplfrm.services.task_reporting_service.logger") as mock_logger,
+        ):
             with self.assertRaises(RuntimeError):
                 service.scan(task_id=task.external_id)
 

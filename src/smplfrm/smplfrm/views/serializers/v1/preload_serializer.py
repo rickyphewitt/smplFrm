@@ -8,7 +8,6 @@ Validates type-specific attributes for cache preloading:
 from rest_framework import serializers
 
 from smplfrm.services.image_manipulation_service import ImageManipulationService
-from smplfrm.views.serializers.v1.task_serializer import TaskSerializer
 
 
 class PreloadImageCacheTaskSerializer(serializers.Serializer):

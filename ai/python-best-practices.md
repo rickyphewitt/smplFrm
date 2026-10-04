@@ -6,7 +6,7 @@
 - Use snake_case for variables and functions
 - Use PascalCase for classes
 - Use UPPER_SNAKE_CASE for constants
-- Limit line length to 88 characters (Black formatter)
+- Limit line length to 88 characters (Ruff formatter, configured in `pyproject.toml`)
 
 ## Type Hints
 - Use type hints for function parameters and return values

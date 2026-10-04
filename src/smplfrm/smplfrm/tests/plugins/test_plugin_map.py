@@ -6,7 +6,6 @@ from smplfrm.plugins.weather.weather import WeatherPlugin
 
 
 class TestGetPluginMap(TestCase):
-
     def test_returns_dict_keyed_by_name(self):
         plugin_map = get_plugin_map()
         self.assertIn("spotify", plugin_map)

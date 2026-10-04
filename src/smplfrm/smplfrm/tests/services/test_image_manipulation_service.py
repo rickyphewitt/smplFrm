@@ -5,6 +5,7 @@ from smplfrm.services import LibraryService
 
 import cv2
 import numpy as np
+import pytest
 
 from smplfrm.services.image_manipulation_service import ImageManipulationService
 
@@ -324,8 +325,6 @@ class TestImageManipulationService(TestCase):
         self.assertEqual(img.shape[0], window_h)
         self.assertEqual(img.shape[1], window_w)
 
-
-import pytest
 
 VALID_BOUNDARY_VALUES = [1, 2, 100, 2048, 4095, 4096]
 

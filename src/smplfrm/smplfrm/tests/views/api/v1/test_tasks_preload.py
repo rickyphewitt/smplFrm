@@ -7,7 +7,6 @@ from rest_framework.test import APIClient
 
 from smplfrm.models import Image, Task
 from smplfrm.models.task import TaskType, Status
-from smplfrm.services.preload_service import PreloadConflict
 
 
 class TestPreloadTaskCreation(TestCase):
@@ -36,9 +35,10 @@ class TestPreloadTaskCreation(TestCase):
             }
         }
 
-        with patch(
-            "smplfrm.services.preload_service.CacheService"
-        ) as mock_cache_cls, patch("smplfrm.services.preload_service.app") as mock_app:
+        with (
+            patch("smplfrm.services.preload_service.CacheService") as mock_cache_cls,
+            patch("smplfrm.services.preload_service.app") as mock_app,
+        ):
             mock_cache = MagicMock()
             mock_cache_cls.return_value = mock_cache
             mock_cache.read.return_value = None  # Nothing cached

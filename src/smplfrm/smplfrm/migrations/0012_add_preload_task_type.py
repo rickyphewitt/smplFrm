@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("smplfrm", "0011_add_plugin_model_and_config_fields"),
     ]

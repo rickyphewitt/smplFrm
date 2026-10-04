@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 from PIL import Image as PIL_Image
 from PIL.ExifTags import TAGS
-from django.conf import settings
 
 from smplfrm.models import Image
 
@@ -28,7 +27,7 @@ class ImageManipulationService:
         for name, value in [("width", width_str), ("height", height_str)]:
             try:
                 int_val = int(value)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return (None, f"{name} must be a positive integer")
             if int_val <= 0:
                 return (None, f"{name} must be a positive integer")

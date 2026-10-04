@@ -28,7 +28,6 @@ SPOTIFY_OAUTH_STATE_SESSION_KEY = "spotify_oauth_state"
 
 
 class SpotifyView(viewsets.ViewSet):
-
     def get_exception_handler(self):
         """Use consolidated JSON:API exception handler."""
         from smplfrm.jsonapi.exceptions import jsonapi_exception_handler
