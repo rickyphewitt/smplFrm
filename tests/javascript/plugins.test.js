@@ -278,7 +278,12 @@ describe('Plugins Tab', () => {
       data: plugins.map((p) => ({
         type: 'plugins',
         id: p.id,
-        attributes: { name: p.name, description: p.description, settings: {}, settings_schema: [] },
+        attributes: {
+          name: p.name,
+          description: p.description,
+          settings: {},
+          settings_schema: [],
+        },
       })),
       meta: { pagination: { count: 8, page_size: 5 } },
       links: {
@@ -385,7 +390,14 @@ describe('Plugins Tab', () => {
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: { coords: '63.17,-147.46' } })),
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            settings: { coords: '63.17,-147.46' },
+          }),
+        ),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -403,11 +415,18 @@ describe('Plugins Tab', () => {
   });
 
   it('should show Reload Now on cancel button after plugin detail save', async () => {
-    const mod = await enterPluginDetail();
+    await enterPluginDetail();
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: {} })),
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            settings: {},
+          }),
+        ),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -419,11 +438,18 @@ describe('Plugins Tab', () => {
   });
 
   it('should keep Back text on plugin back button after plugin detail save', async () => {
-    const mod = await enterPluginDetail();
+    await enterPluginDetail();
 
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(makeJsonApiDetailResponse({ id: 'p1', name: 'weather', settings: {} })),
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'p1',
+            name: 'weather',
+            settings: {},
+          }),
+        ),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -579,7 +605,7 @@ describe('Plugins Tab', () => {
     // This test was originally written to prove a bug where plugin-detail-actions
     // stayed visible after switching tabs. The fix adds plugin detail cleanup to
     // the tab handler. Now this test verifies the fix stays in place.
-    const mod = await enterPluginDetail();
+    await enterPluginDetail();
     simulateTabSwitch('display');
     expect(document.getElementById('main-actions').style.display).toBe('');
     expect(document.getElementById('plugin-detail-actions').style.display).toBe(
@@ -637,7 +663,7 @@ describe('Plugins Tab', () => {
   }
 
   it('should hide plugin actions after: configure -> click Back', async () => {
-    const mod = await enterPluginDetail();
+    await enterPluginDetail();
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: () =>
@@ -770,8 +796,7 @@ describe('Plugins Tab', () => {
     // Mock successful save
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({ data: { type: 'plugins', id: 'spotify' } }),
+      json: () => Promise.resolve({ data: { type: 'plugins', id: 'spotify' } }),
     });
 
     const saveBtn = document.getElementById('plugin-detail-save');
@@ -850,7 +875,6 @@ describe('Plugins Tab', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });
-
 
 describe('Plugin detail failure handling', () => {
   const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
@@ -1003,7 +1027,9 @@ describe('Plugin detail failure handling', () => {
   it('does not label the button Saved! when the plugin save fails', async () => {
     await openDetail(detailResponse());
 
-    global.fetch.mockResolvedValueOnce(errorResponse(400, 'API key is invalid'));
+    global.fetch.mockResolvedValueOnce(
+      errorResponse(400, 'API key is invalid'),
+    );
     const saveBtn = document.getElementById('plugin-detail-save');
     saveBtn.click();
     await settle();
@@ -1015,7 +1041,9 @@ describe('Plugin detail failure handling', () => {
   it('shows the server detail in the form error region when the plugin save fails', async () => {
     await openDetail(detailResponse());
 
-    global.fetch.mockResolvedValueOnce(errorResponse(400, 'API key is invalid'));
+    global.fetch.mockResolvedValueOnce(
+      errorResponse(400, 'API key is invalid'),
+    );
     document.getElementById('plugin-detail-save').click();
     await settle();
 

@@ -8,7 +8,13 @@ describe('spotify bar visibility', () => {
   let document, getNowPlaying;
 
   // Helper to create JSON:API status response
-  function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
+  function createStatusResponse(
+    isPlaying,
+    artist,
+    song,
+    trackUri,
+    configured = true,
+  ) {
     const trackId = trackUri
       ? Array.from(new TextEncoder().encode(trackUri))
           .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
@@ -23,9 +29,7 @@ describe('spotify bar visibility', () => {
         attributes: { configured, is_playing: isPlaying },
         relationships: {
           track: {
-            data: trackId
-              ? { type: 'spotify_tracks', id: trackId }
-              : null,
+            data: trackId ? { type: 'spotify_tracks', id: trackId } : null,
           },
         },
       },
@@ -140,7 +144,8 @@ describe('spotify bar visibility', () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(createStatusResponse(false, null, null, null)),
+        json: () =>
+          Promise.resolve(createStatusResponse(false, null, null, null)),
       }),
     );
     const module = await import('../../src/smplfrm/smplfrm/static/main.js');
@@ -153,9 +158,9 @@ describe('spotify bar visibility', () => {
     expect(document.getElementById('spotify-now-playing').innerHTML).toContain(
       'iconoir-spotify',
     );
-    expect(document.getElementById('spotify-now-playing').innerHTML).not.toContain(
-      'Artist',
-    );
+    expect(
+      document.getElementById('spotify-now-playing').innerHTML,
+    ).not.toContain('Artist');
   });
 
   it('shows spotify bar with oauth link when not authenticated', async () => {

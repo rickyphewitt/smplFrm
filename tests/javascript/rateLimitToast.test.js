@@ -9,9 +9,8 @@ describe('rateLimitToast', () => {
     // Clean DOM
     document.body.innerHTML = '';
 
-    const mod = await import(
-      '../../src/smplfrm/smplfrm/static/resilientFetch.js'
-    );
+    const mod =
+      await import('../../src/smplfrm/smplfrm/static/resilientFetch.js');
     showRateLimitToast = mod.showRateLimitToast;
     hideRateLimitToast = mod.hideRateLimitToast;
     _setRateLimited = mod._setRateLimited;
@@ -168,7 +167,7 @@ describe('rateLimitToast', () => {
       const link = toast.querySelector('a');
       expect(link).not.toBeNull();
       expect(link.href).toBe(
-        'https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables#security'
+        'https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables#security',
       );
     });
 

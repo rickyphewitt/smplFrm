@@ -1,4 +1,8 @@
-import { resilientFetch, taskPollFetch, parseRetryAfter } from './resilientFetch.js';
+import {
+  resilientFetch,
+  taskPollFetch,
+  parseRetryAfter,
+} from './resilientFetch.js';
 import {
   fetchJsonApi,
   JsonApiError,
@@ -14,8 +18,6 @@ import {
 } from './uiErrors.js';
 
 const IMAGE_ID_ATTR = 'image-id';
-const OPACITY_INCREMENT = 0.1;
-const OPACITY_MAX = 1.0;
 const CLOCK_REFRESH_MS = 1000;
 const SPOTIFY_REFRESH_MS = 5000;
 // Weather cadence. The backend refreshes on a 1800s beat and get_for_display()
@@ -26,7 +28,6 @@ const SPOTIFY_REFRESH_MS = 5000;
 // internally. Doubles as the abort deadline for a single attempt, which is far
 // longer than any retry chain a healthy backend produces.
 export const WEATHER_REFRESH_MS = 300000;
-const IMAGE_QUEUE_TARGET = 5;
 const IMAGE_QUEUE_LOW_WATER = 2;
 
 const imageContainer = document.getElementById('image-container');
@@ -99,16 +100,16 @@ async function refillQueue() {
 
     // Fetch next page of images with display_priority sort
     const response = await fetchJsonApi(
-      buildApiUrl(`images?sort=display_priority&page[number]=${currentPage}`)
+      buildApiUrl(`images?sort=display_priority&page[number]=${currentPage}`),
     );
 
     const { resources, meta } = unwrapResourceList(response);
-    
+
     // Update total pages from response
     if (meta?.pagination?.pages) {
       totalPages = meta.pagination.pages;
     }
-    
+
     if (resources.length === 0) {
       // No more images - reset to first page
       currentPage = 1;
@@ -117,8 +118,8 @@ async function refillQueue() {
 
     // Extract new image IDs not already in queue
     const newImages = resources
-      .map(r => ({ id: r.id, ...r.attributes }))
-      .filter(img => !imageQueue.find(q => q.id === img.id));
+      .map((r) => ({ id: r.id, ...r.attributes }))
+      .filter((img) => !imageQueue.find((q) => q.id === img.id));
 
     if (newImages.length === 0) {
       // All images already queued - advance or wrap to beginning
@@ -134,7 +135,7 @@ async function refillQueue() {
     imageQueue.push(...newImages);
 
     // Request best-effort preload for newly appended images
-    const imageIds = newImages.map(img => img.id);
+    const imageIds = newImages.map((img) => img.id);
     if (imageIds.length > 0) {
       const { width, height } = getWindowDimensions();
       await requestPreload(imageIds, width, height);
@@ -176,7 +177,7 @@ async function requestPreload(imageIds, width, height) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/vnd.api+json',
-        'Accept': 'application/vnd.api+json',
+        Accept: 'application/vnd.api+json',
       },
       body: JSON.stringify(payload),
     });
@@ -242,12 +243,12 @@ async function displayMetadata(imageId) {
 
 async function buildImage() {
   const nextImage = await getNextImage();
-  
+
   if (!nextImage) {
     // Queue empty and refill failed - return null
     return null;
   }
-  
+
   const { width, height } = getWindowDimensions();
   const img = new Image();
   img.src = buildApiUrl(
@@ -316,7 +317,7 @@ export function fadeInImage(image, onComplete) {
 async function loadNext(currentImage) {
   try {
     const newImage = await buildImage();
-    
+
     if (!newImage) {
       // No image available - keep current image, retry after refresh interval
       setTimeout(() => {
@@ -324,7 +325,7 @@ async function loadNext(currentImage) {
       }, config.refreshInterval);
       return;
     }
-    
+
     newImage.classList.add('main-img');
 
     newImage.onload = () => {
@@ -339,7 +340,7 @@ async function loadNext(currentImage) {
         loadNext(newImage);
       }, config.refreshInterval);
     };
-  } catch (error) {
+  } catch {
     // On fetch failure: keep current image, retry after refreshInterval
     setTimeout(() => {
       loadNext(currentImage);
@@ -350,7 +351,7 @@ async function loadNext(currentImage) {
 async function startImages() {
   try {
     const newImage = await buildImage();
-    
+
     if (!newImage) {
       // No images available - retry after refresh interval
       setTimeout(() => {
@@ -358,7 +359,7 @@ async function startImages() {
       }, config.refreshInterval);
       return;
     }
-    
+
     newImage.onload = () => {
       newImage.classList.add('main-img');
       imageContainer.appendChild(newImage);
@@ -368,7 +369,7 @@ async function startImages() {
       startProgress();
       loadNext(newImage);
     };
-  } catch (error) {
+  } catch {
     // On fetch failure: retry after refreshInterval
     setTimeout(() => {
       startImages();
@@ -508,16 +509,16 @@ let spotifyAuthRequestInFlight = false;
 
 function showSpotifyAuthLink(authUrl, reason) {
   const reconnect = reason === 'expired';
-  const label = reconnect
-    ? 'Expired - Reconnect Spotify'
-    : 'Connect Spotify';
+  const label = reconnect ? 'Expired - Reconnect Spotify' : 'Connect Spotify';
   const tooltip = reconnect
     ? 'Spotify connection expired - Click to reconnect'
     : 'Connect Spotify';
   const link = document.createElement('a');
   link.href = authUrl;
   link.title = tooltip;
-  link.className = reconnect ? 'spotify-reconnect-link' : 'spotify-connect-link';
+  link.className = reconnect
+    ? 'spotify-reconnect-link'
+    : 'spotify-connect-link';
 
   const icon = document.createElement('i');
   icon.className = reconnect
@@ -1075,9 +1076,7 @@ export async function loadPlugins(page = 1) {
   const enabledPlugins = JSON.parse(modal.dataset.configPlugins || '[]');
 
   try {
-    const doc = await fetchJsonApi(
-      buildApiUrl(`plugins?page[number]=${page}`),
-    );
+    const doc = await fetchJsonApi(buildApiUrl(`plugins?page[number]=${page}`));
     const { resources, meta, links } = unwrapResourceList(doc);
 
     body.innerHTML = resources
@@ -1148,7 +1147,7 @@ export function validateCoordinates(value) {
 }
 
 export const PLUGIN_ACTION_HANDLERS = {
-  geolocation: (input) => {
+  geolocation: (_input) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'action-btn';
@@ -1338,13 +1337,9 @@ export async function loadPresets(page = 1) {
   const prev = document.getElementById('preset-page-prev');
   const next = document.getElementById('preset-page-next');
   const info = document.getElementById('preset-page-info');
-  const modal = document.getElementById('settings-modal');
-  const activeConfigId = modal.dataset.configId;
 
   try {
-    const doc = await fetchJsonApi(
-      buildApiUrl(`configs?page[number]=${page}`),
-    );
+    const doc = await fetchJsonApi(buildApiUrl(`configs?page[number]=${page}`));
     const { resources } = unwrapResourceList(doc);
     const configs = resources.map((r) => ({ id: r.id, ...r.attributes }));
 
@@ -1461,7 +1456,8 @@ export async function loadPresets(page = 1) {
     });
 
     const pagination = doc.meta?.pagination || {};
-    const totalPages = pagination.pages || Math.ceil((pagination.count || 0) / 5) || 1;
+    const totalPages =
+      pagination.pages || Math.ceil((pagination.count || 0) / 5) || 1;
     info.textContent = `Page ${page} of ${totalPages}`;
     prev.disabled = !doc.links?.prev;
     next.disabled = !doc.links?.next;

@@ -3,12 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 describe('resilientFetch', () => {
   let resilientFetch,
     parseRetryAfter,
-    _rateLimited,
     _setRateLimited,
-    MAX_RETRIES,
-    DEFAULT_RETRY_AFTER_SECONDS,
-    showRateLimitToast,
-    hideRateLimitToast;
+    DEFAULT_RETRY_AFTER_SECONDS;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -19,15 +15,11 @@ describe('resilientFetch', () => {
     // Provide minimal DOM for toast functions
     document.body.innerHTML = '<div id="rate-limit-toast"></div>';
 
-    const mod = await import(
-      '../../src/smplfrm/smplfrm/static/resilientFetch.js'
-    );
+    const mod =
+      await import('../../src/smplfrm/smplfrm/static/resilientFetch.js');
     resilientFetch = mod.resilientFetch;
     parseRetryAfter = mod.parseRetryAfter;
-    MAX_RETRIES = mod.MAX_RETRIES;
     DEFAULT_RETRY_AFTER_SECONDS = mod.DEFAULT_RETRY_AFTER_SECONDS;
-    showRateLimitToast = mod.showRateLimitToast;
-    hideRateLimitToast = mod.hideRateLimitToast;
     _setRateLimited = mod._setRateLimited;
 
     // Reset rate-limited state before each test
@@ -256,9 +248,8 @@ describe('resilientFetch', () => {
       await promise;
 
       // Re-import to check module state
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/resilientFetch.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/resilientFetch.js');
       expect(mod._rateLimited).toBe(true);
     });
 
@@ -275,9 +266,8 @@ describe('resilientFetch', () => {
 
       await promise;
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/resilientFetch.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/resilientFetch.js');
       expect(mod._rateLimited).toBe(false);
     });
 
@@ -290,9 +280,8 @@ describe('resilientFetch', () => {
 
       await resilientFetch('/api/test');
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/resilientFetch.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/resilientFetch.js');
       expect(mod._rateLimited).toBe(false);
     });
   });

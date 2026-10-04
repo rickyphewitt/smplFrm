@@ -409,7 +409,10 @@ describe('uiErrors', () => {
       document.body.innerHTML = '<div id="error-message"></div>';
       const before = document.body.innerHTML;
 
-      uiErrors.reportError(error(), { channel: 'silent', fallback: 'Fallback' });
+      uiErrors.reportError(error(), {
+        channel: 'silent',
+        fallback: 'Fallback',
+      });
 
       expect(console.debug).toHaveBeenCalledTimes(1);
       expect(console.error).not.toHaveBeenCalled();

@@ -57,25 +57,22 @@ describe('Weather JSON:API Frontend Contract', () => {
   describe('jsonApiClient module', () => {
     it('exports fetchJsonApi function', async () => {
       // This test will fail until jsonApiClient.js is created
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
       expect(mod.fetchJsonApi).toBeDefined();
       expect(typeof mod.fetchJsonApi).toBe('function');
     });
 
     it('exports unwrapResource function', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
       expect(mod.unwrapResource).toBeDefined();
       expect(typeof mod.unwrapResource).toBe('function');
     });
 
     it('exports unwrapErrors function', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
       expect(mod.unwrapErrors).toBeDefined();
       expect(typeof mod.unwrapErrors).toBe('function');
     });
@@ -90,10 +87,11 @@ describe('Weather JSON:API Frontend Contract', () => {
         }),
       );
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
+      await mod.fetchJsonApi(
+        'http://localhost:8321/api/v1/plugins/weather/current',
       );
-      await mod.fetchJsonApi('http://localhost:8321/api/v1/plugins/weather/current');
 
       expect(fetchMock).toHaveBeenCalled();
       const [, options] = fetchMock.mock.calls[0];
@@ -109,22 +107,22 @@ describe('Weather JSON:API Frontend Contract', () => {
         }),
       );
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       // Verify the module imports and uses resilientFetch
       // This is tested implicitly by checking the correct behavior
-      await mod.fetchJsonApi('http://localhost:8321/api/v1/plugins/weather/current');
+      await mod.fetchJsonApi(
+        'http://localhost:8321/api/v1/plugins/weather/current',
+      );
       expect(fetchMock).toHaveBeenCalled();
     });
   });
 
   describe('unwrapResource', () => {
     it('extracts attributes from data.attributes', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const response = {
         data: {
@@ -149,9 +147,8 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
 
     it('preserves resource id', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const response = {
         data: {
@@ -166,9 +163,8 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
 
     it('preserves resource type', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const response = {
         data: {
@@ -183,18 +179,16 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
 
     it('returns null for null data', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const result = mod.unwrapResource({ data: null });
       expect(result).toBeNull();
     });
 
     it('returns null for missing data key', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const result = mod.unwrapResource({});
       expect(result).toBeNull();
@@ -203,9 +197,8 @@ describe('Weather JSON:API Frontend Contract', () => {
 
   describe('unwrapErrors', () => {
     it('extracts errors array from response', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const response = {
         errors: [
@@ -225,18 +218,16 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
 
     it('returns empty array when no errors key', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const result = mod.unwrapErrors({});
       expect(result).toEqual([]);
     });
 
     it('handles multiple errors', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const response = {
         errors: [
@@ -252,9 +243,8 @@ describe('Weather JSON:API Frontend Contract', () => {
 
   describe('Weather display formatting', () => {
     it('formatWeatherTemp concatenates value and scale with degree symbol', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       // The client should export a helper for weather display formatting
       const result = mod.formatWeatherTemp('72', 'F');
@@ -262,18 +252,16 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
 
     it('formatWeatherTemp handles Celsius', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const result = mod.formatWeatherTemp('22', 'C');
       expect(result).toBe('22°C');
     });
 
     it('formatWeatherTemp handles N/A values', async () => {
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       const result = mod.formatWeatherTemp('N/A', 'F');
       expect(result).toBe('N/A°F');
@@ -292,12 +280,13 @@ describe('Weather JSON:API Frontend Contract', () => {
         ]),
       );
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       await expect(
-        mod.fetchJsonApi('http://localhost:8321/api/v1/plugins/weather/current'),
+        mod.fetchJsonApi(
+          'http://localhost:8321/api/v1/plugins/weather/current',
+        ),
       ).rejects.toMatchObject({
         status: 400,
         errors: expect.arrayContaining([
@@ -317,12 +306,13 @@ describe('Weather JSON:API Frontend Contract', () => {
         ]),
       );
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       await expect(
-        mod.fetchJsonApi('http://localhost:8321/api/v1/plugins/weather/current'),
+        mod.fetchJsonApi(
+          'http://localhost:8321/api/v1/plugins/weather/current',
+        ),
       ).rejects.toMatchObject({
         status: 500,
         errors: expect.arrayContaining([
@@ -338,9 +328,8 @@ describe('Weather JSON:API Frontend Contract', () => {
       // We can't easily test the full retry flow here without fake timers
       // The actual retry behavior is tested in resilientFetch.test.js
 
-      const mod = await import(
-        '../../src/smplfrm/smplfrm/static/jsonApiClient.js'
-      );
+      const mod =
+        await import('../../src/smplfrm/smplfrm/static/jsonApiClient.js');
 
       // Verify fetchJsonApi exists and is a function
       expect(typeof mod.fetchJsonApi).toBe('function');
@@ -350,7 +339,6 @@ describe('Weather JSON:API Frontend Contract', () => {
     });
   });
 });
-
 
 describe('Weather degraded indicator', () => {
   const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
@@ -494,7 +482,8 @@ describe('Weather degraded indicator', () => {
     mod.updateSeparators();
     await settle();
 
-    const successDisplay = document.getElementById('weather-group').style.display;
+    const successDisplay =
+      document.getElementById('weather-group').style.display;
     const successSeparator = separatorBeforeWeather().style.display;
 
     setupBottomBar();

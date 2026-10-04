@@ -139,7 +139,7 @@ describe('Config API Integration', () => {
           errorMessage.classList.remove('show');
         }, 3000);
       }
-    } catch (error) {
+    } catch {
       // Error handled
     }
 
@@ -472,7 +472,6 @@ describe('Task Progress UI', () => {
   });
 });
 
-
 describe('Settings load failure and save guard', () => {
   const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
 
@@ -550,7 +549,8 @@ describe('Settings load failure and save guard', () => {
     return {
       ok: false,
       status,
-      json: () => Promise.resolve({ errors: [{ status: String(status), detail }] }),
+      json: () =>
+        Promise.resolve({ errors: [{ status: String(status), detail }] }),
     };
   }
 
@@ -599,9 +599,9 @@ describe('Settings load failure and save guard', () => {
     await loadConfig();
 
     expect(document.getElementById('save-settings').disabled).toBe(true);
-    expect(
-      document.getElementById('settings-modal').dataset.configLoaded,
-    ).toBe('false');
+    expect(document.getElementById('settings-modal').dataset.configLoaded).toBe(
+      'false',
+    );
   });
 
   it('enables the save button and marks the config loaded on success', async () => {
@@ -611,9 +611,9 @@ describe('Settings load failure and save guard', () => {
     await loadConfig();
 
     expect(document.getElementById('save-settings').disabled).toBe(false);
-    expect(
-      document.getElementById('settings-modal').dataset.configLoaded,
-    ).toBe('true');
+    expect(document.getElementById('settings-modal').dataset.configLoaded).toBe(
+      'true',
+    );
     expect(placeholders().length).toBe(0);
   });
 
@@ -666,7 +666,9 @@ describe('Settings load failure and save guard', () => {
       .map((call) => call[1]?.body)
       .filter(Boolean);
     expect(bodies.some((body) => body.includes('"plugins":[]'))).toBe(false);
-    expect(bodies.some((body) => body.includes('"is_active":true'))).toBe(false);
+    expect(bodies.some((body) => body.includes('"is_active":true'))).toBe(
+      false,
+    );
     expect(
       global.fetch.mock.calls.some((call) => call[1]?.method === 'POST'),
     ).toBe(false);
@@ -698,9 +700,9 @@ describe('Settings load failure and save guard', () => {
 
     expect(placeholders().length).toBe(0);
     expect(document.getElementById('save-settings').disabled).toBe(false);
-    expect(
-      document.getElementById('settings-modal').dataset.configLoaded,
-    ).toBe('true');
+    expect(document.getElementById('settings-modal').dataset.configLoaded).toBe(
+      'true',
+    );
     expect(global.location.reload).not.toHaveBeenCalled();
     expect(document.getElementById('setting-timezone').value).toBe('UTC');
   });
@@ -730,7 +732,9 @@ describe('Settings load failure and save guard', () => {
     const mod = await import(MAIN);
     await mod.loadConfig();
 
-    global.fetch.mockResolvedValueOnce(errorResponse(400, 'Timezone is invalid'));
+    global.fetch.mockResolvedValueOnce(
+      errorResponse(400, 'Timezone is invalid'),
+    );
     const result = await mod.saveConfig();
 
     expect(result).toBe(false);
@@ -761,7 +765,9 @@ describe('Settings load failure and save guard', () => {
     const mod = await import(MAIN);
     await mod.loadConfig();
 
-    global.fetch.mockResolvedValueOnce(errorResponse(400, 'Timezone is invalid'));
+    global.fetch.mockResolvedValueOnce(
+      errorResponse(400, 'Timezone is invalid'),
+    );
     await mod.saveConfig();
 
     const modal = document.getElementById('settings-modal');

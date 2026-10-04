@@ -1,6 +1,7 @@
 repos:
   # Ruff runs from the project environment so its version comes only from
   # uv.lock (run `make packages` first). Lint fixes run before formatting.
+  # CI equivalent: .github/workflows/lint-python.yml
   - repo: local
     hooks:
       - id: ruff-check
@@ -13,6 +14,24 @@ repos:
         entry: uv run --frozen ruff format --force-exclude
         language: system
         types_or: [python, pyi]
+  # ESLint and Prettier run from node_modules so their versions come only from
+  # package-lock.json (run `make packages-js` first). Lint fixes run before
+  # formatting. The Prettier file pattern matches the package.json `format`
+  # script globs. CI equivalent: .github/workflows/lint-javascript.yml
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: node_modules/.bin/eslint --fix --no-warn-ignored
+        language: system
+        types: [javascript]
+      - id: prettier
+        name: prettier
+        entry: node_modules/.bin/prettier --write
+        language: system
+        files: ^(src/(.+/)?static/.+|tests/javascript/.+|vitest\.config|eslint\.config)\.js$
+  - repo: local
+    hooks:
       - id: restage-formatted
         name: restage formatted files
         entry: git add -u

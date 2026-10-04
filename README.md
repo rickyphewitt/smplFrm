@@ -105,6 +105,7 @@ npm run lint:fix          # Auto-fix lint errors
 npm run format            # Format all JS files with Prettier
 npm run format:check      # Check formatting without writing
 ```
+The pre-commit hook (`make pre-commit`) runs ESLint (`--fix`) and Prettier on staged JS files using the versions in `node_modules`, so run `make packages-js` first. The `Lint JavaScript` CI workflow runs `npm run lint` and `npm run format:check`.
 
 **Test location:** Tests are in `tests/javascript/` to avoid Django static bundling.
 
@@ -137,7 +138,7 @@ make test                 # Run the Python test suite
 ### Code Formatting
 * This repo uses [Ruff](https://docs.astral.sh/ruff/) to format (88-column lines) and lint Python code; its version is pinned in `uv.lock` and its settings live in `pyproject.toml`
 * Run `make pre-commit` to install the pre-commit hook, which runs `ruff check --fix` and `ruff format` on staged Python files
-* `make lint` checks lint and formatting without changing files (the same checks as the `Lint` CI workflow)
+* `make lint` checks lint and formatting without changing files (the same checks as the `Lint Python` CI workflow)
 * `make format` applies lint fixes and formats all Python files
 * To mostly ignore the commits that formatted the repo run `make ignore-format-commit`
 
