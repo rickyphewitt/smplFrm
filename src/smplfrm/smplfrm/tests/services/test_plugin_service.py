@@ -7,7 +7,6 @@ from smplfrm.services.plugin_service import PluginService
 
 
 class TestPluginService(TestCase):
-
     def setUp(self):
         self.service = PluginService()
 
@@ -47,7 +46,6 @@ class TestPluginService(TestCase):
 
 
 class TestPluginAPI(TestCase):
-
     def setUp(self):
         self.client = APIClient()
         Plugin.objects.all().delete()

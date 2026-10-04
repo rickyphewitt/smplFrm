@@ -10,9 +10,8 @@ models/serializers to exercise the package's core behavior without touching
 any existing views or changing any global settings.
 """
 
-import pytest
-from django.test import TestCase, RequestFactory, override_settings
-from rest_framework import serializers, status, viewsets
+from django.test import TestCase
+from rest_framework import serializers
 from rest_framework.test import APIRequestFactory
 
 from smplfrm.models.base import generate_external_id
@@ -102,9 +101,6 @@ class TestJsonApiRendererCompatibility(TestCase):
     def test_resource_serializer_produces_type_and_attributes(self):
         """Using JsonApiModelSerializer produces full JSON:API resource structure."""
         from rest_framework_json_api.renderers import JSONRenderer
-        from rest_framework_json_api.serializers import (
-            ResourceIdentifierObjectSerializer,
-        )
         from rest_framework.request import Request
         import json
 

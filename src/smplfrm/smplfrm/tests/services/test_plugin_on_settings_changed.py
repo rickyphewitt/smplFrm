@@ -1,12 +1,11 @@
 from django.test import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from smplfrm.models import Plugin
 from smplfrm.services.plugin_service import PluginService
 
 
 class TestPluginOnSettingsChanged(TestCase):
-
     def setUp(self):
         self.service = PluginService()
         self.plugin = Plugin.objects.get(name="weather")

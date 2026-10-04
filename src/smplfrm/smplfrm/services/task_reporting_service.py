@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class TaskReportingService:
-
     def __init__(self, task_type: TaskType = None):
         from smplfrm.services import TaskService
 

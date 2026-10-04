@@ -2,7 +2,6 @@ import logging
 from typing import Any, Optional
 
 from django.core.cache import cache
-from django.conf import settings
 
 from smplfrm.services.task_reporting_service import TaskReportingService
 from smplfrm.models.task import TaskType

@@ -1,7 +1,6 @@
 """Tests for PreloadService admission and dispatch logic."""
 
-import hashlib
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -100,9 +99,10 @@ class TestPreloadService(TestCase):
             )
 
         # Mock cache and celery
-        with patch.object(self.service.cache_service, "read") as mock_read, patch(
-            "smplfrm.services.preload_service.app"
-        ) as mock_app:
+        with (
+            patch.object(self.service.cache_service, "read") as mock_read,
+            patch("smplfrm.services.preload_service.app") as mock_app,
+        ):
             mock_read.return_value = None
 
             task = self.service.create_preload_task(
@@ -143,9 +143,10 @@ class TestPreloadService(TestCase):
             )
 
         # Mock cache and celery
-        with patch.object(self.service.cache_service, "read") as mock_read, patch(
-            "smplfrm.services.preload_service.app"
-        ) as mock_app:
+        with (
+            patch.object(self.service.cache_service, "read") as mock_read,
+            patch("smplfrm.services.preload_service.app") as mock_app,
+        ):
             mock_read.return_value = None
 
             task = self.service.create_preload_task(
@@ -159,9 +160,10 @@ class TestPreloadService(TestCase):
     def test_invalid_image_id_skipped_without_error(self):
         """Test that invalid image IDs are skipped during payload construction."""
         # Mock cache and celery
-        with patch.object(self.service.cache_service, "read") as mock_read, patch(
-            "smplfrm.services.preload_service.app"
-        ) as mock_app:
+        with (
+            patch.object(self.service.cache_service, "read") as mock_read,
+            patch("smplfrm.services.preload_service.app"),
+        ):
             mock_read.return_value = None
 
             # Include a nonexistent image ID
@@ -196,9 +198,10 @@ class TestPreloadService(TestCase):
     def test_creates_execution_payload(self):
         """Test that task is created with proper execution payload."""
         # Mock cache and celery
-        with patch.object(self.service.cache_service, "read") as mock_read, patch(
-            "smplfrm.services.preload_service.app"
-        ) as mock_app:
+        with (
+            patch.object(self.service.cache_service, "read") as mock_read,
+            patch("smplfrm.services.preload_service.app"),
+        ):
             mock_read.return_value = None
 
             task = self.service.create_preload_task(

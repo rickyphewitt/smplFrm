@@ -1,5 +1,5 @@
 [![CI](https://github.com/rickyphewitt/smplFrm/actions/workflows/ci.yml/badge.svg)](https://github.com/rickyphewitt/smplFrm/actions/workflows/ci.yml)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ___
 
 <p align="center">
@@ -111,7 +111,7 @@ npm run format:check      # Check formatting without writing
 ### Python
 This repo uses Python 3.14 and [uv](https://docs.astral.sh/uv/) to manage the interpreter, virtual environment, and dependencies. `pyproject.toml` declares dependencies and `uv.lock` pins exact versions.
 
-**Install uv** (0.12.20 or newer) using one of the [official methods](https://docs.astral.sh/uv/getting-started/installation/):
+**Install uv** (0.12.18 or newer) using one of the [official methods](https://docs.astral.sh/uv/getting-started/installation/):
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh   # standalone installer
 pipx install uv                                   # or pipx
@@ -134,10 +134,12 @@ make test                 # Run the Python test suite
 
 **Migrating from the previous pip-based setup:** install uv, then run `make packages-clean packages pre-commit`.
 
-### Code Formating
-* This repo uses [black](https://pypi.org/project/black/) to format the code
-* Run `make pre-commit` to install the pre-commit hook
-* To mostly ignore the commit that formatted the repo run `make ignore-format-commit`
+### Code Formatting
+* This repo uses [Ruff](https://docs.astral.sh/ruff/) to format (88-column lines) and lint Python code; its version is pinned in `uv.lock` and its settings live in `pyproject.toml`
+* Run `make pre-commit` to install the pre-commit hook, which runs `ruff check --fix` and `ruff format` on staged Python files
+* `make lint` checks lint and formatting without changing files (the same checks as the `Lint` CI workflow)
+* `make format` applies lint fixes and formats all Python files
+* To mostly ignore the commits that formatted the repo run `make ignore-format-commit`
 
 
 ### Environment Variables

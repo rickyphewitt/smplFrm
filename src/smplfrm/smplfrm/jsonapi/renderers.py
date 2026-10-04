@@ -5,7 +5,6 @@ when using a custom exception handler, and supports dynamic resource types.
 """
 
 from rest_framework_json_api.renderers import JSONRenderer as PackageJSONRenderer
-from rest_framework_json_api.utils import get_resource_id
 
 
 class JsonApiRenderer(PackageJSONRenderer):

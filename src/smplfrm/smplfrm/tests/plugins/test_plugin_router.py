@@ -2,7 +2,6 @@ from django.test import TestCase
 
 
 class TestPluginRouter(TestCase):
-
     def test_plugin_router_includes_spotify_routes(self):
         from smplfrm.plugins import get_plugin_router
 

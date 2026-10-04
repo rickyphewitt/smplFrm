@@ -6,7 +6,6 @@ import smplfrm.models.base
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("smplfrm", "0004_image_view_count"),
     ]

@@ -1,5 +1,4 @@
 from django.test import TestCase
-from django.test.utils import override_settings
 
 from smplfrm.services import CacheService
 
@@ -85,13 +84,15 @@ class TestImageService(TestCase):
 
     def test_clear_calls_reporting_methods(self):
         """Test that clear calls initiate_task, report_task, and complete_task."""
-        from unittest.mock import patch, call
+        from unittest.mock import patch
 
         self.service.upsert(self.cache_key, self.cache_data)
 
-        with patch.object(self.service, "initiate_task") as mock_init, patch.object(
-            self.service, "report_task"
-        ) as mock_report, patch.object(self.service, "complete_task") as mock_complete:
+        with (
+            patch.object(self.service, "initiate_task") as mock_init,
+            patch.object(self.service, "report_task") as mock_report,
+            patch.object(self.service, "complete_task") as mock_complete,
+        ):
             self.service.clear(task_id="test-id")
 
             mock_init.assert_called_once_with("test-id", 1)
@@ -141,9 +142,12 @@ class TestImageService(TestCase):
 
         task = Task.objects.create(task_type=TaskType.CLEAR_CACHE)
 
-        with patch.object(
-            self.service.cache, "clear", side_effect=RuntimeError("cache error")
-        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+        with (
+            patch.object(
+                self.service.cache, "clear", side_effect=RuntimeError("cache error")
+            ),
+            patch("smplfrm.services.task_reporting_service.logger") as mock_logger,
+        ):
             with self.assertRaises(RuntimeError):
                 self.service.clear(task_id=task.external_id)
 

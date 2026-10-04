@@ -3,3 +3,5 @@ from .image_metadata import ImageMetadata
 from .config import Config
 from .plugin import Plugin
 from .task import Task
+
+__all__ = ["Image", "ImageMetadata", "Config", "Plugin", "Task"]

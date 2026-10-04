@@ -55,7 +55,7 @@ class TestImageServiceErrorResponses(TestCase):
         task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
 
         # Create a test image
-        test_image = Image.objects.create(
+        Image.objects.create(
             name="test.jpg", file_path="/test/path.jpg", file_name="test.jpg"
         )
 

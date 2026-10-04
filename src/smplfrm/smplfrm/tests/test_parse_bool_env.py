@@ -113,9 +113,9 @@ class TestPreservationDefaults:
         with patch.dict(os.environ, env_patch, clear=True):
             settings = _reload_settings()
             actual = getattr(settings, setting_name)
-            assert (
-                actual is True
-            ), f"{setting_name} should default to True when unset, got {actual!r}"
+            assert actual is True, (
+                f"{setting_name} should default to True when unset, got {actual!r}"
+            )
 
     def test_all_boolean_defaults_true_simultaneously(self):
         """When ALL four boolean env vars are unset, they all default to True."""
@@ -126,9 +126,9 @@ class TestPreservationDefaults:
             settings = _reload_settings()
             for setting_name in AFFECTED_SETTINGS:
                 actual = getattr(settings, setting_name)
-                assert (
-                    actual is True
-                ), f"{setting_name} should default to True, got {actual!r}"
+                assert actual is True, (
+                    f"{setting_name} should default to True, got {actual!r}"
+                )
 
 
 class TestPreservationTruthyStrings:
@@ -148,9 +148,9 @@ class TestPreservationTruthyStrings:
         with patch.dict(os.environ, {setting_name: truthy_value}):
             settings = _reload_settings()
             actual = getattr(settings, setting_name)
-            assert (
-                actual is True
-            ), f"{setting_name}={truthy_value!r} should be True, got {actual!r}"
+            assert actual is True, (
+                f"{setting_name}={truthy_value!r} should be True, got {actual!r}"
+            )
 
     @pytest.mark.parametrize(
         "setting_name,non_true_value",
@@ -170,9 +170,9 @@ class TestPreservationTruthyStrings:
         with patch.dict(os.environ, {setting_name: non_true_value}):
             settings = _reload_settings()
             actual = getattr(settings, setting_name)
-            assert (
-                actual is False
-            ), f"{setting_name}={non_true_value!r} should be False, got {actual!r}"
+            assert actual is False, (
+                f"{setting_name}={non_true_value!r} should be False, got {actual!r}"
+            )
 
 
 class TestPreservationNonBooleanSettings:
@@ -187,9 +187,9 @@ class TestPreservationNonBooleanSettings:
             settings = _reload_settings()
             for setting_name, expected in NON_BOOLEAN_SETTINGS_DEFAULTS.items():
                 actual = getattr(settings, setting_name)
-                assert (
-                    actual == expected
-                ), f"{setting_name} should be {expected!r}, got {actual!r}"
+                assert actual == expected, (
+                    f"{setting_name} should be {expected!r}, got {actual!r}"
+                )
 
     def test_library_dirs_is_list(self):
         """SMPL_FRM_LIBRARY_DIRS defaults to a list (split by comma)."""

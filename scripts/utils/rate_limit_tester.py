@@ -53,7 +53,7 @@ class ThrottleTestResult:
         if self.response_detail:
             print(f"  Detail: {self.response_detail}")
         if self.issues:
-            print(f"  Issues:")
+            print("  Issues:")
             for issue in self.issues:
                 print(f"    - {issue}")
 

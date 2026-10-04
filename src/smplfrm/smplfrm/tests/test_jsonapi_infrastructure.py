@@ -8,7 +8,6 @@ Tests the shared components used by all JSON:API endpoints:
 """
 
 from django.test import TestCase, RequestFactory
-from rest_framework import status
 from rest_framework.exceptions import (
     NotFound,
     PermissionDenied,
@@ -16,7 +15,6 @@ from rest_framework.exceptions import (
     Throttled,
 )
 from rest_framework.request import Request
-from rest_framework.views import APIView
 from unittest.mock import MagicMock
 
 from smplfrm.jsonapi import (

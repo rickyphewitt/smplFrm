@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("smplfrm", "0002_alter_image_created_date_alter_image_updated_date"),
     ]

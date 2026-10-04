@@ -121,13 +121,11 @@ class TestImageService(TestCase):
             {"name": "bar", "file_path": "/other/", "file_name": "bar.jpg"}
         )
 
-        with patch.object(
-            self.image_service, "initiate_task"
-        ) as mock_init, patch.object(
-            self.image_service, "report_task"
-        ) as mock_report, patch.object(
-            self.image_service, "complete_task"
-        ) as mock_complete:
+        with (
+            patch.object(self.image_service, "initiate_task") as mock_init,
+            patch.object(self.image_service, "report_task") as mock_report,
+            patch.object(self.image_service, "complete_task") as mock_complete,
+        ):
             self.image_service.reset_all_view_count(task_id="test-id")
 
             mock_init.assert_called_once_with("test-id", 2)
@@ -179,9 +177,10 @@ class TestImageService(TestCase):
         task = Task.objects.create(task_type=TaskType.RESET_IMAGE_COUNT)
         self.image_service.create(self.full_image_data)
 
-        with patch.object(
-            Image, "save", side_effect=RuntimeError("save failed")
-        ), patch("smplfrm.services.task_reporting_service.logger") as mock_logger:
+        with (
+            patch.object(Image, "save", side_effect=RuntimeError("save failed")),
+            patch("smplfrm.services.task_reporting_service.logger") as mock_logger,
+        ):
             with self.assertRaises(RuntimeError):
                 self.image_service.reset_all_view_count(task_id=task.external_id)
 
