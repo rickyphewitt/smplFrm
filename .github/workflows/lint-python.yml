@@ -1,12 +1,12 @@
-name: Lint
+name: Lint Python
 
-# Produces the required `lint` status check. Keep the workflow name, the job id
-# `lint` (with no job-level `name:`), and these unfiltered triggers so the check
-# reports on every PR.
+# Mirrors the Ruff hooks in .pre-commit-config.yaml (and `make lint`).
+# Triggers have no path filters so the `lint-python` check reports on every PR,
+# which keeps it usable as a required status check.
 on: [push, pull_request]
 
 jobs:
-  lint:
+  lint-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

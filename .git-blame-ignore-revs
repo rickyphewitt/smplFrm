@@ -4,5 +4,8 @@ dda4912538b3c7d166bf2a9e7ebf895b3d1c0b97
 # TODO: After merging PR #181 to main, add the final merge commit SHA below
 # (one-time Prettier format of all JS files — no logic changes)
 
-# TODO: After merging the Ruff migration PR to main, add its merge commit SHA below
-# (one-time Black -> Ruff reformat and default-rule lint fixes — no logic changes)
+# Ruff formatting commit (Black -> Ruff reformat and default-rule lint fixes)
+de3836e3b7baace00789437751fa353ca76d715b
+
+# TODO: After merging the JavaScript lint CI PR to main, add its merge commit SHA below
+# (Prettier reformat of 14 JS files and ESLint no-unused-vars fixes — no logic changes)

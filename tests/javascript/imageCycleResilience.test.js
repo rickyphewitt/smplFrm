@@ -38,15 +38,28 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
-              { type: 'images', id: 'img-2', attributes: { name: 'second.jpg' } },
-              { type: 'images', id: 'img-3', attributes: { name: 'third.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 3, pages: 1, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'first.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-2',
+                  attributes: { name: 'second.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-3',
+                  attributes: { name: 'third.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 3, pages: 1, page: 1 } },
+            }),
         })
         // Mock successful preload request
         .mockResolvedValueOnce({ status: 201, ok: true });
@@ -76,14 +89,23 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
-              { type: 'images', id: 'img-2', attributes: { name: 'second.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 2, pages: 1, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'first.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-2',
+                  attributes: { name: 'second.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 2, pages: 1, page: 1 } },
+            }),
         })
         // Preload succeeds
         .mockResolvedValueOnce({ status: 201, ok: true });
@@ -104,19 +126,24 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 1, pages: 1, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'first.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 1, pages: 1, page: 1 } },
+            }),
         })
         // Mock preload response (happens async, doesn't block)
         .mockResolvedValueOnce({ status: 201, ok: true });
 
       const result = await getNextImage();
-      
+
       // Image returned immediately from queue
       expect(result).not.toBeNull();
       expect(result.id).toBe('img-1');
@@ -129,11 +156,12 @@ describe('Image Queue Resilience', () => {
         status: 200,
         ok: true,
         headers: { get: () => 'application/vnd.api+json' },
-        json: () => Promise.resolve({
-          data: [],
-          links: {},
-          meta: { pagination: { count: 0, pages: 0, page: 1 } },
-        }),
+        json: () =>
+          Promise.resolve({
+            data: [],
+            links: {},
+            meta: { pagination: { count: 0, pages: 0, page: 1 } },
+          }),
       });
 
       const result = await getNextImage();
@@ -149,14 +177,23 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'page1-1.jpg' } },
-              { type: 'images', id: 'img-2', attributes: { name: 'page1-2.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 4, pages: 2, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'page1-1.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-2',
+                  attributes: { name: 'page1-2.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 4, pages: 2, page: 1 } },
+            }),
         })
         .mockResolvedValueOnce({ status: 201, ok: true }) // preload
         // Second call: page 2 (last page)
@@ -164,14 +201,23 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-3', attributes: { name: 'page2-1.jpg' } },
-              { type: 'images', id: 'img-4', attributes: { name: 'page2-2.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 4, pages: 2, page: 2 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-3',
+                  attributes: { name: 'page2-1.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-4',
+                  attributes: { name: 'page2-2.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 4, pages: 2, page: 2 } },
+            }),
         })
         .mockResolvedValueOnce({ status: 201, ok: true }) // preload
         // Third call: should wrap to page 1, not request page 3
@@ -179,31 +225,42 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'page1-1.jpg' } },
-              { type: 'images', id: 'img-2', attributes: { name: 'page1-2.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 4, pages: 2, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'page1-1.jpg' },
+                },
+                {
+                  type: 'images',
+                  id: 'img-2',
+                  attributes: { name: 'page1-2.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 4, pages: 2, page: 1 } },
+            }),
         })
         .mockResolvedValueOnce({ status: 201, ok: true }); // preload
 
       // Consume page 1
       await getNextImage();
       await getNextImage();
-      
+
       // Trigger refill to page 2
       await getNextImage();
       await getNextImage();
-      
+
       // Trigger refill - should wrap to page 1, not request page 3
       await getNextImage();
-      
+
       // Verify no 404 requests were made
-      const allUrls = global.fetch.mock.calls.map(call => call[0]);
-      const page3Requests = allUrls.filter(url => url.includes('page[number]=3'));
+      const allUrls = global.fetch.mock.calls.map((call) => call[0]);
+      const page3Requests = allUrls.filter((url) =>
+        url.includes('page[number]=3'),
+      );
       expect(page3Requests.length).toBe(0);
     });
 
@@ -214,13 +271,18 @@ describe('Image Queue Resilience', () => {
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 1, pages: 1, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'first.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 1, pages: 1, page: 1 } },
+            }),
         })
         .mockResolvedValueOnce({ status: 201, ok: true }) // preload
         // Simulate 404 on invalid page (should not happen with fix, but test recovery)
@@ -228,29 +290,37 @@ describe('Image Queue Resilience', () => {
           status: 404,
           ok: false,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            errors: [{ status: '404', code: 'not_found', detail: 'Invalid page.' }],
-          }),
+          json: () =>
+            Promise.resolve({
+              errors: [
+                { status: '404', code: 'not_found', detail: 'Invalid page.' },
+              ],
+            }),
         })
         // Recovery: back to page 1
         .mockResolvedValueOnce({
           status: 200,
           ok: true,
           headers: { get: () => 'application/vnd.api+json' },
-          json: () => Promise.resolve({
-            data: [
-              { type: 'images', id: 'img-1', attributes: { name: 'first.jpg' } },
-            ],
-            links: {},
-            meta: { pagination: { count: 1, pages: 1, page: 1 } },
-          }),
+          json: () =>
+            Promise.resolve({
+              data: [
+                {
+                  type: 'images',
+                  id: 'img-1',
+                  attributes: { name: 'first.jpg' },
+                },
+              ],
+              links: {},
+              meta: { pagination: { count: 1, pages: 1, page: 1 } },
+            }),
         })
         .mockResolvedValueOnce({ status: 201, ok: true }); // preload
 
       await getNextImage();
       await getNextImage(); // Triggers 404
       const recovered = await getNextImage();
-      
+
       expect(recovered).not.toBeNull();
       expect(recovered.id).toBe('img-1');
     });

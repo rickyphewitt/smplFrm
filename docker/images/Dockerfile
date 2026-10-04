@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv from the official image, pinned by version and digest.
-# Keep the version in sync with .github/workflows/ci.yml and lint.yml
+# Keep the version in sync with .github/workflows/ci.yml and lint-python.yml
 # (setup-uv `version`); it must be >= pyproject.toml ([tool.uv] required-version).
 COPY --from=ghcr.io/astral-sh/uv:0.12.20@sha256:100047e74f30778ab704942321a09750d6158739573ff58bf3924085cc6cd2d8 /uv /uvx /bin/
 

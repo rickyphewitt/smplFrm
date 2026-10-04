@@ -113,7 +113,13 @@ describe('task poll resilience', () => {
         return blockedResponse;
       }
       // POST /tasks
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -150,7 +156,13 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -177,10 +189,20 @@ describe('task poll resilience', () => {
       if (url.includes('/tasks/task-1')) {
         pollCallCount++;
         return Promise.resolve(
-          makeTaskResponse(200, { id: 'task-1', status: 'running', progress: 10 }),
+          makeTaskResponse(200, {
+            id: 'task-1',
+            status: 'running',
+            progress: 10,
+          }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -201,11 +223,15 @@ describe('task poll resilience', () => {
     fetch.mockImplementation((url) => {
       if (url.includes('/tasks/task-1')) {
         pollCallCount++;
-        return Promise.resolve(
-          makeResponse(429, {}, { 'Retry-After': '10' }),
-        );
+        return Promise.resolve(makeResponse(429, {}, { 'Retry-After': '10' }));
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -225,11 +251,17 @@ describe('task poll resilience', () => {
 
   it('on 429, the task toast remains visible with last progress', async () => {
     let callCount = 0;
-    fetch.mockImplementation((url) => {
+    fetch.mockImplementation((_url) => {
       callCount++;
       if (callCount === 1) {
         // POST /tasks
-        return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Rescan Library', taskType: 'rescan_library' }));
+        return Promise.resolve(
+          makeCreateResponse({
+            id: 'task-1',
+            label: 'Rescan Library',
+            taskType: 'rescan_library',
+          }),
+        );
       }
       if (callCount === 2) {
         // First poll — 40% progress
@@ -275,7 +307,13 @@ describe('task poll resilience', () => {
         pollCallCount++;
         return Promise.resolve(makeResponse(429, {}));
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -297,11 +335,15 @@ describe('task poll resilience', () => {
     fetch.mockImplementation((url) => {
       if (url.includes('/tasks/task-1')) {
         pollCallCount++;
-        return Promise.resolve(
-          makeResponse(429, {}, { 'Retry-After': '0' }),
-        );
+        return Promise.resolve(makeResponse(429, {}, { 'Retry-After': '0' }));
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -332,7 +374,13 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -358,21 +406,27 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(document.getElementById('task-toast-bar').style.width).toBe('100%');
-    expect(document.getElementById('task-toast-text').textContent).toBe('Clear Cache Done!');
+    expect(document.getElementById('task-toast-text').textContent).toBe(
+      'Clear Cache Done!',
+    );
   });
 
   it('does not mutate task UI state after completed (stale callback guard)', async () => {
-    let pollCallCount = 0;
     fetch.mockImplementation((url) => {
       if (url.includes('/tasks/task-1')) {
-        pollCallCount++;
         return Promise.resolve(
           makeTaskResponse(200, {
             id: 'task-1',
@@ -382,7 +436,13 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -415,7 +475,13 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -439,7 +505,13 @@ describe('task poll resilience', () => {
           }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -457,10 +529,20 @@ describe('task poll resilience', () => {
       if (url.includes('/tasks/task-1')) {
         pollCallCount++;
         return Promise.resolve(
-          makeTaskResponse(200, { id: 'task-1', status: 'running', progress: 10 }),
+          makeTaskResponse(200, {
+            id: 'task-1',
+            status: 'running',
+            progress: 10,
+          }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     // Start polling for the same task id twice
@@ -489,7 +571,8 @@ describe('task poll resilience', () => {
         }
       }
       // POST /tasks
-      const taskId = Object.keys(counts).find((id) => counts[id] === 0) || 'task-a';
+      const taskId =
+        Object.keys(counts).find((id) => counts[id] === 0) || 'task-a';
       return Promise.resolve({
         ok: true,
         status: 201,
@@ -540,7 +623,13 @@ describe('task poll resilience', () => {
         pollCallCount++;
         return Promise.resolve(makeResponse(429, {}, { 'Retry-After': '5' }));
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');
@@ -562,10 +651,20 @@ describe('task poll resilience', () => {
       if (url.includes('/tasks/task-1')) {
         pollCallCount++;
         return Promise.resolve(
-          makeTaskResponse(200, { id: 'task-1', status: 'running', progress: 1 }),
+          makeTaskResponse(200, {
+            id: 'task-1',
+            status: 'running',
+            progress: 1,
+          }),
         );
       }
-      return Promise.resolve(makeCreateResponse({ id: 'task-1', label: 'Clear Cache', taskType: 'clear_cache' }));
+      return Promise.resolve(
+        makeCreateResponse({
+          id: 'task-1',
+          label: 'Clear Cache',
+          taskType: 'clear_cache',
+        }),
+      );
     });
 
     await startTask('clear_cache');

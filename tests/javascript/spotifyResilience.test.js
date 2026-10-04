@@ -5,7 +5,13 @@ describe('Spotify polling resilience to 429 responses', () => {
   let getNowPlaying;
 
   // Helper to create JSON:API status response
-  function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
+  function createStatusResponse(
+    isPlaying,
+    artist,
+    song,
+    trackUri,
+    configured = true,
+  ) {
     const trackId = trackUri
       ? Array.from(new TextEncoder().encode(trackUri))
           .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)

@@ -11,7 +11,13 @@ function makeResponse(status, body = {}) {
 }
 
 // Helper to create JSON:API status response
-function createStatusResponse(isPlaying, artist, song, trackUri, configured = true) {
+function createStatusResponse(
+  isPlaying,
+  artist,
+  song,
+  trackUri,
+  configured = true,
+) {
   const trackId = trackUri
     ? Array.from(new TextEncoder().encode(trackUri))
         .reduce((hash, byte) => ((hash << 5) - hash + byte) | 0, 0)
@@ -126,9 +132,8 @@ describe('Spotify authorization recovery', () => {
           },
         }),
       );
-    const { getNowPlaying } = await import(
-      '../../src/smplfrm/smplfrm/static/main.js'
-    );
+    const { getNowPlaying } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
 
     await getNowPlaying();
 
@@ -157,23 +162,21 @@ describe('Spotify authorization recovery', () => {
             type: 'spotify_auth',
             id: 'current',
             attributes: {
-              auth_url: 'https://accounts.spotify.com/authorize?state=reconnect',
+              auth_url:
+                'https://accounts.spotify.com/authorize?state=reconnect',
             },
           },
         }),
       );
-    const { getNowPlaying } = await import(
-      '../../src/smplfrm/smplfrm/static/main.js'
-    );
+    const { getNowPlaying } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
 
     await getNowPlaying();
 
     const link = document.querySelector('#spotify-now-playing a');
     expect(link.textContent).toContain('Expired');
     expect(link.textContent).toContain('Reconnect Spotify');
-    expect(link.title).toBe(
-      'Spotify connection expired - Click to reconnect',
-    );
+    expect(link.title).toBe('Spotify connection expired - Click to reconnect');
     expect(link.classList.contains('spotify-reconnect-link')).toBe(true);
     expect(
       link.querySelector('.spotify-icon').classList.contains('spotify-expired'),
@@ -214,9 +217,8 @@ describe('Spotify authorization recovery', () => {
           ),
         ),
       );
-    const { getNowPlaying } = await import(
-      '../../src/smplfrm/smplfrm/static/main.js'
-    );
+    const { getNowPlaying } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
 
     await getNowPlaying();
     await getNowPlaying();
@@ -228,12 +230,13 @@ describe('Spotify authorization recovery', () => {
   });
 
   it('does not initiate OAuth for an unconfigured plugin', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce(
-      makeResponse(200, createStatusResponse(false, null, null, null, false)),
-    );
-    const { getNowPlaying } = await import(
-      '../../src/smplfrm/smplfrm/static/main.js'
-    );
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        makeResponse(200, createStatusResponse(false, null, null, null, false)),
+      );
+    const { getNowPlaying } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
 
     await getNowPlaying();
 
@@ -272,18 +275,17 @@ describe('Spotify authorization recovery', () => {
           },
         }),
       );
-    const { getNowPlaying } = await import(
-      '../../src/smplfrm/smplfrm/static/main.js'
-    );
+    const { getNowPlaying } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
 
     await getNowPlaying();
-    expect(document.getElementById('spotify-now-playing').textContent).toContain(
-      'Artist - Song',
-    );
+    expect(
+      document.getElementById('spotify-now-playing').textContent,
+    ).toContain('Artist - Song');
 
     await getNowPlaying();
-    expect(document.getElementById('spotify-now-playing').textContent).toContain(
-      'Reconnect Spotify',
-    );
+    expect(
+      document.getElementById('spotify-now-playing').textContent,
+    ).toContain('Reconnect Spotify');
   });
 });

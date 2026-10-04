@@ -51,7 +51,12 @@ describe('Presets Tab', () => {
           },
         },
       ],
-      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      links: {
+        first: '/api/v1/configs',
+        last: '/api/v1/configs',
+        next: null,
+        prev: null,
+      },
       meta: { pagination: { count: 2, page: 1, pages: 1 } },
     };
 
@@ -107,7 +112,12 @@ describe('Presets Tab', () => {
           },
         },
       ],
-      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      links: {
+        first: '/api/v1/configs',
+        last: '/api/v1/configs',
+        next: null,
+        prev: null,
+      },
       meta: { pagination: { count: 2, page: 1, pages: 1 } },
     };
 
@@ -139,10 +149,19 @@ describe('Presets Tab', () => {
         {
           type: 'configs',
           id: 'p2',
-          attributes: { name: 'custom-20260101', description: 'Test config', is_active: false },
+          attributes: {
+            name: 'custom-20260101',
+            description: 'Test config',
+            is_active: false,
+          },
         },
       ],
-      links: { first: '/api/v1/configs', last: '/api/v1/configs', next: null, prev: null },
+      links: {
+        first: '/api/v1/configs',
+        last: '/api/v1/configs',
+        next: null,
+        prev: null,
+      },
       meta: { pagination: { count: 1, page: 1, pages: 1 } },
     };
 
@@ -150,7 +169,11 @@ describe('Presets Tab', () => {
       data: {
         type: 'configs',
         id: 'p2',
-        attributes: { name: 'custom-20260101', description: 'Test config', is_active: false },
+        attributes: {
+          name: 'custom-20260101',
+          description: 'Test config',
+          is_active: false,
+        },
       },
     };
 
@@ -167,7 +190,11 @@ describe('Presets Tab', () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            data: { type: 'configs', id: 'p2', attributes: { is_active: true } },
+            data: {
+              type: 'configs',
+              id: 'p2',
+              attributes: { is_active: true },
+            },
           }),
       });
 
@@ -186,7 +213,9 @@ describe('Presets Tab', () => {
       2,
       'http://localhost:8321/api/v1/configs/p2',
       expect.objectContaining({
-        headers: expect.objectContaining({ Accept: 'application/vnd.api+json' }),
+        headers: expect.objectContaining({
+          Accept: 'application/vnd.api+json',
+        }),
       }),
     );
     expect(global.fetch).toHaveBeenNthCalledWith(
@@ -220,11 +249,31 @@ describe('Presets Tab', () => {
   it('should handle pagination controls', async () => {
     const mockData = {
       data: [
-        { type: 'configs', id: 'p1', attributes: { name: 'smplFrm Default', is_active: true } },
-        { type: 'configs', id: 'p2', attributes: { name: 'smplFrm Minimal', is_active: false } },
-        { type: 'configs', id: 'p3', attributes: { name: 'smplFrm Info', is_active: false } },
-        { type: 'configs', id: 'p4', attributes: { name: 'smplFrm Media', is_active: false } },
-        { type: 'configs', id: 'p5', attributes: { name: 'custom-20260101', is_active: false } },
+        {
+          type: 'configs',
+          id: 'p1',
+          attributes: { name: 'smplFrm Default', is_active: true },
+        },
+        {
+          type: 'configs',
+          id: 'p2',
+          attributes: { name: 'smplFrm Minimal', is_active: false },
+        },
+        {
+          type: 'configs',
+          id: 'p3',
+          attributes: { name: 'smplFrm Info', is_active: false },
+        },
+        {
+          type: 'configs',
+          id: 'p4',
+          attributes: { name: 'smplFrm Media', is_active: false },
+        },
+        {
+          type: 'configs',
+          id: 'p5',
+          attributes: { name: 'custom-20260101', is_active: false },
+        },
       ],
       links: {
         first: '/api/v1/configs?page[number]=1',
@@ -304,7 +353,7 @@ describe('saveConfig copy-on-write', () => {
 
     // Dynamic import to get saveConfig — it's not exported, so we test via the module
     // We need to call it indirectly. Let's just verify the fetch calls.
-    const mod = await import('../../src/smplfrm/smplfrm/static/main.js');
+    await import('../../src/smplfrm/smplfrm/static/main.js');
 
     // saveConfig is not exported, but we can verify the pattern by checking
     // that when we simulate the save flow, POST is called for system-managed configs
@@ -314,7 +363,6 @@ describe('saveConfig copy-on-write', () => {
     expect(modal.dataset.configName.startsWith('smplFrm ')).toBe(true);
   });
 });
-
 
 describe('Preset and task action failures', () => {
   const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
@@ -368,7 +416,8 @@ describe('Preset and task action failures', () => {
       status: 204,
       headers: { get: () => null },
       // A real 204 has no body, so parsing it rejects.
-      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+      json: () =>
+        Promise.reject(new SyntaxError('Unexpected end of JSON input')),
     };
   }
 
@@ -592,12 +641,11 @@ describe('Preset and task action failures', () => {
 
     expect(cell.textContent).toBe('Updated description');
     expect(cell.dataset.original).toBe('Updated description');
-    expect(document.getElementById('error-message').classList.contains('show')).toBe(
-      false,
-    );
+    expect(
+      document.getElementById('error-message').classList.contains('show'),
+    ).toBe(false);
   });
 });
-
 
 describe('List failure placeholders', () => {
   const MAIN = '../../src/smplfrm/smplfrm/static/main.js';
@@ -677,9 +725,9 @@ describe('List failure placeholders', () => {
     const mod = await import(MAIN);
     await mod.loadPresets();
 
-    expect(
-      document.getElementById('preset-list-body').textContent,
-    ).toBe('Presets are not available');
+    expect(document.getElementById('preset-list-body').textContent).toBe(
+      'Presets are not available',
+    );
   });
 
   it('renders a hostile detail as literal text in a failure row', async () => {

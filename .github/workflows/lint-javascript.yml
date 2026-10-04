@@ -1,0 +1,26 @@
+name: Lint JavaScript
+
+# Mirrors the ESLint and Prettier hooks in .pre-commit-config.yaml, in check-only
+# mode. Tool versions come from package-lock.json; the file scope comes from the
+# package.json `lint` and `format:check` scripts.
+# Triggers have no path filters so the `lint-javascript` check reports on every
+# PR, which keeps it usable as a required status check.
+on: [push, pull_request]
+
+jobs:
+  lint-javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Same Node.js version as ci.yml.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: Prettier
+        run: npm run format:check

@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       # Pinned by SHA (v10.2.0). Keep `version` in sync with
-      # docker/images/Dockerfile and lint.yml; it must be >= pyproject.toml
+      # docker/images/Dockerfile and lint-python.yml; it must be >= pyproject.toml
       # ([tool.uv] required-version).
       - name: Set up uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7

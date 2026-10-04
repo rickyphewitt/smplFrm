@@ -14,7 +14,7 @@ describe('main.js', () => {
   beforeEach(async () => {
     // Reset modules to force fresh import with new fetch mock
     vi.resetModules();
-    
+
     // Mock fetch BEFORE importing main.js so module closure captures the mock
     global.fetch = vi.fn();
 
@@ -170,9 +170,13 @@ describe('main.js', () => {
           }),
         }),
       );
-      
+
       // Should return first image from queue
-      expect(result).toEqual({ id: 'test-123', name: 'test.jpg', view_count: 5 });
+      expect(result).toEqual({
+        id: 'test-123',
+        name: 'test.jpg',
+        view_count: 5,
+      });
     });
   });
 
@@ -371,7 +375,9 @@ describe('main.js', () => {
       expect(document.getElementById('task-toast-text').textContent).toBe(
         'Reset Image Count Done!',
       );
-      expect(document.getElementById('task-toast-bar').style.width).toBe('100%');
+      expect(document.getElementById('task-toast-bar').style.width).toBe(
+        '100%',
+      );
     });
 
     it('shows label with error on failure', async () => {
