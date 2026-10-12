@@ -352,14 +352,14 @@ wheels = [
 
 [[package]]
 name = "djangorestframework"
-version = "3.18.1"
+version = "3.18.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8a/2e/b3ce9d449b1ed9f9dd74fb7dfbc5f20860d5f40c2b4b10a2c3eabd8ff579/djangorestframework-3.18.1.tar.gz", hash = "sha256:605d79fa2ec2f02905492e5ea13d903c2d842d0b4c915a57f7bf02ab9f3c91dd", size = 915653, upload-time = "2026-09-07T18:04:08.288Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/b2/1cee76b188301f7d03169ca77fab2b3d3ec5d01b3469189f944af2d7f11a/djangorestframework-3.18.3.tar.gz", hash = "sha256:446a9b352e7eff630421ab3f2328bd2401b109a9470afa4a31189994911ed030", size = 923563, upload-time = "2026-10-06T21:33:51.521Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/83/5ed615e47339d8e65f62eb1a8133f8f046492eb3a25ad40d90acb9a208b3/djangorestframework-3.18.1-py3-none-any.whl", hash = "sha256:f1409d698967aaf82d5d98d76b549c8fba8bd92ebd0d83d24454508f72168dc2", size = 901373, upload-time = "2026-09-07T18:04:06.237Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/dd/de5f4543765bec94e036a5e9593a42f8fa7efec8de78eb56b9ca834385f3/djangorestframework-3.18.3-py3-none-any.whl", hash = "sha256:8544bb674846731b1e3c9b309236ee1dc412905a0aa725be2ec193ca950a7d12", size = 903986, upload-time = "2026-10-06T21:33:49.917Z" },
 ]
 
 [[package]]
@@ -590,16 +590,17 @@ wheels = [
 
 [[package]]
 name = "open-meteo"
-version = "0.4.0"
+version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "mashumaro" },
     { name = "orjson" },
+    { name = "yarl" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/2b/138f6da6250d15f8e09f4f2ff1d072c56a3eb9f4c9e0a54edfb8f2d2f1dd/open_meteo-0.4.0.tar.gz", hash = "sha256:38ebe409edd946af8297fcb210e9e07672dd093b07bcd601527d759b06b84b6f", size = 13861, upload-time = "2025-09-17T08:15:39.092Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/a4/7e9ba48b776aca3de2bad38cb19baa378d3e41adff63704ca8081d1af4ec/open_meteo-1.0.1.tar.gz", hash = "sha256:6528aff6f15e13d6ac5594ce963cf971d8b883eb5d780fffa59fd2d8161ba430", size = 51667, upload-time = "2026-10-05T13:28:46.084Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/e6/d07d38d87c1cd523bf6d7c4966b8e85a7b618f8599449d5cb2f6cfc47ee3/open_meteo-0.4.0-py3-none-any.whl", hash = "sha256:4a46a443ddbb132282ff3739bd790e61c8bf3b382c7601e3220fa74c8c43c7d5", size = 12502, upload-time = "2025-09-17T08:15:37.687Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/36/ceb246b5be9a1a01dee9c8826326f67c8b2c82e2bd6ec199a21fce64676d/open_meteo-1.0.1-py3-none-any.whl", hash = "sha256:75fcb3994cac078d704a882453f207b4ebeeed2768c4821351b8c97e66fe9020", size = 51215, upload-time = "2026-10-05T13:28:44.699Z" },
 ]
 
 [[package]]
@@ -955,10 +956,10 @@ requires-dist = [
     { name = "django", specifier = "~=6.0.7" },
     { name = "django-celery-beat", specifier = "~=2.9.0" },
     { name = "django-redis", specifier = "~=7.0.0" },
-    { name = "djangorestframework", specifier = "~=3.18.1" },
+    { name = "djangorestframework", specifier = "~=3.18.3" },
     { name = "djangorestframework-jsonapi", specifier = "==8.1.0" },
     { name = "gunicorn", specifier = "~=26.2.0" },
-    { name = "open-meteo", specifier = "~=0.4.0" },
+    { name = "open-meteo", specifier = "~=1.0.1" },
     { name = "opencv-python", specifier = "~=5.0.0.93" },
     { name = "pillow", specifier = "~=12.3.0" },
     { name = "python-dateutil", specifier = "~=2.9.0" },
