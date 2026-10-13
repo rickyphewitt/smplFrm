@@ -21,7 +21,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 
-from smplfrm.views.api.v1 import images, images_metadata, config, tasks, plugins
+from smplfrm.views.api.v1 import images, images_metadata, config, tasks, plugins, themes
 from smplfrm.views.index_view import IndexView
 from smplfrm.plugins import get_plugin_router
 
@@ -35,6 +35,7 @@ api_v1_router.register(
 api_v1_router.register(r"configs", config.ConfigViewSet, basename="configs")
 api_v1_router.register(r"tasks", tasks.TaskViewSet, basename="tasks")
 api_v1_router.register(r"plugins", plugins.PluginViewSet, basename="plugins")
+api_v1_router.register(r"themes", themes.ThemeViewSet, basename="themes")
 
 api_v1_plugins_router = get_plugin_router()
 

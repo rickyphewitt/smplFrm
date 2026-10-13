@@ -182,3 +182,41 @@ class TestIndexViewAboutPageLinks(TestCase):
         wiki_section = content[max(0, wiki_idx - 200) : wiki_idx]
         self.assertIn('target="_blank"', wiki_section)
         self.assertIn('rel="noopener noreferrer"', wiki_section)
+
+
+class TestIndexViewThemeResolution(TestCase):
+    """Tests that IndexView resolves the active config's theme into context."""
+
+    def setUp(self):
+        Config.objects.all().delete()
+
+    def test_valid_theme_resolves_to_matching_stylesheet(self):
+        """A config with a registered theme id resolves to that theme's stylesheet."""
+        Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
+            theme="classic",
+        )
+        response = self.client.get("/")
+        self.assertEqual(response.context["theme_stylesheet"], "css/theme-classic.css")
+
+    def test_invalid_theme_resolves_to_default_stylesheet(self):
+        """A config with an unregistered theme id falls back to the default theme."""
+        Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
+            theme="not-a-real-theme",
+        )
+        response = self.client.get("/")
+        self.assertEqual(response.context["theme_stylesheet"], "css/theme-classic.css")
+
+    def test_page_never_renders_empty_stylesheet_href(self):
+        """The rendered page never contains an empty or unresolved stylesheet href."""
+        Config.objects.create(
+            name="smplFrm Default",
+            is_active=True,
+            theme="not-a-real-theme",
+        )
+        response = self.client.get("/")
+        content = response.content.decode()
+        self.assertNotIn('href=""', content)

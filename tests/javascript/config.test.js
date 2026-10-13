@@ -495,6 +495,7 @@ describe('Settings load failure and save guard', () => {
                             <input type="checkbox" id="setting-zoom">
                             <select id="setting-transition-type"><option value="fade">fade</option></select>
                             <select id="setting-fill-mode"><option value="cover">cover</option></select>
+                            <select id="setting-theme"><option value="classic">Classic</option></select>
                         </div>
                     </div>
                     <div class="tab-content" id="tab-tasks">
@@ -535,6 +536,7 @@ describe('Settings load failure and save guard', () => {
           timezone: 'UTC',
           image_fill_mode: 'cover',
           force_date_from_path: false,
+          theme: 'classic',
           ...overrides,
         },
       },
@@ -724,6 +726,7 @@ describe('Settings load failure and save guard', () => {
     expect(JSON.parse(putCall[1].body).data.attributes.plugins).toEqual([
       'weather',
     ]);
+    expect(JSON.parse(putCall[1].body).data.attributes.theme).toBe('classic');
   });
 
   it('shows the server reason when a save is rejected', async () => {

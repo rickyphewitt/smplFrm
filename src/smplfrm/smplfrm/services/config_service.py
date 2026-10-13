@@ -17,8 +17,10 @@ from smplfrm.settings import (
     SMPL_FRM_IMAGE_TRANSITION_TYPE,
     SMPL_FRM_IMAGE_ZOOM_EFFECT,
     SMPL_FRM_FORCE_DATE_FROM_PATH,
+    SMPL_FRM_THEME,
     SMPL_FRM_TIMEZONE,
 )
+from smplfrm.themes import DEFAULT_THEME_ID, get_theme_map
 
 from .base_service import BaseService
 
@@ -52,6 +54,7 @@ _PRESET_FIELDS = [
     "force_date_from_path",
     "timezone",
     "plugins",
+    "theme",
 ]
 
 
@@ -220,6 +223,18 @@ class ConfigService(BaseService):
             config.image_fill_mode = SMPL_FRM_IMAGE_FILL_MODE
             config.force_date_from_path = SMPL_FRM_FORCE_DATE_FROM_PATH
             config.timezone = SMPL_FRM_TIMEZONE
+            if SMPL_FRM_THEME:
+                theme_map = get_theme_map()
+                if SMPL_FRM_THEME in theme_map:
+                    config.theme = SMPL_FRM_THEME
+                else:
+                    logger.warning(
+                        "SMPL_FRM_THEME=%r is not a registered theme, "
+                        "falling back to default theme %r",
+                        SMPL_FRM_THEME,
+                        DEFAULT_THEME_ID,
+                    )
+                    config.theme = DEFAULT_THEME_ID
             config = self.update(config)
 
         return config

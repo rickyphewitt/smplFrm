@@ -1,0 +1,341 @@
+/*
+ * Classic theme: the original smplFrm look.
+ *
+ * Carries every color, font, radius, shadow, and background that
+ * static/styles.css had, extracted verbatim rather than rewritten. Loaded
+ * after base.css, so these declarations add the aesthetic layer on top of
+ * base.css's structural layer. Together the two files render identically to
+ * the original single stylesheet.
+ */
+
+body {
+  background-color: black;
+  /* Single, canonical font declaration for the whole page. Previously
+   * applied only via inheritance from `.text-box` ancestors in the frame
+   * markup, which broke silently once those wrapper elements were removed.
+   * Declared once on `body` instead so every element gets it regardless of
+   * its ancestry, and so a new theme has exactly one place to override it. */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.text-box {
+    color: white;
+}
+
+#middle-section {
+    background-color: black;
+}
+
+#bottom-bar {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 50px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.group-separator {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.progress-container {
+    background-color: #ddd;
+}
+
+.progress-bar {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 0 50px 50px 0;
+    /* --progress is a 0 to 1 number set by main.js on a 100-step interval.
+     * Classic expresses it as a shrinking width (not transform: scaleX) to
+     * preserve the rounded right end carried by border-radius above; the
+     * left edge stays pinned because the element is full-width and the
+     * fill is drawn from the left. */
+    width: calc(var(--progress, 1) * 100%);
+    transition: width 1s linear;
+}
+
+/* Spotify */
+#spotify-bar {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 50px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 20px;
+}
+
+#spotify-bar a {
+    color: white !important;
+}
+
+#spotify-bar a:visited {
+    color: white !important;
+}
+
+#spotify-bar a:link {
+    color: white !important;
+}
+
+#spotify-bar a:active {
+    color: white !important;
+}
+
+.spotify-icon {
+    color: #1DB954;
+}
+
+.spotify-reconnect-link .spotify-icon,
+.spotify-reconnect-link span {
+    color: #fbbf24;
+}
+
+.weather-warning-icon {
+    color: #fbbf24;
+}
+
+.spotify-reconnect-link:hover .spotify-expired {
+    color: #f59e0b;
+}
+
+/* Settings Modal */
+.settings-modal {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.modal-content {
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header h2 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.close-btn {
+    color: #888;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
+.modal-tabs {
+    border-bottom: 2px solid #333;
+}
+
+.tab-btn {
+    color: #888;
+}
+
+.tab-btn:hover {
+    color: #fff;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.spinner::after {
+    border: 3px solid #333;
+    border-top-color: #667eea;
+    border-radius: 50%;
+}
+
+.spinner-inline {
+    border: 2px solid #555;
+    border-top-color: #fff;
+    border-radius: 50%;
+}
+
+.settings-section h3 {
+    color: #888;
+}
+
+.setting-item {
+    border-bottom: 1px solid #333;
+}
+
+.setting-item label {
+    color: #fff;
+}
+
+.slider {
+    background-color: #333;
+    border-radius: 26px;
+}
+
+.slider:before {
+    background-color: white;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.number-input input {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #fff;
+}
+
+.number-input span {
+    color: #888;
+}
+
+.select-input {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #fff;
+}
+
+.reveal-btn {
+    color: #888;
+}
+
+.action-btn {
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #888;
+}
+
+.btn {
+    border-radius: 8px;
+    color: white;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-secondary {
+    background: #333;
+}
+
+.error-message {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 8px;
+}
+
+/* Task list table */
+.task-table th,
+.task-table td {
+    border-bottom: 1px solid #333;
+}
+
+.task-table th {
+    color: #888;
+}
+
+.task-table td {
+    color: #ccc;
+}
+
+.task-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.task-pagination span {
+    color: #888;
+}
+
+.badge-active {
+    background: #667eea;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.editable {
+    border-bottom: 1px dashed #555;
+}
+
+.editable:focus {
+    border-bottom: 1px solid #667eea;
+}
+
+/* Task progress toast */
+.task-toast {
+    background: rgba(30, 30, 30, 0.9);
+    color: #ccc;
+    border-radius: 8px;
+}
+
+.task-toast-track {
+    background: #444;
+    border-radius: 2px;
+}
+
+.task-toast-bar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+}
+
+
+/* Focus indicators — theme contract item 1.
+ *
+ * `:focus-visible` rather than `:focus` so a pointer click does not paint a
+ * ring. The toggle switches need their own rule because base.css sizes the
+ * real <input> to zero with `opacity: 0` and draws `.slider` in its place:
+ * without `input:focus-visible + .slider` those controls have no focus
+ * indicator at all. Uses the single Classic accent hue (contract item 6). */
+.logo-icon:focus-visible,
+.close-btn:focus-visible,
+.tab-btn:focus-visible,
+.btn:focus-visible,
+.action-btn:focus-visible,
+.reveal-btn:focus-visible,
+.number-input input:focus-visible,
+.select-input:focus-visible,
+.editable:focus-visible,
+.task-table a:focus-visible,
+#spotify-bar a:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.toggle-switch input:focus-visible + .slider {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Reduced motion — theme contract item 3.
+ *
+ * Stops decorative motion only. The slideshow animations in base.css
+ * (`.zoom-effect`, `.transition-fade`, `.transition-slide-*`,
+ * `.transition-zoom`) are user-configured display behaviour, not decoration,
+ * so they are deliberately left running. The spinners keep their shape and
+ * simply stop rotating. */
+@media (prefers-reduced-motion: reduce) {
+    .logo-icon,
+    .tab-btn,
+    .btn,
+    .slider,
+    .slider:before,
+    .progress-bar,
+    .task-toast,
+    .task-toast-bar,
+    .error-message {
+        transition: none;
+    }
+
+    .logo-icon:hover,
+    .btn:hover {
+        transform: none;
+    }
+
+    .bar-fade-in,
+    .spotify-expired,
+    .spinner::after,
+    .spinner-inline {
+        animation: none;
+    }
+}

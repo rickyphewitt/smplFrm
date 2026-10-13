@@ -1,6 +1,7 @@
 from django.views.generic import TemplateView
 from smplfrm.services.config_service import ConfigService
 from smplfrm.services.version_service import VersionService
+from smplfrm.themes import resolve
 
 from smplfrm.settings import (
     SMPL_FRM_EXTERNAL_PORT,
@@ -16,6 +17,7 @@ class IndexView(TemplateView):
         from zoneinfo import available_timezones
 
         config = ConfigService().load_config()
+        theme = resolve(config.theme)
 
         context = {
             "host": f"{SMPL_FRM_PROTOCOL}{SMPL_FRM_HOST}",
@@ -31,6 +33,7 @@ class IndexView(TemplateView):
             "plugins": config.plugins,
             "timezones": sorted(available_timezones()),
             "version": VersionService().get_version(),
+            "theme_stylesheet": theme.stylesheet,
         }
 
         return context
