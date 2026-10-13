@@ -15,14 +15,20 @@ src/smplfrm/smplfrm/
     base.py        # BasePlugin class
     spotify/       # Spotify now-playing plugin
     weather/       # Weather data plugin
+  themes/          # Theme registry (named stylesheets, selected per config)
+    base.py        # Theme class
+    classic.py     # Classic theme declaration
   presets/         # Config preset JSON files
   tasks/           # Core Celery tasks (non-plugin)
   templates/       # Django HTML templates
   static/          # JS, CSS, and static assets
+    css/           # base.css (structural, theme-neutral) plus one file per theme
+    icons/         # Vendored icon font subset with license file
   tests/           # Test suite mirroring source structure
     models/
     services/
     plugins/       # Plugin tests (spotify/, weather/)
+    themes/        # Theme registry tests
     views/
     tasks/
 ```
@@ -49,6 +55,41 @@ Core code (`celery.py`, `tasks/`) never directly imports plugin internals. The r
 - Preset JSON files in `presets/` define system-managed configurations synced on startup
 - `ConfigService` manages CRUD, preset sync, and copy-on-write for system-managed configs
 - Environment variables seed the initial config on first creation only
+
+## Theme System
+- A theme is a named stylesheet selected per config; themes have no database row and no migration
+- `smplfrm/themes/__init__.py` holds the registry: `THEME_REGISTRY`, `DEFAULT_THEME_ID`, `get_all_themes()`, `get_theme_map()`, `resolve(theme_id)`, mirroring the shape of `PLUGIN_REGISTRY`
+- `resolve(theme_id)` is the single resolution point: it returns the default theme and logs a warning for any unknown, empty, or null id, which is what lets a theme be deleted later without a data migration or a broken page
+- `Config.theme` is a plain `CharField`, validated in `ConfigSerializer` against the registry rather than via model-level `choices`, so adding a theme never requires a migration
+- `GET /api/v1/themes` is a read-only, code-generated JSON:API collection (`id`, `label`, `description`); the `stylesheet` path is never serialized to a client. The frame itself never requests this endpoint — the active theme is resolved server-side in `IndexView` and arrives with the rendered page
+- The template loads two stylesheets in order: `static/css/base.css` (structural, theme-neutral) and the active theme's stylesheet (colors, type, radii, shadows)
+- The Display tab's Theme control (`#setting-theme`) is populated from the themes endpoint on modal open, in parallel with the config load; the stored value is applied only once options exist, regardless of which request settles first
+- `main.js` never branches on the active theme. Rendering the themes list into a `<select>` is the only place theme data reaches JavaScript
+
+### The theme contract
+Every theme must satisfy, and review enforces:
+1. A visible focus indicator on every interactive element, including controls whose native input is visually replaced (the toggle switches need an explicit `input:focus-visible + .slider` rule)
+2. WCAG AA contrast for all text, including over a white photograph for anything drawn on the frame
+3. A `prefers-reduced-motion: reduce` block that stops decorative motion, while leaving user-configured slideshow transitions alone
+4. A layout that holds under 768px: either an explicit `@media` block, or a documented reliance on the fluid scaffolding in base.css (Classic relies on the percentage widths and centred fixed bars in base.css and ships no media query of its own)
+5. Consumption of `--progress` (set by `main.js` as a 0 to 1 number on `#progress-bar`), or deliberate omission of a progress indicator
+6. One accent hue and one corner-radius scale
+7. No theme-dependent JavaScript
+
+### Adding a theme
+1. Add a CSS file under `static/css/` with the theme's colors, type, radii, and shadows, styled against the markup superset in `templates/index.html`
+2. Add a `Theme` subclass under `smplfrm/themes/` declaring `id`, `label`, `description`, and `stylesheet`
+3. Add the class to `THEME_REGISTRY` in `smplfrm/themes/__init__.py`
+4. Add a row to the theme table in this document
+
+No migration, no template change, no JavaScript change, and no API change: the theme appears in `GET /api/v1/themes` and the Display tab dropdown because both are generated from the registry.
+
+### Retiring a theme
+Delete its CSS file and its registry entry. Configs still storing that theme's id resolve to the default theme through `resolve()`'s fallback, with a logged warning, rather than rendering unstyled.
+
+| Theme id | Label | Status |
+|----------|-------|--------|
+| `classic` | Classic | Default |
 
 ## API Conventions
 - REST API under `/api/v1/`

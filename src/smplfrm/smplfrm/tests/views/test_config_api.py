@@ -53,6 +53,7 @@ class TestConfigAPI(TestCase):
             "force_date_from_path": config.force_date_from_path,
             "timezone": config.timezone,
             "plugins": config.plugins,
+            "theme": config.theme,
             "is_active": config.is_active,
         }
         attrs.update(overrides)
@@ -332,6 +333,51 @@ class TestConfigAPI(TestCase):
         )
 
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_update_with_unregistered_theme_rejected(self):
+        """PUT with a theme id outside the registry is a validation error, not a 500."""
+        custom = Config.objects.create(name="custom-20260101", is_active=False)
+        update_data = {
+            "data": {
+                "type": "configs",
+                "id": custom.external_id,
+                "attributes": {
+                    "name": "custom-20260101",
+                    "theme": "not-a-real-theme",
+                },
+            }
+        }
+
+        response = self.client.put(
+            f"/api/v1/configs/{custom.external_id}",
+            update_data,
+            content_type="application/vnd.api+json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        custom.refresh_from_db()
+        self.assertNotEqual(custom.theme, "not-a-real-theme")
+
+    def test_update_with_registered_theme_accepted(self):
+        """PUT with a registered theme id persists it."""
+        custom = Config.objects.create(name="custom-20260101", is_active=False)
+        update_data = self._build_update_payload(custom, theme="classic")
+
+        response = self.client.put(
+            f"/api/v1/configs/{custom.external_id}",
+            update_data,
+            content_type="application/vnd.api+json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        custom.refresh_from_db()
+        self.assertEqual(custom.theme, "classic")
+
+    def test_detail_includes_theme_attribute(self):
+        """Detail response includes the theme attribute."""
+        response = self.client.get(self.url)
+        data = response.json()
+        self.assertIn("theme", data["data"]["attributes"])
 
     def test_patch_forbidden(self):
         """PATCH for partial update should be forbidden."""

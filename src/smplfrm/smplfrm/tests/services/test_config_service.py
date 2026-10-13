@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from smplfrm.models import Config
 from smplfrm.services.config_service import ConfigService, PRESET_PREFIX, CONFIG_LIMIT
+from smplfrm.themes import DEFAULT_THEME_ID
 
 
 class TestConfigService(TestCase):
@@ -83,6 +84,37 @@ class TestConfigService(TestCase):
         self.assertFalse(config.display_date)
         self.assertEqual(config.image_refresh_interval, 45000)
 
+    @patch("smplfrm.services.config_service.SMPL_FRM_THEME", "classic")
+    def test_load_config_seeds_theme_from_env_var_on_first_creation(self):
+        """A valid SMPL_FRM_THEME seeds a freshly created config."""
+        Config.objects.all().delete()
+
+        service = ConfigService()
+        config = service.load_config()
+
+        self.assertEqual(config.theme, "classic")
+
+    @patch("smplfrm.services.config_service.SMPL_FRM_THEME", "not-a-real-theme")
+    def test_load_config_falls_back_to_default_for_invalid_env_var(self):
+        """An invalid SMPL_FRM_THEME falls back to the default theme."""
+        Config.objects.all().delete()
+
+        service = ConfigService()
+        config = service.load_config()
+
+        self.assertEqual(config.theme, DEFAULT_THEME_ID)
+
+    def test_load_config_does_not_change_theme_on_existing_config(self):
+        """An existing config's theme is left untouched regardless of env var."""
+        self.config.theme = "classic"
+        self.config.save()
+
+        with patch("smplfrm.services.config_service.SMPL_FRM_THEME", "classic"):
+            service = ConfigService()
+            config = service.load_config()
+
+        self.assertEqual(config.theme, "classic")
+
     def test_read_config(self):
         """Test reading a config by external ID."""
         service = ConfigService()
@@ -143,6 +175,19 @@ class TestSyncPresets(TestCase):
         self.assertTrue(info.display_date)
         self.assertTrue(info.display_clock)
         self.assertFalse(info.is_active)
+
+    def test_sync_presets_sets_theme_from_json(self):
+        """Every preset JSON defines theme, and sync_presets applies it."""
+        self.service.sync_presets()
+
+        for name in [
+            "smplFrm Default",
+            "smplFrm Info",
+            "smplFrm Media",
+            "smplFrm Minimal",
+        ]:
+            config = Config.objects.get(name=name)
+            self.assertEqual(config.theme, DEFAULT_THEME_ID)
 
     def test_sync_presets_idempotent(self):
         """Test that running sync_presets twice does not create duplicates."""
@@ -227,6 +272,15 @@ class TestApplyPreset(TestCase):
 
         self.active.refresh_from_db()
         self.assertFalse(self.active.is_active)
+
+    def test_apply_preserves_theme(self):
+        """Theme must be copied, or editing settings on a preset silently resets it."""
+        self.active.theme = "classic"
+        self.active.save()
+
+        result = self.service.apply_preset()
+
+        self.assertEqual(result.theme, "classic")
 
     def test_apply_raises_when_active_is_custom(self):
         """Test that apply raises ValueError when active config is custom."""

@@ -28,6 +28,7 @@ The Display tab controls what information is shown on the photo frame overlay.
 | Date From File Path | Use the file path (YYYY/MM) to determine the photo date instead of EXIF data. |
 | Show Date And Time | Display the current date and time. |
 | Timezone | Timezone for the clock display. Searchable input with all IANA timezones. |
+| Theme | Visual theme for the display and settings panel. Populated from the server's theme registry. Takes effect on reload after saving. |
 
 ## Images
 
@@ -83,7 +84,7 @@ The Presets tab displays all configuration presets and custom configs. It allows
 | Name        | The config name. Editable inline for custom configs.                                             |
 | Description | A brief description. Editable inline for custom configs.                                         |
 | Status      | Shows "Active" badge for the current config, or an "Activate" button to switch to that config.   |
-| Delete      | Delete button (×) for inactive custom configs. Lock icon (🔒) for system-managed or active configs. |
+| Delete      | Delete button (×) for inactive custom configs. Lock icon for system-managed or active configs. |
 
 ### Behavior
 
@@ -134,7 +135,7 @@ Spotify refresh tokens expire six months after authorization. When a token expir
 
 [Weather data by Open-Meteo.com](https://open-meteo.com)
 
-If weather data cannot be retrieved, the weather slot on the frame shows `🌡️ ⚠️` rather than going blank, so an unavailable plugin is distinguishable from a disabled one. The indicator clears when the page next reloads.
+If weather data cannot be retrieved, the weather slot on the frame shows a temperature glyph with a warning glyph rather than going blank, so an unavailable plugin is distinguishable from a disabled one. The indicator clears when the page next reloads.
 
 ## Tasks
 

@@ -31,6 +31,15 @@ packages-js:
 packages-js-clean:
 	rm -fr ./node_modules ./package-lock.json
 
+# Regenerates the vendored Iconoir glyph subset in smplfrm/static/icons/ from
+# the pinned npm package. That file is committed because the runtime image
+# ships no node_modules. Re-run after bumping the pin in package.json or after
+# referencing a new iconoir-* class, then `make test` to check the static
+# contract tests. Requires `make packages-js` first; invoked via bash so no
+# exec bit is needed.
+vendor-assets:
+	bash ./scripts/vendor_assets.sh
+
 lock: check-uv
 	$(UV) lock
 

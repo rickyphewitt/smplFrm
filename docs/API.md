@@ -804,6 +804,65 @@ Accept: application/vnd.api+json
 - Frontend should only call this endpoint after receiving `configured: true` from `/status`
 
 
+### Themes
+
+Themes provide the catalogue of available UI stylesheets. The theme resource has no database row — it is generated from the server-side theme registry.
+
+**Endpoint:** `/api/v1/themes`
+
+#### List Themes (GET)
+
+```http
+GET /api/v1/themes?page[number]=1
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "type": "themes",
+      "id": "classic",
+      "attributes": {
+        "label": "Classic",
+        "description": "The original smplFrm look"
+      }
+    }
+  ],
+  "links": {
+    "first": "/api/v1/themes?page[number]=1",
+    "last": "/api/v1/themes?page[number]=1",
+    "next": null,
+    "prev": null
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pages": 1,
+      "count": 1
+    }
+  }
+}
+```
+
+#### Theme Attributes
+
+| Attribute | Type | Description |
+|-----------|------|--------------|
+| `label` | string | Display name shown in the Display tab dropdown |
+| `description` | string | One-line description shown as helper text |
+
+#### Notes
+
+- Themes are **read-only** — `POST` returns `405 Method Not Allowed`; there is no detail route (`/api/v1/themes/{id}`) and no filtering or sorting
+- Resources appear in registry declaration order
+- The `stylesheet` path is deliberately **not** exposed: it is server-side detail resolved directly by the index template, so no static path is ever serialized to a client
+- Rejected query parameters: `include`, `fields[themes]`, `sort`, any `filter[...]`, and unknown parameters all return `400 Bad Request`
+- The active theme for the frame itself is resolved server-side and arrives with the rendered page; the frame never calls this endpoint
+
+
+
 ### Spotify OAuth Callback (Protocol Exempt)
 
 OAuth2 callback handler for Spotify authorization. **Not a JSON:API endpoint.**

@@ -1,6 +1,7 @@
 from django.db import models
 
 from smplfrm.models.base import ModelBase
+from smplfrm.themes import DEFAULT_THEME_ID
 
 
 class Config(ModelBase):
@@ -49,6 +50,12 @@ class Config(ModelBase):
     # General
     timezone = models.CharField(max_length=50, default="America/Los_Angeles")
     plugins = models.JSONField(default=list, blank=True)
+
+    # Theme
+    # Deliberately no model-level `choices`: validation lives in the
+    # serializer against the theme registry so a new theme needs no
+    # migration. See ai/architecture.md Theme System.
+    theme = models.CharField(max_length=50, default=DEFAULT_THEME_ID)
 
     class Meta:
         db_table = "config"

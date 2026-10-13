@@ -374,6 +374,24 @@ describe('Weather degraded indicator', () => {
     return document.getElementById('weather-temp');
   }
 
+  /** Asserts the weather slot shows the degraded (unavailable) indicator. */
+  function expectWeatherDegraded() {
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(
+      weatherTemp().querySelector('.iconoir-warning-triangle'),
+    ).not.toBeNull();
+  }
+
+  /** Asserts the weather slot shows a successful reading of `text`. */
+  function expectWeatherReading(text) {
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(weatherTemp().textContent).toBe(` ${text}`);
+  }
+
   function separatorBeforeWeather() {
     return document.getElementById('weather-group').previousElementSibling;
   }
@@ -405,7 +423,12 @@ describe('Weather degraded indicator', () => {
     mod.displayWeather();
     await settle();
 
-    expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(
+      weatherTemp().querySelector('.iconoir-warning-triangle'),
+    ).not.toBeNull();
     expect(document.getElementById('app-toast')).toBeNull();
   });
 
@@ -416,7 +439,12 @@ describe('Weather degraded indicator', () => {
     mod.displayWeather();
     await settle();
 
-    expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(
+      weatherTemp().querySelector('.iconoir-warning-triangle'),
+    ).not.toBeNull();
   });
 
   it('never renders a placeholder row or toast for a weather failure', async () => {
@@ -520,7 +548,10 @@ describe('Weather degraded indicator', () => {
     await settle();
 
     expect(weatherTemp().querySelector('img')).toBeNull();
-    expect(weatherTemp().textContent).toBe('🌡️ <img src=x onerror=alert(1)>°F');
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(weatherTemp().textContent).toBe(' <img src=x onerror=alert(1)>°F');
   });
 
   it('shows the temperature on the success path', async () => {
@@ -541,7 +572,10 @@ describe('Weather degraded indicator', () => {
     mod.displayWeather();
     await settle();
 
-    expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+    expect(
+      weatherTemp().querySelector('.iconoir-temperature-high'),
+    ).not.toBeNull();
+    expect(weatherTemp().textContent).toBe(' 72°F');
   });
 
   describe('refresh loop', () => {
@@ -663,7 +697,12 @@ describe('Weather degraded indicator', () => {
 
       // The abort settles the attempt and is reported like any other failure.
       expect(abortedUrls).toHaveLength(1);
-      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expect(
+        weatherTemp().querySelector('.iconoir-temperature-high'),
+      ).not.toBeNull();
+      expect(
+        weatherTemp().querySelector('.iconoir-warning-triangle'),
+      ).not.toBeNull();
       expect(document.getElementById('app-toast')).toBeNull();
       expect(global.fetch).toHaveBeenCalledTimes(1);
 
@@ -697,11 +736,11 @@ describe('Weather degraded indicator', () => {
       mod.refreshWeather();
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expectWeatherDegraded();
 
       await vi.advanceTimersByTimeAsync(REFRESH_MS);
 
-      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+      expectWeatherReading('72°F');
     });
 
     it('keeps polling and keeps the indicator across consecutive failures', async () => {
@@ -714,13 +753,13 @@ describe('Weather degraded indicator', () => {
       const mod = await importLoop();
       mod.refreshWeather();
       await vi.advanceTimersByTimeAsync(0);
-      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expectWeatherDegraded();
 
       await vi.advanceTimersByTimeAsync(REFRESH_MS);
-      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expectWeatherDegraded();
 
       await vi.advanceTimersByTimeAsync(REFRESH_MS);
-      expect(weatherTemp().textContent).toBe('🌡️ ⚠️');
+      expectWeatherDegraded();
       expect(global.fetch).toHaveBeenCalledTimes(3);
       expect(document.getElementById('app-toast')).toBeNull();
       expect(document.querySelectorAll('.ui-error-placeholder').length).toBe(0);
@@ -739,11 +778,11 @@ describe('Weather degraded indicator', () => {
       const mod = await importLoop();
       mod.refreshWeather();
       await vi.advanceTimersByTimeAsync(0);
-      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+      expectWeatherReading('72°F');
 
       await vi.advanceTimersByTimeAsync(REFRESH_MS * 2);
 
-      expect(weatherTemp().textContent).toBe('🌡️ 72°F');
+      expectWeatherReading('72°F');
       expect(global.fetch.mock.calls.length).toBeGreaterThan(1);
     });
 

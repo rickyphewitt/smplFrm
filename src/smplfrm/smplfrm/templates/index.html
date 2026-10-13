@@ -5,40 +5,24 @@
     <meta charset="UTF-8">
     <title>smplFrm</title>
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- OSS Icons from https://github.com/iconoir-icons/iconoir/blob/main/README.md-->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css" />
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <!-- OSS Icons from https://www.npmjs.com/package/iconoir, pinned at the version in package.json -->
+    <link rel="stylesheet" href="{% static 'icons/iconoir.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static theme_stylesheet %}">
 </head>
 
 <body>
 <div class="progress-bar" id="progress-bar"></div>
-<div class="top-bar" id="top-bar">
-    <div class="text-box small-font third-column" id="top-left-box">
-        <div class="logo-icon" id="logo-icon">
-            <img src="{% static 'favicon.png' %}" alt="smplFrm">
-        </div>
-    </div>
-</div>
-<div class="text-box large-font third-column" id="top-center-box"></div>
-<div class="text-box small-font third-column" id="top-right-box">
-     <div id="spotify-bar" style="display: none;" />
+<button type="button" class="logo-icon" id="logo-icon" aria-label="Open settings">
+    <img src="{% static 'favicon.png' %}" alt="smplFrm">
+</button>
+<div id="spotify-bar" style="display: none;">
     <div class="info-group">
         <span id="spotify-now-playing" class="spotify-icon-container"></span>
     </div>
 </div>
 <div id="middle-section" class="text-box">
-    <div style="display: flex; align-items: center; gap: 15px; justify-content: center;">
-        <div style="width: 60px; height: 60px; background: #667eea; border-radius: 6px; border: 4px solid #333; position: relative; overflow: hidden; flex-shrink: 0;">
-            <div style="position: absolute; width: 15px; height: 15px; background: #ffd700; border-radius: 50%; top: 9px; right: 9px;"></div>
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: #764ba2; clip-path: polygon(0 100%, 0 50%, 30% 30%, 60% 50%, 100% 20%, 100% 100%);"></div>
-        </div>
-        <div style="font-size: 48px; font-weight: 500; color: white; font-family: 'Inter', sans-serif;">
-            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">smpl</span>Frm
-        </div>
-    </div>
+    <img src="{% static 'assets/smplfrm-logo-1200x400.png' %}" alt="smplFrm" class="splash-logo">
 </div>
  <div id="bottom-bar" class="text-box">
     <div class="info-group" id="photo-date-group">
@@ -59,11 +43,11 @@
  </div>
 <div id="image-container"></div>
 
-<div class="settings-modal" id="settings-modal" data-config-id="{{ config_id }}" data-config-name="{{ config_name }}">
+<div class="settings-modal" id="settings-modal" data-config-id="{{ config_id }}" data-config-name="{{ config_name }}" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Settings</h2>
-            <button class="close-btn" id="close-modal">&times;</button>
+            <h2 id="settings-modal-title">Settings</h2>
+            <button class="close-btn" id="close-modal" aria-label="Close settings">&times;</button>
         </div>
         
         <div class="modal-tabs">
@@ -108,6 +92,10 @@
                         <option value="{{ tz }}">
                         {% endfor %}
                     </datalist>
+                </div>
+                <div class="setting-item">
+                    <label for="setting-theme" title="Visual theme for the display and settings panel">Theme</label>
+                    <select id="setting-theme" class="select-input"></select>
                 </div>
             </div>
         </div>

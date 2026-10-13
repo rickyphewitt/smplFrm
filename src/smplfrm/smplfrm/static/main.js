@@ -61,6 +61,27 @@ export function getWindowDimensions() {
   };
 }
 
+/**
+ * Replaces an element's content with an icon glyph followed by text.
+ *
+ * Builds the icon as a real `<i>` element and the text as a text node rather
+ * than interpolating into `innerHTML`, so dynamic text (a formatted date, a
+ * temperature string) is never parsed as markup regardless of its contents.
+ *
+ * @param {Element} element - The element to replace the contents of
+ * @param {string} iconClass - Iconoir class, e.g. 'iconoir-camera'
+ * @param {string} [text] - Text to render after the icon; omitted when falsy
+ */
+export function setIconText(element, iconClass, text) {
+  const icon = document.createElement('i');
+  icon.className = iconClass;
+  if (text) {
+    element.replaceChildren(icon, document.createTextNode(` ${text}`));
+  } else {
+    element.replaceChildren(icon);
+  }
+}
+
 export function buildApiUrl(endpoint) {
   return `${config.host}:${config.port}/api/v1/${endpoint}`;
 }
@@ -73,7 +94,7 @@ export function startProgress() {
       clearInterval(interval);
       width = 0;
     }
-    progressBar.style.width = `${width}%`;
+    progressBar.style.setProperty('--progress', width / 100);
   }, config.refreshInterval / 100);
 }
 
@@ -217,27 +238,31 @@ async function displayMetadata(imageId) {
     // Unwrap JSON:API response
     const { resources } = unwrapResourceList(data);
     if (resources.length === 0) {
-      document.getElementById('photo-date').innerHTML = `📷`;
+      setIconText(document.getElementById('photo-date'), 'iconoir-camera');
       return;
     }
 
     const takenDate = Date.parse(resources[0].attributes.taken);
 
     if (isNaN(takenDate)) {
-      document.getElementById('photo-date').innerHTML = `📷`;
+      setIconText(document.getElementById('photo-date'), 'iconoir-camera');
     } else {
       const prettyDate = new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'long',
       }).format(takenDate);
-      document.getElementById('photo-date').innerHTML = `📷 ${prettyDate}`;
+      setIconText(
+        document.getElementById('photo-date'),
+        'iconoir-camera',
+        prettyDate,
+      );
     }
   } catch (error) {
     reportError(error, {
       channel: 'silent',
       fallback: 'Image metadata unavailable.',
     });
-    document.getElementById('photo-date').innerHTML = `📷`;
+    setIconText(document.getElementById('photo-date'), 'iconoir-camera');
   }
 }
 
@@ -386,7 +411,11 @@ function displayClock() {
     month: 'long',
     day: 'numeric',
   }).format(now);
-  document.getElementById('current-date').innerHTML = `📅 ${currentDate}`;
+  setIconText(
+    document.getElementById('current-date'),
+    'iconoir-calendar',
+    currentDate,
+  );
 
   // Display current time without seconds
   const timeString = now.toLocaleTimeString('en-US', {
@@ -394,7 +423,11 @@ function displayClock() {
     minute: '2-digit',
     hour12: true,
   });
-  document.getElementById('current-time').innerHTML = `🕐 ${timeString}`;
+  setIconText(
+    document.getElementById('current-time'),
+    'iconoir-clock',
+    timeString,
+  );
 
   setTimeout(displayClock, CLOCK_REFRESH_MS);
 }
@@ -425,7 +458,11 @@ export function displayWeather({ signal } = {}) {
       if (resource && resource.attributes) {
         const { temperature, temperature_scale } = resource.attributes;
         const formatted = formatWeatherTemp(temperature, temperature_scale);
-        document.getElementById('weather-temp').textContent = `🌡️ ${formatted}`;
+        setIconText(
+          document.getElementById('weather-temp'),
+          'iconoir-temperature-high',
+          formatted,
+        );
       }
     })
     .catch((error) => {
@@ -437,7 +474,16 @@ export function displayWeather({ signal } = {}) {
         channel: 'indicator',
         fallback: 'Weather is unavailable.',
         onDegrade: () => {
-          document.getElementById('weather-temp').textContent = '🌡️ ⚠️';
+          const target = document.getElementById('weather-temp');
+          const tempIcon = document.createElement('i');
+          tempIcon.className = 'iconoir-temperature-high';
+          const warnIcon = document.createElement('i');
+          warnIcon.className = 'iconoir-warning-triangle weather-warning-icon';
+          target.replaceChildren(
+            tempIcon,
+            document.createTextNode(' '),
+            warnIcon,
+          );
         },
       });
     });
@@ -718,6 +764,125 @@ function clearSettingsPlaceholder(modal) {
     .forEach((node) => node.remove());
 }
 
+/**
+ * Theme control state, scoped to the module so loadConfig() and
+ * loadThemeOptions() can settle in either order without deciding the
+ * selected value by timing.
+ *
+ * The stored theme travels through `_pendingStoredTheme` until options
+ * exist; applying `.value` to a <select> with no matching <option> silently
+ * leaves the first option selected, and a later save would then persist
+ * that as the user's choice. `_themeOptionsLoaded` guards against applying
+ * the stored value before any option exists at all, and
+ * `_themesFetchFailed` records that the registry is unknown so the stored
+ * id can still be offered as the sole option whenever it arrives.
+ */
+let _pendingStoredTheme = null;
+let _themeOptionsLoaded = false;
+let _themesFetchFailed = false;
+
+/**
+ * Applies the stored theme to #setting-theme once options exist.
+ *
+ * Safe to call from either loadConfig() or loadThemeOptions(), in either
+ * order: the first call to supply both a stored value and a populated
+ * select wins, and later calls are no-ops once applied.
+ *
+ * When the themes fetch failed, this also builds the degraded single-option
+ * control. That has to happen here rather than only in the fetch's catch
+ * block: the failure can settle before the config response, and at that
+ * point the stored id is not known yet. Leaving the select empty in that
+ * ordering would make every save submit `theme: ""`, which the serializer
+ * rejects, blocking saves of unrelated settings.
+ */
+function applyPendingStoredTheme() {
+  if (!_themeOptionsLoaded || _pendingStoredTheme == null) {
+    return;
+  }
+  const select = document.getElementById('setting-theme');
+  const hasOption = Array.from(select.options).some(
+    (opt) => opt.value === _pendingStoredTheme,
+  );
+  if (hasOption) {
+    select.value = _pendingStoredTheme;
+    return;
+  }
+  if (_themesFetchFailed) {
+    // The only id we can offer is the one the config already stores, so a
+    // save cannot change the theme by accident even though the control
+    // still "works". The id is shown alongside the label because it is the
+    // only name available without the registry.
+    const option = document.createElement('option');
+    option.value = _pendingStoredTheme;
+    option.textContent = `Current theme (${_pendingStoredTheme})`;
+    select.replaceChildren(option);
+    select.value = _pendingStoredTheme;
+  }
+}
+
+/**
+ * Fetches the themes collection and populates #setting-theme.
+ *
+ * Follows `links.next` until exhausted so the dropdown is complete
+ * regardless of page size, capped at ten pages so a pathological response
+ * cannot hammer a throttled endpoint. On failure, degrades to a single
+ * option showing the currently stored theme and reports through the
+ * view-placeholder channel; a themes failure never blocks saving unrelated
+ * settings.
+ */
+export async function loadThemeOptions() {
+  const select = document.getElementById('setting-theme');
+  const modal = document.getElementById('settings-modal');
+  const MAX_PAGES = 10;
+
+  const themes = [];
+  let url = buildApiUrl('themes');
+  let pagesFetched = 0;
+
+  try {
+    while (url && pagesFetched < MAX_PAGES) {
+      const doc = await fetchJsonApi(url);
+      const { resources, links } = unwrapResourceList(doc);
+      themes.push(...resources.map((r) => ({ id: r.id, ...r.attributes })));
+      pagesFetched++;
+      url = links.next || null;
+    }
+    if (url && pagesFetched >= MAX_PAGES) {
+      console.debug(
+        '[loadThemeOptions] stopped at the ten-page cap with more pages remaining',
+      );
+    }
+
+    select.replaceChildren(
+      ...themes.map((theme) => {
+        const option = document.createElement('option');
+        option.value = theme.id;
+        option.textContent = theme.label;
+        if (theme.description) {
+          option.title = theme.description;
+        }
+        return option;
+      }),
+    );
+    _themeOptionsLoaded = true;
+    _themesFetchFailed = false;
+    applyPendingStoredTheme();
+  } catch (error) {
+    // Degraded state: the stored theme becomes the only option, applied here
+    // if it is already known and by the next applyPendingStoredTheme() call
+    // if the config load has not settled yet.
+    select.replaceChildren();
+    _themeOptionsLoaded = true;
+    _themesFetchFailed = true;
+    applyPendingStoredTheme();
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load themes.',
+      target: settingsBody(modal),
+    });
+  }
+}
+
 export async function loadConfig() {
   const modal = document.getElementById('settings-modal');
   const configId = modal.dataset.configId;
@@ -747,6 +912,8 @@ export async function loadConfig() {
     document.getElementById('setting-fill-mode').value = config.image_fill_mode;
     document.getElementById('setting-force-date-path').checked =
       config.force_date_from_path;
+    _pendingStoredTheme = config.theme;
+    applyPendingStoredTheme();
 
     clearSettingsPlaceholder(modal);
     modal.dataset.configLoaded = 'true';
@@ -802,6 +969,7 @@ export async function saveConfig() {
     force_date_from_path: document.getElementById('setting-force-date-path')
       .checked,
     plugins: JSON.parse(modal.dataset.configPlugins || '[]'),
+    theme: document.getElementById('setting-theme').value,
   };
 
   try {
@@ -1153,6 +1321,7 @@ export const PLUGIN_ACTION_HANDLERS = {
     btn.className = 'action-btn';
     btn.textContent = '📍';
     btn.title = 'Look up coordinates';
+    btn.setAttribute('aria-label', 'Look up coordinates');
     btn.addEventListener('click', () => {
       window.open('https://www.latlong.net', '_blank');
       btn.textContent = '🌐';
@@ -1254,8 +1423,14 @@ async function openPluginDetail(pluginId) {
         reveal.type = 'button';
         reveal.className = 'reveal-btn';
         reveal.textContent = '👁';
+        reveal.setAttribute('aria-label', 'Show password');
         reveal.addEventListener('click', () => {
-          input.type = input.type === 'password' ? 'text' : 'password';
+          const nowVisible = input.type === 'password';
+          input.type = nowVisible ? 'text' : 'password';
+          reveal.setAttribute(
+            'aria-label',
+            nowVisible ? 'Hide password' : 'Show password',
+          );
         });
         row.appendChild(input);
         row.appendChild(reveal);
@@ -1331,6 +1506,70 @@ async function openPluginDetail(pluginId) {
   showDetailView();
 }
 
+/**
+ * Builds one preset table cell, editable for custom configs only.
+ *
+ * The value is set with `textContent`, so a config name or description is
+ * never parsed as markup — these strings come back from the API and are
+ * writable through PUT /configs/{id}.
+ */
+function buildPresetCell(config, field, value, isManaged) {
+  const cell = document.createElement('td');
+  cell.textContent = value;
+  if (!isManaged) {
+    cell.className = 'editable';
+    cell.setAttribute('contenteditable', 'true');
+    cell.dataset.id = config.id;
+    cell.dataset.field = field;
+  }
+  return cell;
+}
+
+/** Builds the Status cell: an Active badge, or an Activate button. */
+function buildPresetStatusCell(config) {
+  const cell = document.createElement('td');
+  if (config.is_active) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-active';
+    badge.textContent = 'Active';
+    cell.appendChild(badge);
+    return cell;
+  }
+  const activate = document.createElement('button');
+  activate.className = 'btn btn-secondary btn-sm preset-activate-btn';
+  activate.dataset.id = config.id;
+  activate.textContent = 'Activate';
+  cell.appendChild(activate);
+  return cell;
+}
+
+/** Builds the Delete cell: a delete button, or a lock glyph with a reason. */
+function buildPresetDeleteCell(config, isManaged) {
+  const cell = document.createElement('td');
+
+  if (!isManaged && !config.is_active) {
+    const button = document.createElement('button');
+    button.className =
+      'btn btn-secondary btn-sm task-delete-btn preset-delete-btn';
+    button.dataset.id = config.id;
+    button.textContent = '\u00d7';
+    button.setAttribute('aria-label', `Delete preset ${config.name}`);
+    cell.appendChild(button);
+    return cell;
+  }
+
+  const locked = document.createElement('span');
+  locked.className = 'delete-disabled';
+  locked.title = isManaged
+    ? 'System-managed configs cannot be deleted'
+    : 'Active config cannot be deleted';
+  const icon = document.createElement('i');
+  icon.className = 'iconoir-lock';
+  locked.appendChild(icon);
+  cell.appendChild(locked);
+  return cell;
+}
+
 export async function loadPresets(page = 1) {
   presetPage = page;
   const body = document.getElementById('preset-list-body');
@@ -1343,27 +1582,19 @@ export async function loadPresets(page = 1) {
     const { resources } = unwrapResourceList(doc);
     const configs = resources.map((r) => ({ id: r.id, ...r.attributes }));
 
-    body.innerHTML = configs
-      .map((c) => {
+    body.replaceChildren(
+      ...configs.map((c) => {
         const isManaged = c.name.startsWith('smplFrm ');
-        const nameCell = isManaged
-          ? `<td>${c.name}</td>`
-          : `<td class="editable" contenteditable="true" data-id="${c.id}" data-field="name">${c.name}</td>`;
-        const descCell = isManaged
-          ? `<td>${c.description || ''}</td>`
-          : `<td class="editable" contenteditable="true" data-id="${c.id}" data-field="description">${c.description || ''}</td>`;
-        const status = c.is_active
-          ? '<span class="badge-active">Active</span>'
-          : `<button class="btn btn-secondary btn-sm preset-activate-btn" data-id="${c.id}">Activate</button>`;
-        const deleteBtn =
-          !isManaged && !c.is_active
-            ? `<button class="btn btn-secondary btn-sm task-delete-btn preset-delete-btn" data-id="${c.id}">&times;</button>`
-            : isManaged
-              ? `<span class="delete-disabled" title="System-managed configs cannot be deleted">🔒</span>`
-              : `<span class="delete-disabled" title="Active config cannot be deleted">🔒</span>`;
-        return `<tr>${nameCell}${descCell}<td>${status}</td><td>${deleteBtn}</td></tr>`;
-      })
-      .join('');
+        const row = document.createElement('tr');
+        row.append(
+          buildPresetCell(c, 'name', c.name, isManaged),
+          buildPresetCell(c, 'description', c.description || '', isManaged),
+          buildPresetStatusCell(c),
+          buildPresetDeleteCell(c, isManaged),
+        );
+        return row;
+      }),
+    );
 
     body.querySelectorAll('.editable').forEach((cell) => {
       cell.dataset.original = cell.textContent.trim();
@@ -1481,12 +1712,38 @@ export async function loadTasks(page = 1) {
   try {
     const data = await fetchJsonApi(buildApiUrl(`tasks?page[number]=${page}`));
 
-    body.innerHTML = data.data
-      .map((t) => {
-        const created = new Date(t.attributes.created).toLocaleString();
-        return `<tr data-id="${t.id}"><td>${t.attributes.label}</td><td>${t.attributes.status}</td><td>${t.attributes.progress}%</td><td>${created}</td><td><button class="btn btn-secondary btn-sm task-delete-btn" data-id="${t.id}">&times;</button></td></tr>`;
-      })
-      .join('');
+    body.replaceChildren(
+      ...data.data.map((t) => {
+        const { label, status, progress, created } = t.attributes;
+        const row = document.createElement('tr');
+        row.dataset.id = t.id;
+
+        // textContent for every value: the label is server-supplied text,
+        // not markup.
+        const cells = [
+          label,
+          status,
+          `${progress}%`,
+          new Date(created).toLocaleString(),
+        ];
+        cells.forEach((text) => {
+          const cell = document.createElement('td');
+          cell.textContent = text;
+          row.appendChild(cell);
+        });
+
+        const deleteCell = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn-secondary btn-sm task-delete-btn';
+        deleteBtn.dataset.id = t.id;
+        deleteBtn.textContent = '\u00d7';
+        deleteBtn.setAttribute('aria-label', `Delete task ${label}`);
+        deleteCell.appendChild(deleteBtn);
+        row.appendChild(deleteCell);
+
+        return row;
+      }),
+    );
 
     body.querySelectorAll('.task-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -1522,6 +1779,63 @@ export async function loadTasks(page = 1) {
   }
 }
 
+/**
+ * Returns the focusable elements inside a container, in DOM order.
+ *
+ * Used to build the Tab-cycling focus trap for the settings modal. Scoped to
+ * a conservative, commonly-focusable selector set rather than every possible
+ * focusable element, which is sufficient for the modal's actual content
+ * (buttons, inputs, selects, links, and the close control).
+ *
+ * Two hiding mechanisms have to be honoured, and neither can be read from a
+ * computed style: jsdom does not resolve stylesheet rules, and
+ * `offsetParent` requires a layout engine.
+ *
+ * - Inactive tab panels are hidden by the `.tab-content { display: none }`
+ *   class rule in base.css, so their controls are excluded by panel
+ *   membership: an element inside a `.tab-content` that lacks `.active` is
+ *   not reachable.
+ * - The plugin detail view, its action bar, and the main action bar are
+ *   toggled with inline `style.display`, so those are excluded by walking
+ *   ancestors for an inline `display: none` or a `hidden` attribute.
+ *
+ * @param {Element} container
+ * @returns {Element[]}
+ */
+export function getFocusableElements(container) {
+  const selector = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  const isInInactiveTabPanel = (el) => {
+    const panel = el.closest('.tab-content');
+    return panel !== null && !panel.classList.contains('active');
+  };
+
+  const isVisible = (el) => {
+    let node = el;
+    while (node && node !== container.parentElement) {
+      if (node.style && node.style.display === 'none') {
+        return false;
+      }
+      if (node.hasAttribute && node.hasAttribute('hidden')) {
+        return false;
+      }
+      node = node.parentElement;
+    }
+    return true;
+  };
+
+  return Array.from(container.querySelectorAll(selector)).filter(
+    (el) => !isInInactiveTabPanel(el) && isVisible(el),
+  );
+}
+
 function initSettingsModal() {
   const modal = document.getElementById('settings-modal');
   const logoIcon = document.getElementById('logo-icon');
@@ -1537,6 +1851,12 @@ function initSettingsModal() {
     cancelBtn.classList.remove('btn-primary');
     cancelBtn.classList.add('btn-secondary');
 
+    // Focus moves into the panel on open, immediately rather than after the
+    // config load below settles. The close button is always present and
+    // visible regardless of which tab or load state is active, so it is a
+    // safe first-focus target.
+    closeBtn.focus();
+
     // Reset plugin detail view
     document.getElementById('plugin-detail-view').style.display = 'none';
     document.getElementById('plugin-list-view').style.display = '';
@@ -1548,7 +1868,13 @@ function initSettingsModal() {
     const spinner = document.createElement('div');
     spinner.className = 'spinner';
     activeTab.appendChild(spinner);
-    await loadConfig();
+    // Reset per-open theme-control state so a stale value from a previous
+    // open cannot leak into this one; the stored theme and the themes
+    // collection are fetched in parallel and may settle in either order.
+    _pendingStoredTheme = null;
+    _themeOptionsLoaded = false;
+    _themesFetchFailed = false;
+    await Promise.all([loadConfig(), loadThemeOptions()]);
     spinner.remove();
     sections.forEach((s) => (s.style.display = ''));
 
@@ -1563,6 +1889,8 @@ function initSettingsModal() {
       location.reload();
     } else {
       modal.classList.remove('open');
+      // Focus returns to the control that opened the modal.
+      logoIcon.focus();
     }
   };
 
@@ -1576,8 +1904,32 @@ function initSettingsModal() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('open')) {
+    if (!modal.classList.contains('open')) {
+      return;
+    }
+
+    if (e.key === 'Escape') {
       closeModal();
+      return;
+    }
+
+    // Focus trap: Tab and Shift+Tab cycle within the modal's focusable
+    // elements instead of escaping to the rest of the page.
+    if (e.key === 'Tab') {
+      const focusable = getFocusableElements(modal);
+      if (focusable.length === 0) {
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
   });
 

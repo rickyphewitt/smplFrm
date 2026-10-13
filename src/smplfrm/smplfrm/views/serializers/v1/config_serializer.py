@@ -6,6 +6,7 @@ Uses rest_framework_json_api for proper JSON:API document structure.
 from rest_framework_json_api import serializers
 
 from smplfrm.models import Config
+from smplfrm.themes import get_theme_map
 
 
 class ConfigSerializer(serializers.ModelSerializer):
@@ -39,5 +40,16 @@ class ConfigSerializer(serializers.ModelSerializer):
             "force_date_from_path",
             "timezone",
             "plugins",
+            "theme",
         ]
         read_only_fields = ["id"]
+
+    def validate_theme(self, value):
+        """Reject a theme id that is not in the registry.
+
+        Validation lives here rather than as a model-level `choices`
+        constraint so adding a theme never needs a migration.
+        """
+        if value not in get_theme_map():
+            raise serializers.ValidationError(f"'{value}' is not a registered theme.")
+        return value
