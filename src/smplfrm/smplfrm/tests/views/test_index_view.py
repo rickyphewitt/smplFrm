@@ -2,7 +2,24 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
+import smplfrm.themes as themes
 from smplfrm.models import Config
+from smplfrm.themes.base import Theme
+from smplfrm.themes.classic import ClassicTheme
+
+
+class _PreloadingTheme(Theme):
+    def __init__(self):
+        super().__init__(
+            id="preloading",
+            label="Preloading",
+            description="Declares two preload fonts",
+            stylesheet="css/base.css",
+            preload_fonts=(
+                "fonts/geist/geist-latin-400-normal.woff2",
+                "fonts/geist/geist-latin-500-normal.woff2",
+            ),
+        )
 
 
 class TestIndexViewVersionContext(TestCase):
@@ -220,3 +237,56 @@ class TestIndexViewThemeResolution(TestCase):
         response = self.client.get("/")
         content = response.content.decode()
         self.assertNotIn('href=""', content)
+
+
+class TestIndexViewThemePreloadFonts(TestCase):
+    """Tests that IndexView emits the active theme's font preloads."""
+
+    def setUp(self):
+        Config.objects.all().delete()
+
+    def _preload_links(self, content):
+        return [
+            line.strip() for line in content.splitlines() if 'rel="preload"' in line
+        ]
+
+    def test_classic_renders_no_preload_links(self):
+        Config.objects.create(name="smplFrm Default", is_active=True, theme="classic")
+        response = self.client.get("/")
+        self.assertEqual(response.context["theme_preload_fonts"], ())
+        self.assertEqual(self._preload_links(response.content.decode()), [])
+
+    @patch.object(themes, "THEME_REGISTRY", [ClassicTheme, _PreloadingTheme])
+    def test_each_preload_font_renders_one_crossorigin_font_link(self):
+        Config.objects.create(
+            name="smplFrm Default", is_active=True, theme="preloading"
+        )
+        response = self.client.get("/")
+        content = response.content.decode()
+
+        links = self._preload_links(content)
+        self.assertEqual(len(links), 2)
+        for link, font in zip(links, _PreloadingTheme().preload_fonts):
+            with self.subTest(font=font):
+                self.assertIn(f"{font}", link)
+                self.assertIn('as="font"', link)
+                self.assertIn('type="font/woff2"', link)
+                # Font preloads are always fetched in CORS mode; without
+                # crossorigin the browser discards the preload and fetches twice.
+                self.assertIn("crossorigin", link)
+
+    @patch.object(themes, "THEME_REGISTRY", [ClassicTheme, _PreloadingTheme])
+    def test_preloads_precede_the_stylesheets(self):
+        Config.objects.create(
+            name="smplFrm Default", is_active=True, theme="preloading"
+        )
+        content = self.client.get("/").content.decode()
+        self.assertLess(
+            content.index('rel="preload"'), content.index('rel="stylesheet"')
+        )
+
+    @patch.object(themes, "THEME_REGISTRY", [ClassicTheme, _PreloadingTheme])
+    def test_unknown_theme_falls_back_to_default_preloads(self):
+        Config.objects.create(name="smplFrm Default", is_active=True, theme="gone")
+        response = self.client.get("/")
+        self.assertEqual(response.context["theme_preload_fonts"], ())

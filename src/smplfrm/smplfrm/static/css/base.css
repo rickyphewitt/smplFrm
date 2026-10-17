@@ -6,10 +6,10 @@
  * keyframes live here because they are behaviour, not style — every theme
  * consumes them unchanged.
  *
- * Where a selector in the original stylesheet mixed structural and aesthetic
- * declarations, the declarations were split across base.css and the theme
- * stylesheet rather than the selector; CSS cascades additively, so applying
- * both files together renders identically to the original single stylesheet.
+ * A selector can appear in both base.css and a theme stylesheet: base.css
+ * holds its structural declarations and the theme its aesthetic ones. The
+ * template loads base.css first and the active theme second, and the two
+ * cascade additively, so a theme only ever adds or overrides appearance.
  */
 
 body {
@@ -282,9 +282,9 @@ img {
     cursor: pointer;
     z-index: 300;
     transition: transform 0.2s;
-    /* Reset native <button> chrome so the element reads purely as the icon
-     * it was when it was a styled <div>, now that it's a real button for
-     * keyboard and screen-reader users. */
+    /* #logo-icon is a real <button> so keyboard and screen-reader users can
+     * open settings. Reset the native button chrome so it renders as the bare
+     * logo image; any visible treatment comes from the theme. */
     padding: 0;
     border: none;
     background: none;
@@ -642,11 +642,54 @@ input:checked + .slider:before {
     transition: width 0.3s;
 }
 
-/* Error presentation scaffolding (uiErrors.js). Neither element carries
- * aesthetic styling here: `.app-toast` is created and styled entirely inline
- * by showActionToast(), by design (see that function's docstring), and
- * `.ui-error-placeholder` is applied to both table rows and generic
+/* Dynamically created toasts (resilientFetch.js, uiErrors.js). Placement and
+ * the hidden-until-shown state live here; colors and radius belong to the
+ * theme. JavaScript toggles opacity and pointer-events inline on show and
+ * hide, so the `.show` rules below only matter before that first toggle.
+ * Stacked above `#task-toast` (20px): rate-limit at 80px, action at 140px. */
+.rate-limit-toast,
+.app-toast {
+    position: fixed;
+    right: 20px;
+    padding: 12px 18px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    min-width: 180px;
+}
+
+.rate-limit-toast {
+    bottom: 80px;
+    z-index: 10000;
+}
+
+.app-toast {
+    bottom: 140px;
+    z-index: 10001;
+}
+
+.rate-limit-toast.show,
+.app-toast.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.rate-limit-toast a {
+    text-decoration: underline;
+}
+
+/* `.ui-error-placeholder` is applied to both table rows and generic
  * containers (showViewPlaceholder()), so no shared display rule is safe to
- * add without breaking one of those two shapes. Both are therefore
- * deliberately absent from base.css today; this comment records that gap
- * rather than a rule. */
+ * add without breaking one of those two shapes; it is deliberately absent
+ * from base.css. */
+
+/* About tab copy. */
+.about-description {
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.about-link {
+    text-decoration: none;
+}

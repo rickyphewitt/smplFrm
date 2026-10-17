@@ -86,6 +86,26 @@ export function buildApiUrl(endpoint) {
   return `${config.host}:${config.port}/api/v1/${endpoint}`;
 }
 
+/** Body class replayed on every photo change; a styling hook for themes. */
+export const PHOTO_CHANGED_CLASS = 'photo-changed';
+
+/**
+ * Replays the `photo-changed` class on `<body>` so a theme can animate the
+ * frame overlay each time a new photo is shown, e.g.
+ * `body.photo-changed #bottom-bar { animation: ... }`.
+ *
+ * CSS restarts an animation only when its selector stops and starts
+ * matching, so the class is removed, a reflow is forced, and the class is
+ * added back. The same hook fires for every theme; a theme that ignores the
+ * class sees no change.
+ */
+export function markPhotoChanged() {
+  const { body } = document;
+  body.classList.remove(PHOTO_CHANGED_CLASS);
+  void body.offsetWidth;
+  body.classList.add(PHOTO_CHANGED_CLASS);
+}
+
 export function startProgress() {
   let width = 100;
   const interval = setInterval(() => {
@@ -266,6 +286,20 @@ async function displayMetadata(imageId) {
   }
 }
 
+/**
+ * Updates the overlay for a newly shown photo, then signals the change.
+ *
+ * The `photo-changed` hook is replayed only once the photo date is in place,
+ * so a theme's entrance animation never reveals the previous photo's date.
+ * displayMetadata() handles its own errors, so the hook fires on every photo.
+ *
+ * @param {string} imageId - External id of the photo now on screen
+ * @returns {Promise<void>}
+ */
+export function refreshPhotoOverlay(imageId) {
+  return displayMetadata(imageId).finally(markPhotoChanged);
+}
+
 async function buildImage() {
   const nextImage = await getNextImage();
 
@@ -360,7 +394,7 @@ async function loadNext(currentImage) {
         fadeInImage(newImage, () => {
           imageContainer.removeChild(currentImage);
         });
-        displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
+        refreshPhotoOverlay(newImage.getAttribute(IMAGE_ID_ATTR));
         startProgress();
         loadNext(newImage);
       }, config.refreshInterval);
@@ -390,7 +424,7 @@ async function startImages() {
       imageContainer.appendChild(newImage);
 
       fadeInImage(newImage);
-      displayMetadata(newImage.getAttribute(IMAGE_ID_ATTR));
+      refreshPhotoOverlay(newImage.getAttribute(IMAGE_ID_ATTR));
       startProgress();
       loadNext(newImage);
     };
@@ -1319,14 +1353,14 @@ export const PLUGIN_ACTION_HANDLERS = {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'action-btn';
-    btn.textContent = '📍';
+    setIconText(btn, 'iconoir-map-pin');
     btn.title = 'Look up coordinates';
     btn.setAttribute('aria-label', 'Look up coordinates');
     btn.addEventListener('click', () => {
       window.open('https://www.latlong.net', '_blank');
-      btn.textContent = '🌐';
+      setIconText(btn, 'iconoir-globe');
       setTimeout(() => {
-        btn.textContent = '📍';
+        setIconText(btn, 'iconoir-map-pin');
       }, 1500);
     });
 
@@ -1422,7 +1456,7 @@ async function openPluginDetail(pluginId) {
         const reveal = document.createElement('button');
         reveal.type = 'button';
         reveal.className = 'reveal-btn';
-        reveal.textContent = '👁';
+        setIconText(reveal, 'iconoir-eye');
         reveal.setAttribute('aria-label', 'Show password');
         reveal.addEventListener('click', () => {
           const nowVisible = input.type === 'password';

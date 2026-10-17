@@ -1,20 +1,19 @@
 /*
- * Classic theme: the original smplFrm look.
+ * Classic theme: dark translucent overlays on the photo, a system font
+ * stack, and a violet accent.
  *
- * Carries every color, font, radius, shadow, and background that
- * static/styles.css had, extracted verbatim rather than rewritten. Loaded
- * after base.css, so these declarations add the aesthetic layer on top of
- * base.css's structural layer. Together the two files render identically to
- * the original single stylesheet.
+ * Holds every color, font, radius, shadow, and background for the Classic
+ * look. Loaded after base.css, so these declarations add the aesthetic layer
+ * on top of base.css's structural layer. Satisfies the theme contract in
+ * ai/architecture.md.
  */
 
 body {
   background-color: black;
-  /* Single, canonical font declaration for the whole page. Previously
-   * applied only via inheritance from `.text-box` ancestors in the frame
-   * markup, which broke silently once those wrapper elements were removed.
-   * Declared once on `body` instead so every element gets it regardless of
-   * its ancestry, and so a new theme has exactly one place to override it. */
+  /* The single font declaration for the whole page. Declared on `body` so
+   * every element inherits it regardless of where it sits in the markup
+   * (the frame overlay, the settings modal, and dynamically created toasts
+   * alike), and so a theme has exactly one place to set its typeface. */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -279,8 +278,37 @@ input:checked + .slider {
     border-radius: 2px;
 }
 
+/* Rate-limit and action toasts (placement in base.css) */
+.rate-limit-toast,
+.app-toast {
+    background: rgba(45, 55, 72, 0.92);
+    border-radius: 8px;
+}
 
-/* Focus indicators — theme contract item 1.
+.rate-limit-toast {
+    color: #cbd5e0;
+}
+
+.rate-limit-toast a {
+    color: #90cdf4;
+}
+
+.app-toast {
+    color: #fed7d7;
+}
+
+/* About tab */
+.about-description,
+.about-muted {
+    color: #aaa;
+}
+
+.about-link {
+    color: #667eea;
+}
+
+
+/* Focus indicators (theme contract item 1, ai/architecture.md).
  *
  * `:focus-visible` rather than `:focus` so a pointer click does not paint a
  * ring. The toggle switches need their own rule because base.css sizes the
@@ -297,6 +325,8 @@ input:checked + .slider {
 .select-input:focus-visible,
 .editable:focus-visible,
 .task-table a:focus-visible,
+.about-link:focus-visible,
+.rate-limit-toast a:focus-visible,
 #spotify-bar a:focus-visible {
     outline: 2px solid #667eea;
     outline-offset: 2px;
@@ -307,7 +337,7 @@ input:checked + .slider {
     outline-offset: 2px;
 }
 
-/* Reduced motion — theme contract item 3.
+/* Reduced motion (theme contract item 3, ai/architecture.md).
  *
  * Stops decorative motion only. The slideshow animations in base.css
  * (`.zoom-effect`, `.transition-fade`, `.transition-slide-*`,
@@ -323,6 +353,8 @@ input:checked + .slider {
     .progress-bar,
     .task-toast,
     .task-toast-bar,
+    .rate-limit-toast,
+    .app-toast,
     .error-message {
         transition: none;
     }

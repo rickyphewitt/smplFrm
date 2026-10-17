@@ -164,19 +164,31 @@ describe('uiErrors', () => {
       expect(toast.textContent).toBe('Second');
     });
 
-    it('is positioned clear of the rate-limit and task toasts', () => {
+    it('leaves placement and colors to the stylesheets', () => {
       uiErrors.showActionToast('Message');
 
+      // Stacking clear of the rate-limit and task toasts is defined in
+      // base.css (and checked by its contract test); colors come from the
+      // active theme. JavaScript only toggles visibility.
       const toast = document.getElementById('app-toast');
-      expect(toast.style.position).toBe('fixed');
-      expect(toast.style.bottom).not.toBe('80px');
-      expect(toast.style.bottom).not.toBe('20px');
-      expect(parseInt(toast.style.bottom, 10)).toBeGreaterThan(80);
+      expect(toast.className).toContain('app-toast');
+      for (const prop of [
+        'position',
+        'bottom',
+        'right',
+        'background',
+        'color',
+        'borderRadius',
+        'fontSize',
+        'zIndex',
+      ]) {
+        expect(toast.style[prop]).toBe('');
+      }
     });
 
     it('allows all three toasts to be visible simultaneously', async () => {
       document.body.innerHTML =
-        '<div id="task-toast" class="task-toast show" style="bottom: 20px;">' +
+        '<div id="task-toast" class="task-toast show">' +
         '<span id="task-toast-text"></span><div id="task-toast-bar"></div></div>';
       const { showRateLimitToast, _setRateLimited } = await import(FETCH_PATH);
       _setRateLimited(false);
@@ -191,12 +203,11 @@ describe('uiErrors', () => {
       expect(taskToast.classList.contains('show')).toBe(true);
       expect(appToast.style.opacity).toBe('1');
 
-      const bottoms = [
-        rateToast.style.bottom,
-        taskToast.style.bottom,
-        appToast.style.bottom,
-      ];
-      expect(new Set(bottoms).size).toBe(3);
+      // Each toast carries its own class, which base.css places at a
+      // distinct offset so they never overlap.
+      expect(rateToast.classList.contains('rate-limit-toast')).toBe(true);
+      expect(taskToast.classList.contains('task-toast')).toBe(true);
+      expect(appToast.classList.contains('app-toast')).toBe(true);
     });
 
     it('never reads or writes the task toast elements', () => {

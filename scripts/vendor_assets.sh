@@ -1,61 +1,90 @@
 #!/usr/bin/env bash
 #
-# Regenerate the vendored Iconoir subset from the pinned npm package.
+# Regenerate the vendored static assets from the pinned npm packages.
 #
 # The runtime image ships no node_modules — Django serves everything under
-# smplfrm/static/ — so the icon CSS is committed to the repo. This script is
-# the reproducible way to refresh it after bumping the pin in package.json or
-# after referencing a new glyph, replacing a hand copy that was easy to get
-# subtly wrong.
+# smplfrm/static/ — so these assets are committed to the repo. This script is
+# the reproducible way to refresh them after bumping a pin in package.json,
+# referencing a new glyph, or adding a font face, replacing hand copies that
+# were easy to get subtly wrong.
 #
-# It writes static/icons/iconoir.css containing exactly the glyph classes
-# referenced by main.js and index.html, each rule extracted verbatim from the
-# pinned package, plus upstream's shared sizing rules.
+# Icons: writes static/icons/iconoir.css containing exactly the glyph classes
+# referenced by the app JavaScript in static/ and by the templates, each rule
+# extracted verbatim from the pinned package, plus upstream's shared sizing
+# rules. The LICENSE beside it is deliberately NOT touched: it carries an
+# appended provenance footer that upstream does not have.
 #
-# The LICENSE beside it is deliberately NOT touched: it carries an appended
-# provenance footer that upstream does not have.
-#
-# No fonts are vendored — the page declares a system font stack in the active
-# theme's stylesheet — so this script handles icons only.
+# Fonts: copies the Latin-subset woff2 files listed in FONT_FACES below, plus
+# each family's OFL license, into static/fonts/<family>/. No @font-face CSS is
+# generated: each theme owns its typefaces and declares them in its own
+# stylesheet.
 #
 # Verify the result with `make test`: smplfrm/tests/static/ checks glyph
-# coverage, that no unused rule lingers, and that each rule still matches the
-# pinned package.
+# coverage, that no unused rule lingers, that each rule still matches the
+# pinned package, and that every vendored font matches its package byte for
+# byte.
 
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+static_dir="src/smplfrm/smplfrm/static"
+templates_dir="src/smplfrm/smplfrm/templates"
+
 iconoir_pkg="node_modules/iconoir"
 iconoir_src="$iconoir_pkg/css/iconoir.css"
-iconoir_dest="src/smplfrm/smplfrm/static/icons/iconoir.css"
-main_js="src/smplfrm/smplfrm/static/main.js"
-index_html="src/smplfrm/smplfrm/templates/index.html"
+iconoir_dest="$static_dir/icons/iconoir.css"
 
-for path in "$iconoir_src" "$main_js" "$index_html"; do
-  if [[ ! -f $path ]]; then
-    echo "error: $path not found." >&2
+# Font faces to vendor, one per line: <npm package> <family dir> <weight>.
+# The family dir is both the fontsource file prefix and the destination
+# directory under static/fonts/. Only Latin, normal style, woff2.
+FONT_FACES=(
+  "@fontsource/eb-garamond eb-garamond 400"
+  "@fontsource/geist geist 400"
+  "@fontsource/geist geist 500"
+)
+
+require_file() {
+  if [[ ! -f $1 ]]; then
+    echo "error: $1 not found." >&2
     echo "Run 'make packages-js' first to install the pinned packages." >&2
     exit 1
   fi
-done
+}
+
+package_version() {
+  sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "node_modules/$1/package.json" | head -1
+}
+
+# ---------------------------------------------------------------------------
+# Icons
+# ---------------------------------------------------------------------------
+
+require_file "$iconoir_src"
+
+shopt -s nullglob
+icon_sources=("$static_dir"/*.js "$templates_dir"/*.html)
+shopt -u nullglob
+if [[ ${#icon_sources[@]} -eq 0 ]]; then
+  echo "error: no JavaScript or template files found to scan." >&2
+  exit 1
+fi
 
 # Glyph classes the shipped UI actually references. The trailing [a-z-]*
 # requires at least one character after the dash so a comment mentioning
 # `iconoir-{name}` does not register as a usage.
 mapfile -t used_classes < <(
-  grep -ho 'iconoir-[a-z][a-z-]*' "$main_js" "$index_html" | sort -u
+  grep -ho 'iconoir-[a-z][a-z-]*' "${icon_sources[@]}" | sort -u
 )
 if [[ ${#used_classes[@]} -eq 0 ]]; then
-  echo "error: no iconoir- classes found in $main_js or $index_html." >&2
+  echo "error: no iconoir- classes found in $static_dir/*.js or" >&2
+  echo "$templates_dir/*.html." >&2
   exit 1
 fi
 
-iconoir_version="$(
-  sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' \
-    "$iconoir_pkg/package.json" | head -1
-)"
+iconoir_version="$(package_version iconoir)"
 if [[ -z $iconoir_version ]]; then
   echo "error: could not read the iconoir version from $iconoir_pkg." >&2
   exit 1
@@ -95,9 +124,10 @@ cat >"$tmp_file" <<EOF
  * Glyph alignment against adjacent text lives in static/css/base.css, not
  * here, so regenerating this file cannot drop it.
  *
- * To add an icon: reference its class in main.js or index.html, then run
- * \`make vendor-assets\`. To upgrade Iconoir: bump the pin in package.json,
- * run \`make packages-js && make vendor-assets\`, then \`make test\`.
+ * To add an icon: reference its class in any static/*.js file or template,
+ * then run \`make vendor-assets\`. To upgrade Iconoir: bump the pin in
+ * package.json, run \`make packages-js && make vendor-assets\`, then
+ * \`make test\`.
  */
 $shared_rules
 EOF
@@ -117,6 +147,33 @@ done
 mv "$tmp_file" "$iconoir_dest"
 trap - EXIT
 
-echo
 echo "Vendored ${#used_classes[@]} glyph(s) from iconoir $iconoir_version."
+echo
+
+# ---------------------------------------------------------------------------
+# Fonts
+# ---------------------------------------------------------------------------
+
+declare -A licensed_families=()
+
+for face in "${FONT_FACES[@]}"; do
+  read -r package family weight <<<"$face"
+  pkg_dir="node_modules/$package"
+  src="$pkg_dir/files/${family}-latin-${weight}-normal.woff2"
+  dest_dir="$static_dir/fonts/$family"
+
+  require_file "$src"
+  require_file "$pkg_dir/LICENSE"
+
+  mkdir -p "$dest_dir"
+  cp "$src" "$dest_dir/"
+  echo "font   $family $weight ($package $(package_version "$package"))"
+
+  if [[ -z ${licensed_families[$family]:-} ]]; then
+    cp "$pkg_dir/LICENSE" "$dest_dir/LICENSE"
+    licensed_families[$family]=1
+  fi
+done
+
+echo "Vendored ${#FONT_FACES[@]} font face(s)."
 echo "Run 'make test' to verify against the contract tests."

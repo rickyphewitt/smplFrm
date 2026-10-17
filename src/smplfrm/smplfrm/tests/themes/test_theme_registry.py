@@ -13,6 +13,7 @@ from smplfrm.themes import (
     get_theme_map,
     resolve,
 )
+from smplfrm.themes.base import Theme
 from smplfrm.themes.classic import ClassicTheme
 
 
@@ -38,6 +39,26 @@ class TestGetAllThemes(TestCase):
             self.assertTrue(hasattr(theme, "label"))
             self.assertTrue(hasattr(theme, "description"))
             self.assertTrue(hasattr(theme, "stylesheet"))
+            self.assertTrue(hasattr(theme, "preload_fonts"))
+
+
+class TestThemePreloadFontsAttribute(TestCase):
+    def test_preload_fonts_defaults_to_empty_tuple(self):
+        theme = Theme(id="x", label="X", description="d", stylesheet="css/x.css")
+        self.assertEqual(theme.preload_fonts, ())
+
+    def test_preload_fonts_is_stored_as_a_tuple(self):
+        theme = Theme(
+            id="x",
+            label="X",
+            description="d",
+            stylesheet="css/x.css",
+            preload_fonts=["fonts/a/a.woff2"],
+        )
+        self.assertEqual(theme.preload_fonts, ("fonts/a/a.woff2",))
+
+    def test_classic_preloads_no_fonts(self):
+        self.assertEqual(ClassicTheme().preload_fonts, ())
 
 
 class TestGetThemeMap(TestCase):

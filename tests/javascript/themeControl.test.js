@@ -135,7 +135,7 @@ describe('theme control (#setting-theme)', () => {
       okResponse(
         themesPage([
           { id: 'classic', label: 'Classic' },
-          { id: 'gallery', label: 'Gallery' },
+          { id: 'dusk', label: 'Dusk' },
         ]),
       ),
     );
@@ -145,7 +145,7 @@ describe('theme control (#setting-theme)', () => {
 
     const select = document.getElementById('setting-theme');
     const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(['classic', 'gallery']);
+    expect(values).toEqual(['classic', 'dusk']);
   });
 
   it('follows links.next across multiple pages', async () => {
@@ -158,7 +158,7 @@ describe('theme control (#setting-theme)', () => {
         ),
       )
       .mockResolvedValueOnce(
-        okResponse(themesPage([{ id: 'gallery', label: 'Gallery' }])),
+        okResponse(themesPage([{ id: 'dusk', label: 'Dusk' }])),
       );
 
     const mod = await import(MAIN);
@@ -166,7 +166,7 @@ describe('theme control (#setting-theme)', () => {
 
     const select = document.getElementById('setting-theme');
     const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(['classic', 'gallery']);
+    expect(values).toEqual(['classic', 'dusk']);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -191,9 +191,9 @@ describe('theme control (#setting-theme)', () => {
     expect(document.getElementById('setting-theme').options.length).toBe(10);
   });
 
-  describe('load order independence (FR-42)', () => {
+  describe('load order independence', () => {
     it('selects the stored theme when the config response settles first', async () => {
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       const mod = await import(MAIN);
       await mod.loadConfig();
 
@@ -201,13 +201,13 @@ describe('theme control (#setting-theme)', () => {
         okResponse(
           themesPage([
             { id: 'classic', label: 'Classic' },
-            { id: 'gallery', label: 'Gallery' },
+            { id: 'dusk', label: 'Dusk' },
           ]),
         ),
       );
       await mod.loadThemeOptions();
 
-      expect(document.getElementById('setting-theme').value).toBe('gallery');
+      expect(document.getElementById('setting-theme').value).toBe('dusk');
     });
 
     it('selects the stored theme when the themes response settles first', async () => {
@@ -215,47 +215,47 @@ describe('theme control (#setting-theme)', () => {
         okResponse(
           themesPage([
             { id: 'classic', label: 'Classic' },
-            { id: 'gallery', label: 'Gallery' },
+            { id: 'dusk', label: 'Dusk' },
           ]),
         ),
       );
       const mod = await import(MAIN);
       await mod.loadThemeOptions();
 
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       await mod.loadConfig();
 
-      expect(document.getElementById('setting-theme').value).toBe('gallery');
+      expect(document.getElementById('setting-theme').value).toBe('dusk');
     });
 
     it('an immediate save after load does not change the stored theme', async () => {
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       global.fetch.mockResolvedValueOnce(
         okResponse(
           themesPage([
             { id: 'classic', label: 'Classic' },
-            { id: 'gallery', label: 'Gallery' },
+            { id: 'dusk', label: 'Dusk' },
           ]),
         ),
       );
       const mod = await import(MAIN);
       await Promise.all([mod.loadConfig(), mod.loadThemeOptions()]);
 
-      expect(document.getElementById('setting-theme').value).toBe('gallery');
+      expect(document.getElementById('setting-theme').value).toBe('dusk');
 
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       await mod.saveConfig();
 
       const putCall = global.fetch.mock.calls.find(
         (call) => call[1]?.method === 'PUT',
       );
-      expect(JSON.parse(putCall[1].body).data.attributes.theme).toBe('gallery');
+      expect(JSON.parse(putCall[1].body).data.attributes.theme).toBe('dusk');
     });
   });
 
-  describe('degraded state on themes-fetch failure (FR-26)', () => {
+  describe('degraded state on themes-fetch failure', () => {
     it('shows the stored theme as the only option and reports a view error', async () => {
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       global.fetch.mockResolvedValueOnce(errorResponse(500, 'boom'));
 
       const mod = await import(MAIN);
@@ -263,18 +263,18 @@ describe('theme control (#setting-theme)', () => {
 
       const select = document.getElementById('setting-theme');
       expect(select.options.length).toBe(1);
-      expect(select.value).toBe('gallery');
+      expect(select.value).toBe('dusk');
       expect(placeholders().length).toBeGreaterThan(0);
     });
 
     it('still allows saving other settings after a themes-fetch failure', async () => {
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       global.fetch.mockResolvedValueOnce(errorResponse(500, 'boom'));
 
       const mod = await import(MAIN);
       await Promise.all([mod.loadConfig(), mod.loadThemeOptions()]);
 
-      global.fetch.mockResolvedValueOnce(okResponse(configResponse('gallery')));
+      global.fetch.mockResolvedValueOnce(okResponse(configResponse('dusk')));
       const result = await mod.saveConfig();
 
       expect(result).toBe(true);
@@ -298,7 +298,7 @@ describe('theme control (#setting-theme)', () => {
       // built when the config finally arrives. A 500 rather than a 429 keeps
       // resilientFetch's retry/sleep chain out of the test.
       let releaseConfig;
-      const configDoc = okResponse(configResponse('gallery'));
+      const configDoc = okResponse(configResponse('dusk'));
       global.fetch.mockImplementation((url) => {
         if (String(url).includes('/themes')) {
           return Promise.resolve(errorResponse(500, 'themes down'));
@@ -316,12 +316,12 @@ describe('theme control (#setting-theme)', () => {
 
       const select = document.getElementById('setting-theme');
       expect(select.options.length).toBe(1);
-      expect(select.value).toBe('gallery');
+      expect(select.value).toBe('dusk');
     });
 
     it('still saves unrelated settings when the themes failure settles first', async () => {
       let releaseConfig;
-      const configDoc = okResponse(configResponse('gallery'));
+      const configDoc = okResponse(configResponse('dusk'));
       global.fetch.mockImplementation((url) => {
         if (String(url).includes('/themes')) {
           return Promise.resolve(errorResponse(500, 'themes down'));
@@ -338,7 +338,7 @@ describe('theme control (#setting-theme)', () => {
       await settled;
 
       global.fetch.mockImplementation(() =>
-        Promise.resolve(okResponse(configResponse('gallery'))),
+        Promise.resolve(okResponse(configResponse('dusk'))),
       );
       const result = await mod.saveConfig();
 
@@ -348,7 +348,7 @@ describe('theme control (#setting-theme)', () => {
       );
       // An empty value here would be rejected by the serializer, taking every
       // other setting in the same payload down with it.
-      expect(JSON.parse(putCall[1].body).data.attributes.theme).toBe('gallery');
+      expect(JSON.parse(putCall[1].body).data.attributes.theme).toBe('dusk');
     });
   });
 });

@@ -34,6 +34,7 @@ class IndexView(TemplateView):
             "timezones": sorted(available_timezones()),
             "version": VersionService().get_version(),
             "theme_stylesheet": theme.stylesheet,
+            "theme_preload_fonts": theme.preload_fonts,
         }
 
         return context
