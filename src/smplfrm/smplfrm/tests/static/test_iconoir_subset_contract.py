@@ -1,14 +1,14 @@
 """Contract test for the vendored Iconoir icon subset.
 
-static/icons/iconoir.css is a hand-maintained subset of the npm "iconoir"
-package, containing only the glyphs smplFrm actually uses. Two kinds of drift
-are possible and both are guarded here:
+static/icons/iconoir.css is a generated subset of the npm "iconoir" package,
+containing only the glyphs smplFrm actually uses. Two kinds of drift are
+possible and both are guarded here:
 
-1. A glyph class referenced in main.js or templates/index.html but missing
-   from the vendored subset. The browser then renders a plain colored square
-   instead of the icon (the base `*[class^='iconoir-']::before` rule sets size
-   and background, but with no `mask-image` for that class there is nothing to
-   mask it into a shape).
+1. A glyph class referenced in the app JavaScript under static/ or in a
+   template but missing from the vendored subset. The browser then renders a
+   plain colored square instead of the icon (the base
+   `*[class^='iconoir-']::before` rule sets size and background, but with no
+   `mask-image` for that class there is nothing to mask it into a shape).
 2. A vendored rule that no longer matches the pinned upstream package,
    because it was edited by hand or copied from a different version. That
    check runs only when node_modules is present (CI installs it before the
@@ -42,15 +42,25 @@ def _rules_by_class(css_text):
 
 class TestIconoirSubsetContract(SimpleTestCase):
     def setUp(self):
-        main_js = (STATIC_DIR / "main.js").read_text()
-        index_html = (TEMPLATES_DIR / "index.html").read_text()
-        self.used_icon_classes = set(ICON_CLASS_PATTERN.findall(main_js)) | set(
-            ICON_CLASS_PATTERN.findall(index_html)
+        # Same scope as scripts/vendor_assets.sh: every app-authored script and
+        # every template, so an icon added outside main.js is still vendored.
+        self.icon_sources = sorted(
+            [*STATIC_DIR.glob("*.js"), *TEMPLATES_DIR.glob("*.html")]
         )
+        self.used_icon_classes = set()
+        for path in self.icon_sources:
+            self.used_icon_classes |= set(ICON_CLASS_PATTERN.findall(path.read_text()))
 
         self.iconoir_css = ICONOIR_CSS_PATH.read_text()
         self.vendored_rules = _rules_by_class(self.iconoir_css)
         self.defined_icon_classes = set(self.vendored_rules)
+
+    def test_scan_includes_every_script_that_renders_icons(self):
+        """Guards the guard: the toast scripts render icons too."""
+        for name in ("main.js", "resilientFetch.js", "uiErrors.js"):
+            with self.subTest(script=name):
+                self.assertIn(STATIC_DIR / name, self.icon_sources)
+        self.assertIn(TEMPLATES_DIR / "index.html", self.icon_sources)
 
     def test_every_used_icon_class_has_a_mask_rule(self):
         missing = self.used_icon_classes - self.defined_icon_classes

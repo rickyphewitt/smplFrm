@@ -28,28 +28,26 @@ export function showRateLimitToast() {
     toast = document.createElement('div');
     toast.id = 'rate-limit-toast';
     toast.className = 'rate-limit-toast';
-    Object.assign(toast.style, {
-      position: 'fixed',
-      bottom: '80px',
-      right: '20px',
-      background: 'rgba(45, 55, 72, 0.92)',
-      color: '#cbd5e0',
-      padding: '12px 18px',
-      borderRadius: '8px',
-      fontSize: '13px',
-      zIndex: '10000',
-      opacity: '0',
-      pointerEvents: 'none',
-      transition: 'opacity 0.3s',
-      minWidth: '180px',
-    });
+    toast.style.opacity = '0';
+    toast.style.pointerEvents = 'none';
 
+    // Built from DOM nodes so every theme styles the glyph and link through
+    // CSS: placement lives in base.css and colors in the active theme.
     const text = document.createElement('span');
     text.id = 'rate-limit-toast-text';
-    text.innerHTML =
-      '⏳ Requests are temporarily rate-limited. ' +
-      '<a href="https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables#security" ' +
-      'target="_blank" style="color: #90cdf4; text-decoration: underline;">Increase the rate limit</a>';
+    const icon = document.createElement('i');
+    icon.className = 'iconoir-hourglass';
+    const link = document.createElement('a');
+    link.href =
+      'https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables#security';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Increase the rate limit';
+    text.append(
+      icon,
+      document.createTextNode(' Requests are temporarily rate-limited. '),
+      link,
+    );
     toast.appendChild(text);
     document.body.appendChild(toast);
   }

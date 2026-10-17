@@ -4,14 +4,12 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 /**
  * Geolocation Handler Tests
  *
- * The Weather plugin's 📍 button previously used the browser Geolocation API
- * (navigator.geolocation), which is unavailable on plain HTTP pages. Since
- * smplFrm is typically served over HTTP on local networks (e.g. Raspberry Pi),
- * the button silently did nothing — no error, no feedback, no fallback.
- *
- * The fix replaces the Geolocation API with a simple window.open to latlong.net,
- * giving users a reliable way to look up coordinates regardless of protocol.
- * Client-side coordinate validation was also added to catch invalid input before save.
+ * The Weather plugin's coordinate lookup button opens latlong.net in a new
+ * tab rather than calling the browser Geolocation API. smplFrm is usually
+ * served over plain HTTP on a local network (e.g. a Raspberry Pi), where
+ * navigator.geolocation is unavailable, so the API would fail silently.
+ * Opening a lookup page works regardless of protocol, and client-side
+ * coordinate validation catches malformed input before save.
  */
 
 let PLUGIN_ACTION_HANDLERS;
@@ -61,8 +59,8 @@ beforeAll(async () => {
   validateCoordinates = mod.validateCoordinates;
 });
 
-describe('Bug Condition: Silent Failure on 📍 Button Click', () => {
-  it('should call window.open with latlong.net when 📍 button is clicked (HTTP context)', () => {
+describe('Coordinate lookup button click (HTTP context)', () => {
+  it('should call window.open with latlong.net when the lookup button is clicked (HTTP context)', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     const input = document.createElement('input');
@@ -76,7 +74,27 @@ describe('Bug Condition: Silent Failure on 📍 Button Click', () => {
     openSpy.mockRestore();
   });
 
-  it('should provide visible feedback by changing button text on click', () => {
+  it('should provide visible feedback by changing the button icon on click', () => {
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+
+    const btn = PLUGIN_ACTION_HANDLERS.geolocation(input);
+    expect(btn.querySelector('i.iconoir-map-pin')).not.toBeNull();
+
+    btn.click();
+
+    // After click, the map-pin glyph is swapped for a globe to show the
+    // lookup page was opened.
+    expect(btn.querySelector('i.iconoir-map-pin')).toBeNull();
+    expect(btn.querySelector('i.iconoir-globe')).not.toBeNull();
+
+    vi.restoreAllMocks();
+  });
+
+  it('restores the map-pin icon after the feedback interval', () => {
+    vi.useFakeTimers();
     vi.spyOn(window, 'open').mockImplementation(() => null);
 
     const input = document.createElement('input');
@@ -84,12 +102,13 @@ describe('Bug Condition: Silent Failure on 📍 Button Click', () => {
 
     const btn = PLUGIN_ACTION_HANDLERS.geolocation(input);
     btn.click();
+    vi.advanceTimersByTime(1500);
 
-    // After click, button text should change from '📍' to provide visible feedback
-    // On unfixed code, the handler returns early so textContent stays '📍'
-    expect(btn.textContent).not.toBe('📍');
+    expect(btn.querySelector('i.iconoir-globe')).toBeNull();
+    expect(btn.querySelector('i.iconoir-map-pin')).not.toBeNull();
 
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 });
 
@@ -125,13 +144,14 @@ describe('Preservation: Button Creation and DOM Integration', () => {
     expect(btn.className).toBe('action-btn');
   });
 
-  it('returned button has textContent="📍"', () => {
+  it('returned button shows the map-pin icon', () => {
     const input = document.createElement('input');
     input.type = 'text';
 
     const btn = PLUGIN_ACTION_HANDLERS.geolocation(input);
 
-    expect(btn.textContent).toBe('📍');
+    expect(btn.children).toHaveLength(1);
+    expect(btn.firstElementChild.className).toBe('iconoir-map-pin');
   });
 
   it('returned button has a non-empty title attribute', () => {
@@ -175,7 +195,7 @@ describe('Preservation: Button Creation and DOM Integration', () => {
       expect(btn).toBeInstanceOf(HTMLButtonElement);
       expect(btn.type).toBe('button');
       expect(btn.className).toBe('action-btn');
-      expect(btn.textContent).toBe('📍');
+      expect(btn.firstElementChild.className).toBe('iconoir-map-pin');
       expect(btn.title.length).toBeGreaterThan(0);
       // Input value must remain unchanged
       expect(input.value).toBe(config.value);

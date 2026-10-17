@@ -11,11 +11,27 @@ Tests the Themes JSON:API contract:
 - Strict query validation
 """
 
+from unittest.mock import patch
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
+import smplfrm.themes as themes
 from smplfrm.themes import get_all_themes
+from smplfrm.themes.base import Theme
+from smplfrm.themes.classic import ClassicTheme
+
+
+class _PreloadingTheme(Theme):
+    def __init__(self):
+        super().__init__(
+            id="preloading",
+            label="Preloading",
+            description="Declares a preload font",
+            stylesheet="css/base.css",
+            preload_fonts=("fonts/geist/geist-latin-400-normal.woff2",),
+        )
 
 
 class TestThemesListJsonApi(TestCase):
@@ -65,6 +81,16 @@ class TestThemesListJsonApi(TestCase):
 
         for resource in data["data"]:
             self.assertNotIn("stylesheet", resource["attributes"])
+
+    def test_list_does_not_expose_preload_fonts(self):
+        """Preload font paths are server-side detail and must never be serialized."""
+        with patch.object(themes, "THEME_REGISTRY", [ClassicTheme, _PreloadingTheme]):
+            response = self.client.get("/api/v1/themes")
+        data = response.json()
+
+        self.assertEqual(len(data["data"]), 2)
+        for resource in data["data"]:
+            self.assertEqual(set(resource["attributes"]), {"label", "description"})
 
     def test_list_does_not_emit_included(self):
         """No included compound documents."""

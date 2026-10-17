@@ -56,6 +56,41 @@ describe('rateLimitToast', () => {
       const toasts = document.querySelectorAll('#rate-limit-toast');
       expect(toasts.length).toBe(1);
     });
+
+    it('renders an hourglass glyph, the message, and the rate-limit link', () => {
+      showRateLimitToast();
+
+      const text = document.getElementById('rate-limit-toast-text');
+      expect(text.firstElementChild.tagName).toBe('I');
+      expect(text.firstElementChild.className).toBe('iconoir-hourglass');
+      expect(text.textContent).toBe(
+        ' Requests are temporarily rate-limited. Increase the rate limit',
+      );
+
+      const link = text.querySelector('a');
+      expect(link.getAttribute('href')).toBe(
+        'https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables#security',
+      );
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+    });
+
+    it('leaves colors, radius, and type to the stylesheets', () => {
+      showRateLimitToast();
+
+      const toast = document.getElementById('rate-limit-toast');
+      const link = toast.querySelector('a');
+      for (const prop of [
+        'background',
+        'color',
+        'borderRadius',
+        'fontSize',
+        'position',
+      ]) {
+        expect(toast.style[prop]).toBe('');
+      }
+      expect(link.getAttribute('style')).toBeNull();
+    });
   });
 
   describe('hideRateLimitToast', () => {
@@ -143,19 +178,15 @@ describe('rateLimitToast', () => {
       expect(toast.classList.contains('alert')).toBe(false);
     });
 
-    it('uses muted blue/gray background color', () => {
+    it('takes its colors from the active theme, not inline styles', () => {
       showRateLimitToast();
 
+      // The muted informational palette is declared in the theme stylesheet
+      // (`.rate-limit-toast` in theme-classic.css), so any theme can restyle it.
       const toast = document.getElementById('rate-limit-toast');
-      expect(toast.style.background).toBe('rgba(45, 55, 72, 0.92)');
-    });
-
-    it('uses light gray text color', () => {
-      showRateLimitToast();
-
-      const toast = document.getElementById('rate-limit-toast');
-      // jsdom normalizes hex to rgb
-      expect(toast.style.color).toBe('rgb(203, 213, 224)');
+      expect(toast.className).toBe('rate-limit-toast show');
+      expect(toast.style.background).toBe('');
+      expect(toast.style.color).toBe('');
     });
   });
 
@@ -197,18 +228,20 @@ describe('rateLimitToast', () => {
       expect(rateLimitToast.id).not.toBe('task-toast');
     });
 
-    it('is positioned at a different vertical offset than task toast', () => {
+    it('is placed by its own class rather than by inline offsets', () => {
       const taskToast = document.createElement('div');
       taskToast.id = 'task-toast';
-      taskToast.style.position = 'fixed';
-      taskToast.style.bottom = '20px';
+      taskToast.className = 'task-toast';
       document.body.appendChild(taskToast);
 
       showRateLimitToast();
 
+      // base.css stacks `.rate-limit-toast` above `.task-toast`; its
+      // contract test checks the offsets. No inline offset may override it.
       const rateLimitToast = document.getElementById('rate-limit-toast');
-      expect(rateLimitToast.style.bottom).toBe('80px');
-      expect(rateLimitToast.style.bottom).not.toBe(taskToast.style.bottom);
+      expect(rateLimitToast.classList.contains('rate-limit-toast')).toBe(true);
+      expect(rateLimitToast.classList.contains('task-toast')).toBe(false);
+      expect(rateLimitToast.style.bottom).toBe('');
     });
   });
 });

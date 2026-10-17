@@ -145,7 +145,8 @@ export function isSuppressed(error) {
  * Shows the action toast, creating `#app-toast` on first use.
  *
  * Follows the dynamic-creation pattern of `showRateLimitToast` in
- * `resilientFetch.js` so no template or CSS change is required. Stacked above
+ * `resilientFetch.js`. Placement lives in base.css and colors in the active
+ * theme, so JavaScript only toggles visibility. Stacked above
  * `#rate-limit-toast` (80px) and `#task-toast` (20px) so all three can be
  * visible at once. Never touches the task-toast elements.
  *
@@ -157,21 +158,8 @@ export function showActionToast(message) {
     toast = document.createElement('div');
     toast.id = 'app-toast';
     toast.className = 'app-toast';
-    Object.assign(toast.style, {
-      position: 'fixed',
-      bottom: '140px',
-      right: '20px',
-      background: 'rgba(45, 55, 72, 0.92)',
-      color: '#fed7d7',
-      padding: '12px 18px',
-      borderRadius: '8px',
-      fontSize: '13px',
-      zIndex: '10001',
-      opacity: '0',
-      pointerEvents: 'none',
-      transition: 'opacity 0.3s',
-      minWidth: '180px',
-    });
+    toast.style.opacity = '0';
+    toast.style.pointerEvents = 'none';
     document.body.appendChild(toast);
   }
 

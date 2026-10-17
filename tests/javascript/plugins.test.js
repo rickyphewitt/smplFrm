@@ -356,6 +356,63 @@ describe('Plugins Tab', () => {
     expect(inputs[1].value).toBe('F');
   });
 
+  it('should render password fields with an icon-only reveal toggle', async () => {
+    const mockData = makeJsonApiListResponse([
+      { id: 'spotify', name: 'Spotify', description: 'Now playing' },
+    ]);
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockData),
+    });
+
+    const mod = await import('../../src/smplfrm/smplfrm/static/main.js');
+    await mod.loadPlugins();
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          makeJsonApiDetailResponse({
+            id: 'spotify',
+            name: 'Spotify',
+            description: 'Now playing',
+            settings: { client_secret: 'test_secret' },
+            settings_schema: [
+              {
+                key: 'client_secret',
+                label: 'Client Secret',
+                type: 'password',
+              },
+            ],
+          }),
+        ),
+    });
+
+    const configBtn = document.querySelector('.plugin-configure-btn');
+    await configBtn.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const input = document.querySelector('[data-key="client_secret"]');
+    const reveal = document.querySelector('#plugin-detail-form .reveal-btn');
+    expect(input.type).toBe('password');
+    expect(reveal).not.toBeNull();
+
+    // The glyph is the only content; the accessible name comes from
+    // aria-label, so no visible text is needed.
+    expect(reveal.children).toHaveLength(1);
+    expect(reveal.firstElementChild.className).toBe('iconoir-eye');
+    expect(reveal.textContent).toBe('');
+    expect(reveal.getAttribute('aria-label')).toBe('Show password');
+
+    reveal.click();
+    expect(input.type).toBe('text');
+    expect(reveal.getAttribute('aria-label')).toBe('Hide password');
+
+    reveal.click();
+    expect(input.type).toBe('password');
+    expect(reveal.getAttribute('aria-label')).toBe('Show password');
+  });
+
   it('should PUT plugin settings when detail save is clicked', async () => {
     const mockData = makeJsonApiListResponse([
       { id: 'p1', name: 'weather', description: 'Weather data' },

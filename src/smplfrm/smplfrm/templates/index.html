@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <title>smplFrm</title>
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    {% for font in theme_preload_fonts %}
+    <link rel="preload" href="{% static font %}" as="font" type="font/woff2" crossorigin>
+    {% endfor %}
     <!-- OSS Icons from https://www.npmjs.com/package/iconoir, pinned at the version in package.json -->
     <link rel="stylesheet" href="{% static 'icons/iconoir.css' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
@@ -257,7 +260,7 @@
         <div class="tab-content" id="tab-about">
             <div class="settings-section">
                 <h3>smplFrm</h3>
-                <p style="color: #aaa; line-height: 1.6; margin-bottom: 20px;">
+                <p class="about-description">
                     Digital photo frame for displaying photos on any device with a web browser.
                 </p>
                 <div class="setting-item">
@@ -265,12 +268,12 @@
                     <span>
                         {% if version and version != "unknown" %}
                             {% if version|first == "v" %}
-                                <a href="https://github.com/rickyphewitt/smplFrm/releases/tag/{{ version }}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">{{ version }}</a>
+                                <a href="https://github.com/rickyphewitt/smplFrm/releases/tag/{{ version }}" target="_blank" rel="noopener noreferrer" class="about-link">{{ version }}</a>
                             {% else %}
-                                <a href="https://github.com/rickyphewitt/smplFrm/commit/{{ version }}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">{{ version }}</a>
+                                <a href="https://github.com/rickyphewitt/smplFrm/commit/{{ version }}" target="_blank" rel="noopener noreferrer" class="about-link">{{ version }}</a>
                             {% endif %}
                         {% else %}
-                            <span style="color: #aaa;">unknown</span>
+                            <span class="about-muted">unknown</span>
                         {% endif %}
                     </span>
                 </div>
@@ -279,11 +282,11 @@
                 <h3>Links</h3>
                 <div class="setting-item">
                     <label>GitHub</label>
-                    <a href="https://github.com/rickyphewitt/smplFrm" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">rickyphewitt/smplFrm →</a>
+                    <a href="https://github.com/rickyphewitt/smplFrm" target="_blank" rel="noopener noreferrer" class="about-link">rickyphewitt/smplFrm →</a>
                 </div>
                 <div class="setting-item">
                     <label>Wiki</label>
-                    <a href="https://github.com/rickyphewitt/smplFrm/wiki" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">smplFrm Wiki →</a>
+                    <a href="https://github.com/rickyphewitt/smplFrm/wiki" target="_blank" rel="noopener noreferrer" class="about-link">smplFrm Wiki →</a>
                 </div>
             </div>
         </div>

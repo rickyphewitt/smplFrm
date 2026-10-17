@@ -24,6 +24,7 @@ src/smplfrm/smplfrm/
   static/          # JS, CSS, and static assets
     css/           # base.css (structural, theme-neutral) plus one file per theme
     icons/         # Vendored icon font subset with license file
+    fonts/         # Vendored theme font faces (woff2) with OFL licenses
   tests/           # Test suite mirroring source structure
     models/
     services/
@@ -76,16 +77,26 @@ Every theme must satisfy, and review enforces:
 6. One accent hue and one corner-radius scale
 7. No theme-dependent JavaScript
 
+### Hooks available to themes
+Theme-neutral signals `main.js` provides for every theme; a theme may use or ignore each one:
+- `--progress` on `#progress-bar`: a 0 to 1 number, updated on a 100-step interval per photo
+- `body.photo-changed`: replayed (removed, reflowed, re-added) each time a new photo is shown, after its photo date is in place, so `body.photo-changed #bottom-bar { animation: ... }` restarts on every photo
+- Corner toasts (`.task-toast`, `.rate-limit-toast`, `.app-toast`) are placed and stacked by `base.css`; JavaScript only toggles their visibility, so a theme styles them with ordinary selectors
+
+### Theme fonts
+Each theme owns its typefaces (the icon font is shared). Faces are vendored from pinned `@fontsource/*` npm packages by `make vendor-assets`, which copies the Latin `woff2` files listed in `FONT_FACES` in `scripts/vendor_assets.sh`, plus each family's OFL license, into `static/fonts/<family>/`. The theme stylesheet declares its own `@font-face` rules with `font-display: swap`. Faces needed before first paint go in the theme's `preload_fonts`, which the template emits as `<link rel="preload" as="font" crossorigin>` ahead of the stylesheets.
+
 ### Adding a theme
-1. Add a CSS file under `static/css/` with the theme's colors, type, radii, and shadows, styled against the markup superset in `templates/index.html`
-2. Add a `Theme` subclass under `smplfrm/themes/` declaring `id`, `label`, `description`, and `stylesheet`
+1. Add a CSS file under `static/css/` with the theme's colors, type, radii, and shadows, styled against the shared markup in `templates/index.html` (the element ids, classes, and `data-*` hooks `main.js` reads; a theme never changes the template)
+2. Add a `Theme` subclass under `smplfrm/themes/` declaring `id`, `label`, `description`, and `stylesheet`, plus `preload_fonts` if it uses webfonts
 3. Add the class to `THEME_REGISTRY` in `smplfrm/themes/__init__.py`
-4. Add a row to the theme table in this document
+4. If the theme uses webfonts, add its faces to `FONT_FACES` in `scripts/vendor_assets.sh`, pin the `@fontsource/*` package in `package.json`, and run `make vendor-assets`
+5. Add a row to the theme table in this document
 
 No migration, no template change, no JavaScript change, and no API change: the theme appears in `GET /api/v1/themes` and the Display tab dropdown because both are generated from the registry.
 
 ### Retiring a theme
-Delete its CSS file and its registry entry. Configs still storing that theme's id resolve to the default theme through `resolve()`'s fallback, with a logged warning, rather than rendering unstyled.
+Delete its CSS file and its registry entry, and remove any faces only it uses from `FONT_FACES` and `static/fonts/`. Configs still storing that theme's id resolve to the default theme through `resolve()`'s fallback, with a logged warning, rather than rendering unstyled.
 
 | Theme id | Label | Status |
 |----------|-------|--------|

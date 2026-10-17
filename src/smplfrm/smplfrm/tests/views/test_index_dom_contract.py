@@ -5,14 +5,15 @@ class, and data-* attribute actually read by `main.js` or `tests/javascript/`
 is present in the rendered markup, plus the CSS keyframe names `main.js`
 assigns as animation strings.
 
-This is a standing guard against accidental markup drift during the theme
-split: a theme is only a stylesheet, so none of these hooks may move, be
-renamed, or disappear as stylesheets are extracted and themes are added.
+Every theme is only a stylesheet applied to this one template, so these
+hooks are the interface between the markup, main.js, and every theme. None
+of them may move, be renamed, or disappear when a stylesheet changes or a
+theme is added.
 
-The dead wrappers `#top-bar`, `#top-left-box`, `#top-center-box`, and
-`#top-right-box` were removed from the template; they were referenced only
-by CSS and the template, never by JavaScript or a JS test, and are asserted
-absent below.
+The page also must not carry the unused layout wrappers `#top-bar`,
+`#top-left-box`, `#top-center-box`, and `#top-right-box`. Nothing in
+JavaScript reads them, and a theme that relied on them for inherited styles
+would break in any template that omits them, so their absence is asserted.
 """
 
 import re
@@ -113,7 +114,7 @@ EXPECTED_KEYFRAMES = [
 
 
 class TestIndexDomContract(TestCase):
-    """Guards the frozen DOM contract that `main.js` and the JS suite rely on."""
+    """Guards the DOM hooks that `main.js` and the JS suite rely on."""
 
     def setUp(self):
         Config.objects.all().delete()
@@ -191,8 +192,8 @@ class TestIndexSelfContainment(TestCase):
                 self.assertNotIn(forbidden, content)
 
 
-class TestIndexMarkupSuperset(TestCase):
-    """Guards the markup superset: dead wrappers removed, hooks theme-neutral."""
+class TestIndexSharedMarkup(TestCase):
+    """Guards the shared markup: no unused wrappers, well-formed theme-neutral hooks."""
 
     def setUp(self):
         Config.objects.all().delete()
@@ -205,17 +206,17 @@ class TestIndexMarkupSuperset(TestCase):
             image_transition_type="fade",
         )
 
-    def test_dead_wrappers_removed(self):
+    def test_unused_wrappers_absent(self):
         response = self.client.get("/")
         content = response.content.decode()
-        for removed_id in (
+        for wrapper_id in (
             "top-bar",
             "top-left-box",
             "top-center-box",
             "top-right-box",
         ):
-            with self.subTest(removed_id=removed_id):
-                self.assertNotIn(f'id="{removed_id}"', content)
+            with self.subTest(wrapper_id=wrapper_id):
+                self.assertNotIn(f'id="{wrapper_id}"', content)
 
     def test_spotify_bar_is_not_self_closed(self):
         """The spotify-bar div must open and close separately.
