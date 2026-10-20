@@ -101,6 +101,7 @@ Delete its CSS file and its registry entry, and remove any faces only it uses fr
 | Theme id | Label | Status |
 |----------|-------|--------|
 | `classic` | Classic | Default |
+| `gallery` | Gallery | Beta: opt-in |
 
 ## API Conventions
 - REST API under `/api/v1/`

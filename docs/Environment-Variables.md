@@ -22,7 +22,7 @@ Environment variables seed the initial configuration on first startup. After tha
 | `SMPL_FRM_IMAGE_FILL_MODE` | `blur` | Aspect ratio fill: `blur`, `border`, or `zoom_to_fill`. |
 | `SMPL_FRM_IMAGE_ZOOM_EFFECT` | `True` | Enable slow zoom animation on images. |
 | `SMPL_FRM_IMAGE_TRANSITION_TYPE` | `random` | Transition effect: `fade`, `slide-left`, `slide-right`, `zoom`, `none`, or `random`. |
-| `SMPL_FRM_THEME` | `classic` | Visual theme id, applied on first config creation only. Must match a registered theme id (see [Settings](Settings#display)); an unknown value falls back to the default theme and logs a warning rather than failing startup. |
+| `SMPL_FRM_THEME` | `classic` | Visual theme id (`classic`, or `gallery` for the beta Gallery theme), applied on first config creation only. Must match a registered theme id (see [Settings](Settings#display)); an unknown value falls back to the default theme and logs a warning rather than failing startup. |
 
 ## Infrastructure
 

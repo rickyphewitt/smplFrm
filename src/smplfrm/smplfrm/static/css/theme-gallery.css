@@ -1,0 +1,903 @@
+/*
+ * Gallery theme: the photograph is the work, and everything else reads as
+ * the wall label beside it.
+ *
+ * Frame: one bottom-left label block (photo date in EB Garamond, a short
+ * hairline, then date, time, and temperature on one line, the track below)
+ * over a bottom scrim, a 2px progress hairline, and a faint logo. No pills,
+ * no cards, no backdrop-filter.
+ * Settings: a full-height panel docked to the left edge, typeset rather
+ * than boxed.
+ *
+ * Loaded after base.css, which supplies the structural layer. Every color
+ * literal lives in the :root block, every corner uses --r, and the only
+ * animated properties are transform and opacity. Satisfies the theme
+ * contract in ai/architecture.md.
+ */
+
+/* Typefaces: Latin-subset woff2 vendored under static/fonts/ by
+ * `make vendor-assets`. The two faces drawn on the frame are preloaded via
+ * GalleryTheme.preload_fonts, so these URLs must resolve to the same paths.
+ *
+ * The "Fallback" faces are local system fonts rescaled to the web fonts'
+ * average glyph width and vertical metrics, so text keeps its size and line
+ * positions while a web font is still loading (font-display: swap) and the
+ * swap causes no layout shift. Overrides follow the size-adjust method used
+ * by capsize and next/font: EB Garamond against Times New Roman, Geist
+ * against Arial. Liberation Serif and Liberation Sans share those metrics,
+ * which covers Linux kiosks. */
+@font-face {
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/eb-garamond/eb-garamond-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/geist/geist-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/geist/geist-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'EB Garamond Fallback';
+    src: local('Times New Roman'), local('Times'), local('Liberation Serif');
+    size-adjust: 94.77%;
+    ascent-override: 106.26%;
+    descent-override: 31.44%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: 'Geist Fallback';
+    src: local('Arial'), local('Helvetica'), local('Liberation Sans');
+    size-adjust: 104.76%;
+    ascent-override: 95.94%;
+    descent-override: 28.16%;
+    line-gap-override: 0%;
+}
+
+/* Tokens. Contrast ratios are against --bg unless noted. */
+:root {
+    color-scheme: dark;
+
+    --bg: #0b0b0c;              /* page and panel surface */
+    --raised: #131315;          /* inputs and toasts */
+    --text: #f2efe9;            /* primary text, all frame text, 17.1:1 */
+    --dim: #b4afa6;             /* panel secondary text, 9.0:1 */
+    --faint: #8b8780;           /* panel table headers and quiet controls, 5.5:1 */
+    --line: #26262a;            /* hairlines and borders */
+    --line-strong: #3b3b42;     /* hover borders and dashed edit underline */
+    --track: #2c2c31;           /* toggle track when off; the knob holds 12.1:1 */
+
+    /* One accent hue as exactly two tokens. --accent is the only accent
+     * allowed as text or as a line on --bg (7.4:1). --accent-fill is the
+     * only accent allowed as a fill behind a white label (4.9:1). */
+    --accent: #9b92f7;
+    --accent-fill: #6a5cea;
+    --on-fill: #ffffff;         /* labels on --accent-fill */
+
+    --warn: #e8b53f;            /* expiry and degraded-plugin indicators */
+    --bad: #d4625a;             /* error and failed states, 5.3:1 */
+    --bad-wash: rgb(212 98 90 / 0.08);
+
+    /* Frame hairlines, all bone at reduced opacity. */
+    --rule: rgb(242 239 233 / 0.45);
+    --rule-faint: rgb(242 239 233 / 0.3);
+    --progress-line: rgb(242 239 233 / 0.55);
+
+    --backdrop: rgb(0 0 0 / 0.5);
+
+    /* Bottom scrim. Dense enough across the whole label bounding box that
+     * --text stays above 4.5:1 over a pure white photograph: at least 0.62
+     * effective black (5.4:1) where the label's top edge sits, and 0.76 or
+     * more (9.4:1) behind most of it. */
+    --scrim: linear-gradient(
+        to top,
+        rgb(0 0 0 / 0.88),
+        rgb(0 0 0 / 0.76) 46%,
+        rgb(0 0 0 / 0.3) 76%,
+        rgb(0 0 0 / 0) 100%
+    );
+
+    --r: 2px;                   /* the single corner radius */
+
+    --serif: 'EB Garamond', 'EB Garamond Fallback', Georgia, serif;
+    --sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, sans-serif;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+    font-family: var(--sans);
+    color: var(--text);
+    background-color: var(--bg);
+}
+
+/* Widths and heights below are the rendered size, padding and border
+ * included, so a 196px input is 196px on screen. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* ----- Frame surface ----- */
+
+#middle-section {
+    background-color: var(--bg);
+}
+
+/* The scrim is drawn by the photo container itself, layered above the
+ * photographs (z-index 150) and below every overlay (200 and up), so it needs
+ * no element of its own. It is absent until the first photo is in place, and
+ * absent whenever neither the label block nor the track is showing (the
+ * Minimal preset), so it never darkens a photo for nothing. main.js hides
+ * both bars with an inline `display: none`, which is what the `:has()` rule
+ * reads; browsers without `:has()` simply keep the scrim.
+ *
+ * The 300px floor keeps the label covered on short viewports, such as a
+ * landscape phone, where 40% of the height would end below the label. */
+#image-container::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: max(40%, 300px);
+    background: var(--scrim);
+    pointer-events: none;
+    z-index: 175;
+}
+
+#image-container:empty::after {
+    display: none;
+}
+
+body:has(#bottom-bar[style*='display: none']):has(#spotify-bar[style*='display: none'])
+    #image-container::after {
+    display: none;
+}
+
+/* Label block. The photo date takes its own line via flex-basis, and the
+ * separator that would have followed it is dropped. */
+#bottom-bar {
+    left: 56px;
+    right: auto;
+    bottom: 94px;
+    transform: none;
+    padding: 0;
+    max-width: calc(100% - 112px);
+    flex-wrap: wrap;
+    gap: 16px;
+    text-align: left;
+    font-size: 13px;
+}
+
+#photo-date-group {
+    flex-basis: 100%;
+    position: relative;
+    padding-bottom: 16px;
+    font-family: var(--serif);
+    font-size: 40px;
+    font-weight: 400;
+    line-height: 1.12;
+}
+
+#photo-date-group::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 46px;
+    height: 1px;
+    background: var(--rule);
+}
+
+#photo-date-group + .group-separator {
+    display: none;
+}
+
+#current-date-group,
+#current-time-group,
+#weather-group {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+}
+
+.group-separator {
+    width: 1px;
+    height: 12px;
+    background: var(--rule-faint);
+}
+
+/* A wall label carries no icons: date, time, and temperature are clear from
+ * their format. The one exception is the degraded-weather warning, which is
+ * a state rather than decoration; without it, "weather unavailable" would
+ * look identical to "weather disabled". */
+#bottom-bar [class^='iconoir-'],
+#bottom-bar [class*=' iconoir-'] {
+    display: none;
+}
+
+#bottom-bar .weather-warning-icon {
+    display: inline-block;
+    color: var(--warn);
+}
+
+/* Track line, on its own line below the label. Clipped short of the logo so
+ * a long title never runs underneath it. */
+#spotify-bar {
+    top: auto;
+    left: 56px;
+    right: 96px;
+    bottom: 52px;
+    padding: 0;
+    gap: 9px;
+    overflow: hidden;
+    font-size: 14px;
+    color: var(--text);
+}
+
+#spotify-bar a,
+#spotify-bar a:link,
+#spotify-bar a:visited,
+#spotify-bar a:active {
+    color: var(--text);
+}
+
+.spotify-icon-container {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.spotify-icon {
+    font-size: 15px;
+    color: var(--text);
+}
+
+.spotify-reconnect-link .spotify-icon,
+.spotify-reconnect-link span {
+    color: var(--warn);
+}
+
+/* Entrance on each new photo, replayed by the `body.photo-changed` hook in
+ * main.js. The track follows the label by 120ms. */
+body.photo-changed #bottom-bar,
+body.photo-changed #spotify-bar {
+    animation: galleryLabelIn 900ms var(--ease-out) both;
+}
+
+body.photo-changed #spotify-bar {
+    animation-delay: 120ms;
+}
+
+@keyframes galleryLabelIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+}
+
+/* Progress: a hairline along the bottom edge, drawn with scaleX so the
+ * animation stays on the compositor. */
+.progress-bar {
+    top: auto;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--progress-line);
+    transform-origin: left center;
+    transform: scaleX(var(--progress, 1));
+    transition: transform 1s linear;
+}
+
+/* Logo: bottom right, faint until hovered or focused. */
+.logo-icon {
+    top: auto;
+    left: auto;
+    right: 36px;
+    bottom: 34px;
+    width: 30px;
+    height: 30px;
+    opacity: 0.38;
+    transition: opacity 180ms ease;
+}
+
+.logo-icon:hover,
+.logo-icon:focus-visible {
+    transform: none;
+    opacity: 1;
+}
+
+/* ----- Focus indicators -----
+ *
+ * Every interactive element gets a visible ring in the accent. The logo uses
+ * bone, since it sits on the photo rather than on the panel. The toggles
+ * need their own rule: base.css shrinks the real checkbox to nothing and
+ * draws `.slider` in its place. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.logo-icon:focus-visible {
+    outline-color: var(--text);
+}
+
+.editable:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.toggle-switch input:focus-visible + .slider {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ----- Settings panel: docked to the left edge ----- */
+
+.settings-modal {
+    background: var(--backdrop);
+}
+
+/* A flex column so the title, tab list, and actions stay put and only the
+ * active tab's content scrolls. */
+.modal-content {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(468px, 100%);
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    animation: galleryPanelIn 320ms var(--ease-out) both;
+}
+
+@keyframes galleryPanelIn {
+    from {
+        opacity: 0;
+        transform: translateX(-18px);
+    }
+}
+
+.modal-header {
+    flex: none;
+    align-items: baseline;
+    margin-bottom: 0;
+    padding: 40px 36px 20px;
+}
+
+.modal-header h2 {
+    font-family: var(--serif);
+    font-size: 31px;
+    font-weight: 400;
+    color: var(--text);
+}
+
+.close-btn {
+    font-size: 26px;
+    color: var(--faint);
+}
+
+.close-btn:hover {
+    color: var(--text);
+}
+
+/* Vertical tab list with a 2px accent marker on the active item. The
+ * negative margin pulls the marker into the gutter so the tab labels align
+ * with the panel title. */
+.modal-tabs {
+    flex: none;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0;
+    padding: 0 36px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.tab-btn {
+    margin: 0 0 0 -16px;
+    padding: 9px 0 9px 14px;
+    border-bottom: 0;
+    border-left: 2px solid transparent;
+    text-align: left;
+    font: inherit;
+    font-size: 14px;
+    color: var(--faint);
+    transition: none;
+}
+
+.tab-btn:hover {
+    color: var(--text);
+}
+
+.tab-btn.active {
+    color: var(--text);
+    border-left-color: var(--accent);
+}
+
+.tab-content {
+    padding: 30px 36px;
+}
+
+.tab-content.active {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-color: var(--line-strong) transparent;
+}
+
+.settings-section {
+    margin-bottom: 0;
+}
+
+.settings-section + .settings-section {
+    margin-top: 34px;
+}
+
+.settings-section h3 {
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--text);
+}
+
+.about-description {
+    max-width: 46ch;
+    margin: 0 0 18px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--dim);
+}
+
+/* Rows: label left, control right, one divider below each. */
+.setting-item {
+    gap: 18px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+}
+
+.setting-item label {
+    font-size: 14px;
+    color: var(--text);
+}
+
+/* Toggles */
+.toggle-switch {
+    flex: none;
+    width: 42px;
+    height: 22px;
+}
+
+.slider {
+    background: var(--track);
+    border-radius: var(--r);
+    transition: none;
+}
+
+.slider:before {
+    left: 3px;
+    bottom: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text);
+    border-radius: var(--r);
+    transition: transform 180ms ease;
+}
+
+input:checked + .slider {
+    background: var(--accent-fill);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Inputs */
+.select-input,
+.number-input input {
+    padding: 7px 9px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+}
+
+.timezone-input {
+    width: 196px;
+}
+
+.number-input input {
+    width: 86px;
+}
+
+.number-input span {
+    font-size: 12px;
+    color: var(--faint);
+}
+
+.reveal-btn {
+    color: var(--faint);
+}
+
+.action-btn {
+    padding: 4px 8px;
+    color: var(--faint);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+}
+
+.reveal-btn:hover,
+.action-btn:hover {
+    color: var(--text);
+}
+
+/* Buttons. Primary is the accent fill with a white label; secondary is a
+ * hairline outline. Each is as wide as its label rather than stretched
+ * across the row. A press nudges the button down a pixel. */
+.btn {
+    flex: none;
+    padding: 10px 18px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    border: 1px solid transparent;
+    border-radius: var(--r);
+    transition: transform 120ms ease;
+}
+
+.btn:hover {
+    transform: none;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-primary {
+    color: var(--on-fill);
+    background: var(--accent-fill);
+}
+
+.btn-primary:hover {
+    opacity: 0.88;
+}
+
+.btn-secondary {
+    color: var(--dim);
+    background: none;
+    border-color: var(--line);
+}
+
+.btn-secondary:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+}
+
+.modal-actions {
+    flex: none;
+    margin-top: 0;
+    padding: 20px 36px 30px;
+    border-top: 1px solid var(--line);
+}
+
+/* Form error band. Collapsed to nothing while hidden so it never reserves an
+ * empty strip at the bottom of the panel. */
+.error-message {
+    flex: none;
+    margin: 0 36px 26px;
+    padding: 11px 13px;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bad-wash);
+    border-left: 2px solid var(--bad);
+}
+
+.error-message:not(.show) {
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    overflow: hidden;
+}
+
+.ui-error-placeholder {
+    font-size: 13px;
+    color: var(--bad);
+}
+
+/* Spinners: a rotating hairline square, keeping to the one radius. */
+.spinner::after {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--line-strong);
+    border-top-color: var(--accent);
+    border-radius: var(--r);
+}
+
+.spinner-inline {
+    border: 1px solid var(--line-strong);
+    border-top-color: var(--text);
+    border-radius: var(--r);
+}
+
+/* Tables: one rule under the header row and one between rows, nothing
+ * else. */
+.task-table {
+    margin-bottom: 0;
+    font-size: 13px;
+}
+
+.task-table th,
+.task-table td {
+    font-size: 13px;
+}
+
+.task-table th {
+    padding: 0 10px 11px 0;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-bottom: 1px solid var(--line);
+}
+
+.task-table td {
+    padding: 13px 10px 13px 0;
+    color: var(--dim);
+}
+
+.task-table tbody tr + tr td {
+    border-top: 1px solid var(--line);
+}
+
+.task-table td:first-child {
+    color: var(--text);
+}
+
+.task-pagination {
+    justify-content: flex-start;
+    margin-top: 18px;
+}
+
+.task-pagination span {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--faint);
+}
+
+.badge-active {
+    padding: 0;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.delete-disabled {
+    opacity: 1;
+    color: var(--faint);
+}
+
+.editable {
+    border-bottom: 1px dashed var(--line-strong);
+}
+
+.editable:focus {
+    border-bottom: 1px solid var(--accent);
+}
+
+/* Links: bone text on an accent underline. */
+.task-table a,
+.about-link {
+    padding-bottom: 1px;
+    text-decoration: none;
+    color: var(--text);
+    border-bottom: 1px solid var(--accent);
+}
+
+.about-muted {
+    color: var(--faint);
+}
+
+/* ----- Toasts ----- */
+
+.task-toast,
+.rate-limit-toast,
+.app-toast {
+    font-size: 12px;
+    color: var(--dim);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+}
+
+.app-toast {
+    color: var(--text);
+    border-left: 2px solid var(--bad);
+}
+
+.rate-limit-toast a {
+    color: var(--accent);
+}
+
+.task-toast-track {
+    height: 2px;
+    margin-top: 10px;
+    background: var(--line);
+}
+
+/* main.js writes the bar's width directly; dropping base.css's width
+ * transition keeps every animated property to transform and opacity. */
+.task-toast-bar {
+    background: var(--accent);
+    transition: none;
+}
+
+/* ----- Responsive -----
+ *
+ * The max-width: 767px block applies only when the page declares a viewport
+ * width. templates/index.html has no viewport meta tag yet, so phones lay
+ * the page out at a 980px virtual width and this block does not take effect
+ * on them; it does apply to genuinely narrow desktop windows. */
+
+@media (max-width: 767px) {
+    #bottom-bar {
+        left: 20px;
+        bottom: 78px;
+        max-width: calc(100% - 40px);
+        gap: 12px;
+    }
+
+    #photo-date-group {
+        font-size: 29px;
+    }
+
+    #spotify-bar {
+        left: 20px;
+        right: 72px;
+        bottom: 44px;
+    }
+
+    .logo-icon {
+        right: 20px;
+        bottom: 34px;
+    }
+
+    .modal-content {
+        width: 100%;
+        border-right: 0;
+    }
+
+    .modal-header,
+    .modal-tabs,
+    .tab-content,
+    .modal-actions {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .modal-header {
+        padding-top: 28px;
+    }
+
+    .error-message {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+
+    /* The tab list becomes a horizontally scrollable row with a bottom
+     * marker instead of a left one. */
+    .modal-tabs {
+        flex-direction: row;
+        gap: 16px;
+        padding-bottom: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .tab-btn {
+        flex: none;
+        margin: 0;
+        padding: 10px 2px;
+        white-space: nowrap;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn.active {
+        border-bottom-color: var(--accent);
+    }
+
+    .timezone-input {
+        width: 160px;
+    }
+}
+
+@media (min-width: 1920px) {
+    #photo-date-group {
+        font-size: 56px;
+    }
+
+    #current-date-group,
+    #current-time-group,
+    #weather-group,
+    #spotify-bar {
+        font-size: 17px;
+    }
+}
+
+/* ----- Reduced motion -----
+ *
+ * Stops every animation and transition this theme introduces, plus the
+ * decorative ones it inherits (bar fade, Spotify pulse, spinners). The
+ * slideshow animations in base.css are user-configured display behaviour,
+ * not decoration, so they keep running. */
+@media (prefers-reduced-motion: reduce) {
+    body.photo-changed #bottom-bar,
+    body.photo-changed #spotify-bar,
+    .modal-content,
+    .bar-fade-in,
+    .spotify-expired,
+    .spinner::after,
+    .spinner-inline {
+        animation: none;
+    }
+
+    .logo-icon,
+    .btn,
+    .slider:before,
+    .progress-bar,
+    .task-toast,
+    .rate-limit-toast,
+    .app-toast,
+    .error-message {
+        transition: none;
+    }
+
+    .btn:active {
+        transform: none;
+    }
+}

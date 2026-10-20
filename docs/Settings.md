@@ -30,6 +30,13 @@ The Display tab controls what information is shown on the photo frame overlay.
 | Timezone | Timezone for the clock display. Searchable input with all IANA timezones. |
 | Theme | Visual theme for the display and settings panel. Populated from the server's theme registry. Takes effect on reload after saving. |
 
+Available themes:
+
+| Theme | Status | Description |
+|-------|--------|-------------|
+| Classic | Default | Translucent rounded bars over the photo, centered settings dialog. |
+| Gallery | Beta | A wall label in the bottom-left corner over a soft shadow at the bottom of the photo, and a settings panel docked to the left edge. |
+
 ## Images
 
 The Images tab controls image display timing, effects, and processing.
