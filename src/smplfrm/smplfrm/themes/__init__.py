@@ -11,10 +11,11 @@ later without a data migration.
 import logging
 
 from smplfrm.themes.classic import ClassicTheme
+from smplfrm.themes.gallery import GalleryTheme
 
 logger = logging.getLogger(__name__)
 
-THEME_REGISTRY = [ClassicTheme]
+THEME_REGISTRY = [ClassicTheme, GalleryTheme]
 
 # Single source of truth for both the model field default and the resolve()
 # fallback.
