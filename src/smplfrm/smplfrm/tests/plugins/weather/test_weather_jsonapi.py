@@ -540,3 +540,42 @@ class TestWeatherJsonApiMediaNegotiation(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "application/vnd.api+json")
+
+    @patch("smplfrm.plugins.weather.views.WeatherPlugin")
+    def test_accept_multiple_types_with_q_values_returns_jsonapi(self, mock_plugin_cls):
+        """An Accept list with q-values still selects the JSON:API renderer."""
+        mock_plugin = mock_plugin_cls.return_value
+        mock_plugin.get_for_display.return_value = {
+            "temperature": "72",
+            "temperature_scale": "F",
+            "daily_low": "55",
+            "daily_low_scale": "F",
+            "daily_high": "80",
+            "daily_high_scale": "F",
+        }
+
+        response = self.client.get(
+            self.url,
+            HTTP_ACCEPT="text/html;q=0.9, application/vnd.api+json, */*;q=0.8",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "application/vnd.api+json")
+        self.assertIn("data", response.json())
+
+    @patch("smplfrm.plugins.weather.views.WeatherPlugin")
+    def test_accept_header_beyond_token_limit_returns_406(self, mock_plugin_cls):
+        """Accept tokens past DRF's limit are ignored, so negotiation fails with 406.
+
+        DefaultContentNegotiation parses at most max_accept_tokens (64) media
+        types; the JSON:API type here is token 201, so no renderer matches and
+        the plugin is never reached.
+        """
+        mock_plugin = mock_plugin_cls.return_value
+        accept_parts = [f"application/x-test-{i};q=0.1" for i in range(200)]
+        accept_parts.append("application/vnd.api+json")
+
+        response = self.client.get(self.url, HTTP_ACCEPT=", ".join(accept_parts))
+
+        self.assertEqual(response.status_code, status.HTTP_406_NOT_ACCEPTABLE)
+        mock_plugin.get_for_display.assert_not_called()
