@@ -72,7 +72,7 @@ class WeatherPlugin(BasePlugin):
 
     def __init__(self) -> None:
         super().__init__(name="weather", description="Weather data")
-        self.redis_key = "weather"
+        self.redis_key = "weather:v2"
 
     def configure(self):
         """Load weather settings from DB."""
@@ -99,7 +99,6 @@ class WeatherPlugin(BasePlugin):
             forecast = await open_meteo.forecast(
                 latitude=self.lat,
                 longitude=self.long,
-                current_weather=True,
                 daily=[
                     DailyParameters.SUNRISE,
                     DailyParameters.SUNSET,
@@ -168,7 +167,7 @@ class WeatherPlugin(BasePlugin):
 
         if current_temp_index is not None:
             current_temp_value = self._get_current_temp(raw_data, current_temp_index)
-            if current_temp_value != "N/A":
+            if current_temp_value is not None and current_temp_value != "N/A":
                 weather_data["temperature"] = str(current_temp_value)
 
         daily_index = self._get_current_daily_index(raw_data, now)

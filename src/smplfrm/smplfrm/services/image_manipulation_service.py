@@ -228,7 +228,7 @@ class ImageManipulationService:
         scale_height_size, scale_width_size = self._determine_scaled_dimensions(
             target_width, target_height, image_w, image_h
         )
-        vert_border, horz_border = self._determine_border(
+        top, bottom, left, right = self._determine_border(
             scale_width_size, scale_height_size, target_width, target_height
         )
 
@@ -237,10 +237,10 @@ class ImageManipulationService:
         )
         resized_img = cv2.copyMakeBorder(
             resized_img,
-            horz_border,
-            horz_border,
-            vert_border,
-            vert_border,
+            top,
+            bottom,
+            left,
+            right,
             cv2.BORDER_REPLICATE,
             value=(0, 0, 0, 100),
         )
@@ -287,8 +287,11 @@ class ImageManipulationService:
 
     def _determine_border(
         self, scale_width: int, scale_height: int, target_width: int, target_height: int
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, int, int]:
         """Calculate border sizes to center scaled image.
+
+        An odd remainder puts the extra pixel on the bottom/right so the
+        bordered image exactly matches the target dimensions.
 
         Args:
             scale_width: Scaled image width
@@ -297,20 +300,15 @@ class ImageManipulationService:
             target_height: Target height
 
         Returns:
-            Tuple of (vertical_border, horizontal_border)
+            Tuple of (top, bottom, left, right) border sizes
         """
-        vertical_border = 0
-        horizontal_border = 0
+        width_gap = max(target_width - scale_width, 0)
+        height_gap = max(target_height - scale_height, 0)
 
-        if scale_width < target_width:
-            vertical_border = target_width - scale_width
-            vertical_border = int(vertical_border / 2)
+        left = width_gap // 2
+        top = height_gap // 2
 
-        if scale_height < target_height:
-            horizontal_border = target_height - scale_height
-            horizontal_border = int(horizontal_border / 2)
-
-        return vertical_border, horizontal_border
+        return top, height_gap - top, left, width_gap - left
 
     def _scale_by(self, scale_to: int, size_1: int, size_2: int) -> int:
         """Calculate scaled dimension maintaining aspect ratio.
