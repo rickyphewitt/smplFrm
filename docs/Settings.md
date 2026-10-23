@@ -1,6 +1,8 @@
 # Settings
 
-The settings modal can be accessed by clicking the SmplFrm icon in the top-right corner of the display. It contains tabs for Display, Images, Library, Presets, Plugins, Tasks, and About.
+The settings modal is opened by clicking the SmplFrm icon on the display, or by pressing Tab to focus it and then Enter. Where the icon sits depends on the active theme (see [Available themes](#display)): top-left in Classic, bottom-right in Gallery, where it is faint until you hover over or focus it. The modal contains tabs for Display, Images, Library, Presets, Plugins, Tasks, and About.
+
+The mouse cursor hides after 30 seconds without movement and comes back as soon as the mouse moves or clicks. It always stays visible while the settings modal is open.
 
 ## Error Messages
 
@@ -32,10 +34,10 @@ The Display tab controls what information is shown on the photo frame overlay.
 
 Available themes:
 
-| Theme | Status | Description |
-|-------|--------|-------------|
-| Classic | Default | Translucent rounded bars over the photo, centered settings dialog. |
-| Gallery | Beta | A wall label in the bottom-left corner over a soft shadow at the bottom of the photo, and a settings panel docked to the left edge. |
+| Theme | Status | Settings icon | Description |
+|-------|--------|---------------|-------------|
+| Classic | Default | Top-left | Translucent rounded bars over the photo, centered settings dialog. |
+| Gallery | Beta | Bottom-right, faint until hovered or focused | A wall label in the bottom-left corner over a soft shadow at the bottom of the photo, and a settings panel docked to the left edge. |
 
 ## Images
 

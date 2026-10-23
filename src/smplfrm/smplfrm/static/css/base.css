@@ -18,6 +18,15 @@ body {
   overflow: hidden;
 }
 
+/* main.js sets this class once the pointer has been still for 30 seconds,
+ * so a mouse left over the frame does not sit on the photo. It covers every
+ * element and overrides the `cursor: pointer` on buttons and links; the
+ * next movement removes the class. */
+body.cursor-idle,
+body.cursor-idle * {
+  cursor: none !important;
+}
+
 img {
     display: block;
     margin: auto;
