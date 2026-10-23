@@ -148,14 +148,14 @@ body {
  * reads; browsers without `:has()` simply keep the scrim.
  *
  * The 300px floor keeps the label covered on short viewports, such as a
- * landscape phone, where 40% of the height would end below the label. */
+ * landscape phone, where 30% of the height would end below the label. */
 #image-container::after {
     content: '';
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    height: max(40%, 300px);
+    height: max(30%, 300px);
     background: var(--scrim);
     pointer-events: none;
     z-index: 175;
@@ -175,12 +175,12 @@ body:has(#bottom-bar[style*='display: none']):has(#spotify-bar[style*='display: 
 #bottom-bar {
     left: 56px;
     right: auto;
-    bottom: 94px;
+    bottom: 72px;
     transform: none;
     padding: 0;
     max-width: calc(100% - 112px);
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 10px;
     text-align: left;
     font-size: 13px;
 }
@@ -188,11 +188,11 @@ body:has(#bottom-bar[style*='display: none']):has(#spotify-bar[style*='display: 
 #photo-date-group {
     flex-basis: 100%;
     position: relative;
-    padding-bottom: 16px;
+    padding-bottom: 10px;
     font-family: var(--serif);
-    font-size: 40px;
+    font-size: 36px;
     font-weight: 400;
-    line-height: 1.12;
+    line-height: 1.05;
 }
 
 #photo-date-group::after {
@@ -212,8 +212,8 @@ body:has(#bottom-bar[style*='display: none']):has(#spotify-bar[style*='display: 
 #current-date-group,
 #current-time-group,
 #weather-group {
-    font-size: 13px;
-    letter-spacing: 0.1em;
+    font-size: 12px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     font-variant-numeric: tabular-nums;
 }
@@ -244,7 +244,7 @@ body:has(#bottom-bar[style*='display: none']):has(#spotify-bar[style*='display: 
     top: auto;
     left: 56px;
     right: 96px;
-    bottom: 52px;
+    bottom: 40px;
     padding: 0;
     gap: 9px;
     overflow: hidden;
@@ -858,14 +858,14 @@ input:checked + .slider:before {
 
 @media (min-width: 1920px) {
     #photo-date-group {
-        font-size: 56px;
+        font-size: 40px;
     }
 
     #current-date-group,
     #current-time-group,
     #weather-group,
     #spotify-bar {
-        font-size: 17px;
+        font-size: 15px;
     }
 }
 
