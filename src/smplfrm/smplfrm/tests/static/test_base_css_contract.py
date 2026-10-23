@@ -83,3 +83,18 @@ class TestToastPlacement(SimpleTestCase):
         action = self._bottom_px(".app-toast")
         self.assertLess(task, rate_limit)
         self.assertLess(rate_limit, action)
+
+
+class TestIdleCursor(SimpleTestCase):
+    """main.js sets body.cursor-idle after 30 seconds of pointer inactivity.
+
+    Hiding the cursor is behaviour, not style, so base.css owns the rule and
+    every theme inherits it. It must cover descendants and win over the
+    `cursor: pointer` that buttons and links declare.
+    """
+
+    def test_idle_class_hides_the_cursor_everywhere(self):
+        css = re.sub(r"/\*.*?\*/", "", BASE_CSS_PATH.read_text(), flags=re.S)
+        css = re.sub(r"\s+", " ", css)
+        value = _declaration(css, "body.cursor-idle, body.cursor-idle *", "cursor")
+        self.assertEqual(value, "none !important")

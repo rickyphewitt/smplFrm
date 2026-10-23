@@ -82,6 +82,7 @@ Theme-neutral signals `main.js` provides for every theme; a theme may use or ign
 - `--progress` on `#progress-bar`: a 0 to 1 number, updated on a 100-step interval per photo
 - `body.photo-changed`: replayed (removed, reflowed, re-added) each time a new photo is shown, after its photo date is in place, so `body.photo-changed #bottom-bar { animation: ... }` restarts on every photo
 - Corner toasts (`.task-toast`, `.rate-limit-toast`, `.app-toast`) are placed and stacked by `base.css`; JavaScript only toggles their visibility, so a theme styles them with ordinary selectors
+- `body.cursor-idle`: set after 30 seconds without pointer movement or a press (never while the settings modal is open) and removed on the next one; `base.css` turns it into `cursor: none` on every element, so a theme needs no rule of its own
 
 ### Theme fonts
 Each theme owns its typefaces (the icon font is shared). Faces are vendored from pinned `@fontsource/*` npm packages by `make vendor-assets`, which copies the Latin `woff2` files listed in `FONT_FACES` in `scripts/vendor_assets.sh`, plus each family's OFL license, into `static/fonts/<family>/`. The theme stylesheet declares its own `@font-face` rules with `font-display: swap`. Faces needed before first paint go in the theme's `preload_fonts`, which the template emits as `<link rel="preload" as="font" crossorigin>` ahead of the stylesheets.
@@ -92,6 +93,7 @@ Each theme owns its typefaces (the icon font is shared). Faces are vendored from
 3. Add the class to `THEME_REGISTRY` in `smplfrm/themes/__init__.py`
 4. If the theme uses webfonts, add its faces to `FONT_FACES` in `scripts/vendor_assets.sh`, pin the `@fontsource/*` package in `package.json`, and run `make vendor-assets`
 5. Add a row to the theme table in this document
+6. Add a row to the Available themes table in `docs/Settings.md`, including where the theme puts the settings icon (`#logo-icon`): each theme positions it, and users need to know where to find it
 
 No migration, no template change, no JavaScript change, and no API change: the theme appears in `GET /api/v1/themes` and the Display tab dropdown because both are generated from the registry.
 

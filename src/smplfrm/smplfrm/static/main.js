@@ -106,6 +106,55 @@ export function markPhotoChanged() {
   body.classList.add(PHOTO_CHANGED_CLASS);
 }
 
+/** Body class set once the pointer has been still for CURSOR_IDLE_MS. */
+export const CURSOR_IDLE_CLASS = 'cursor-idle';
+export const CURSOR_IDLE_MS = 30000;
+
+/**
+ * Hides the mouse cursor once the pointer has been still for
+ * CURSOR_IDLE_MS, so a mouse left over the frame does not sit on the photo.
+ * Any movement or press shows it again and restarts the countdown, and so
+ * does a click, which also covers opening the settings panel from the
+ * keyboard. The cursor is never hidden while the settings panel is open.
+ *
+ * Only the `cursor-idle` class on `<body>` is toggled; base.css turns it
+ * into `cursor: none`, so every theme gets the same behaviour.
+ *
+ * Returns a function that removes the listeners and the pending timer and
+ * shows the cursor again.
+ */
+export function initIdleCursor() {
+  const { body } = document;
+  const events = ['pointermove', 'pointerdown', 'click'];
+  let timer;
+
+  const hide = () => {
+    const modal = document.getElementById('settings-modal');
+    if (modal && modal.classList.contains('open')) {
+      timer = setTimeout(hide, CURSOR_IDLE_MS);
+      return;
+    }
+    body.classList.add(CURSOR_IDLE_CLASS);
+  };
+
+  const wake = () => {
+    body.classList.remove(CURSOR_IDLE_CLASS);
+    clearTimeout(timer);
+    timer = setTimeout(hide, CURSOR_IDLE_MS);
+  };
+
+  events.forEach((type) =>
+    document.addEventListener(type, wake, { passive: true }),
+  );
+  wake();
+
+  return () => {
+    clearTimeout(timer);
+    events.forEach((type) => document.removeEventListener(type, wake));
+    body.classList.remove(CURSOR_IDLE_CLASS);
+  };
+}
+
 export function startProgress() {
   let width = 100;
   const interval = setInterval(() => {
@@ -721,6 +770,7 @@ export function init() {
   // Installed first so a rejection from anything below still reaches the user.
   installGlobalRejectionHandler();
   initSettingsModal();
+  initIdleCursor();
   startImages();
 
   if (config.displayClock) {
