@@ -164,6 +164,8 @@ Each row includes a delete button (×) that deletes the task. If the task is cur
 
 Only one task of each type can be pending or running at a time. Attempting to start a duplicate will show an error in the toast.
 
+Image preload tasks are created automatically as photos are queued for display. Only the 10 most recent are kept, and older ones are removed automatically.
+
 Tasks that were created more than 7 days ago will be deleted.
 
 ## About
