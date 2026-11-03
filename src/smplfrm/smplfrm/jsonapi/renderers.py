@@ -40,7 +40,6 @@ class JsonApiRenderer(PackageJSONRenderer):
         resource_instance,
         resource_name,
         serializer,
-        force_type_resolution=False,
     ):
         """Build resource object with support for dynamic types.
 
@@ -63,5 +62,4 @@ class JsonApiRenderer(PackageJSONRenderer):
             resource_instance,
             resource_name,
             serializer,
-            force_type_resolution=False,  # We handled it
         )

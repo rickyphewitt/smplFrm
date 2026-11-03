@@ -381,6 +381,125 @@ class TestJsonApiMediaTypeCompatibility(TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Upstream signature contract
+# ---------------------------------------------------------------------------
+#
+# Why these tests exist: djangorestframework-jsonapi 9.0.0 dropped polymorphic
+# support and took two parameters with it that this project was forwarding —
+# JSONRenderer.build_json_resource_obj(..., force_type_resolution) and
+# get_resource_name(context, expand_polymorphic_types). Neither removal is
+# visible at import time, so the dependency bump in PR #289 surfaced as 140
+# failures across four unrelated route families. The write-path ones were
+# especially opaque: a TypeError raised inside the parser is converted by
+# jsonapi_exception_handler into a sanitised 500, so the tests reported
+# "500 != 201" and said nothing about the missing keyword argument.
+#
+# These tests bind the arguments the project actually passes against the
+# installed signatures, so the next upstream parameter removal fails here, by
+# name, instead of in every view test at once. The argument sets are read from
+# the production call sites rather than restated here, so the assertions cannot
+# drift away from the code they guard.
+# See .kiro/specs/python-deps-update-pr289-jsonapi-compat.md (AC-7).
+
+
+def _production_call_arguments(method, callee_name):
+    """Return (positional count, keyword names) the project passes to callee_name.
+
+    The call is read out of the method's own source so that this test tracks the
+    production call site instead of a copy of it.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(method)))
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        callee = node.func
+        name = (
+            callee.attr
+            if isinstance(callee, ast.Attribute)
+            else getattr(callee, "id", None)
+        )
+        if name == callee_name:
+            return len(node.args), [keyword.arg for keyword in node.keywords]
+
+    raise AssertionError(f"No call to {callee_name}() found in {method.__qualname__}")
+
+
+def _assert_binds(target, positional_count, keyword_names, call_site):
+    """Fail with a readable message if call_site would not bind to target."""
+    import inspect
+
+    signature = inspect.signature(target)
+
+    try:
+        signature.bind(
+            *[None] * positional_count,
+            **{name: None for name in keyword_names},
+        )
+    except TypeError as error:
+        raise AssertionError(
+            f"{call_site} does not bind to the installed "
+            f"{target.__qualname__}{signature}: {error}"
+        ) from error
+
+
+class TestUpstreamSignatureContract(TestCase):
+    """Verify the project's calls into rest_framework_json_api still bind."""
+
+    def test_renderer_override_accepts_the_upstream_call(self):
+        """Upstream calls our override with five positional arguments."""
+        from smplfrm.jsonapi.renderers import JsonApiRenderer
+
+        # rest_framework_json_api/renderers.py calls build_json_resource_obj at
+        # lines 349, 372, 560 and 580, each with exactly five positional args.
+        _assert_binds(
+            JsonApiRenderer.build_json_resource_obj,
+            positional_count=5,
+            keyword_names=[],
+            call_site="the upstream call into JsonApiRenderer.build_json_resource_obj",
+        )
+
+    def test_renderer_override_call_binds_to_upstream(self):
+        """Our super() call matches the installed parent signature."""
+        from rest_framework_json_api.renderers import JSONRenderer
+
+        from smplfrm.jsonapi.renderers import JsonApiRenderer
+
+        positional_count, keyword_names = _production_call_arguments(
+            JsonApiRenderer.build_json_resource_obj, "build_json_resource_obj"
+        )
+
+        _assert_binds(
+            JSONRenderer.build_json_resource_obj,
+            positional_count=positional_count,
+            keyword_names=keyword_names,
+            call_site="JsonApiRenderer.build_json_resource_obj's super() call",
+        )
+
+    def test_parser_call_binds_to_upstream_get_resource_name(self):
+        """Our get_resource_name call matches the installed function signature."""
+        from rest_framework_json_api.utils import get_resource_name
+
+        from smplfrm.jsonapi.parsers import JsonApiParser
+
+        positional_count, keyword_names = _production_call_arguments(
+            JsonApiParser.parse_data, "get_resource_name"
+        )
+
+        _assert_binds(
+            get_resource_name,
+            positional_count=positional_count,
+            keyword_names=keyword_names,
+            call_site="JsonApiParser.parse_data's get_resource_name() call",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
