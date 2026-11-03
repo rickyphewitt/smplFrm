@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.0",
-    "@vitest/ui": "^5.0.0",
+    "@vitest/ui": "^5.0.5",
     "eslint": "10.2.1",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.5.0",
