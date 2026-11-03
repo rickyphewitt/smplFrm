@@ -46,9 +46,7 @@ class JsonApiParser(JsonApiPackageParser):
 
         # Check for inconsistencies with polymorphic support
         if method in ("PUT", "POST", "PATCH"):
-            resource_name = get_resource_name(
-                parser_context, expand_polymorphic_types=True
-            )
+            resource_name = get_resource_name(parser_context)
 
             # Get accepted types from serializer if available
             accepted_types = self._get_accepted_types(view, resource_name)
