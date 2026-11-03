@@ -30,6 +30,15 @@ class PreloadService:
 
     MAX_NON_TERMINAL_TASKS = 5
 
+    # Preload runs unattended at roughly one task per five photos displayed,
+    # which is ~576 rows per day per client at the default 30s refresh
+    # interval. Retaining 10 fills two pages of the Tasks tab at the page
+    # size of 5: enough history to confirm preloading is working, few enough
+    # that manually started tasks stay within reach.
+    MAX_RETAINED_TASKS = 10
+
+    TERMINAL_STATUSES = (Status.COMPLETED, Status.FAILED)
+
     def __init__(self):
         self.cache_service = CacheService()
 
@@ -124,7 +133,48 @@ class PreloadService:
             f"Created preload task {task.external_id} for {len(valid_images)} images"
         )
 
+        try:
+            self._trim_retained_tasks()
+        except Exception as e:
+            # Retention is housekeeping. The row exists and has been dispatched
+            # to a worker, so a trim failure must not turn a successful
+            # admission into an error response.
+            logger.error(f"Preload task retention trim failed: {e}", exc_info=True)
+
         return task
+
+    def _trim_retained_tasks(self) -> int:
+        """Hard-delete preload tasks beyond the retention cap.
+
+        Keeps the newest MAX_RETAINED_TASKS visible (non-soft-deleted) preload
+        tasks and removes every other preload task that has reached a terminal
+        status. Rows still pending or running are never removed: a worker reads
+        its own row on each image to detect cancellation and to report progress.
+
+        Returns:
+            Number of rows deleted
+        """
+        preload_tasks = Task.objects.filter(task_type=TaskType.PRELOAD_IMAGE_CACHE)
+
+        # Materialised because the slice makes the queryset unusable in delete().
+        # Ordered by id as well as created so rows sharing a timestamp rank
+        # deterministically.
+        keep_ids = list(
+            preload_tasks.filter(deleted=False)
+            .order_by("-created", "-id")
+            .values_list("id", flat=True)[: self.MAX_RETAINED_TASKS]
+        )
+
+        deleted_count, _ = (
+            preload_tasks.filter(status__in=self.TERMINAL_STATUSES)
+            .exclude(id__in=keep_ids)
+            .delete()
+        )
+
+        if deleted_count:
+            logger.debug(f"Trimmed {deleted_count} preload tasks beyond retention cap")
+
+        return deleted_count
 
     def _compute_fingerprint(
         self, image_ids: List[str], width: int, height: int
