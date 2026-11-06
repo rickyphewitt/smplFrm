@@ -144,6 +144,8 @@ Spotify refresh tokens expire six months after authorization. When a token expir
 
 [Weather data by Open-Meteo.com](https://open-meteo.com)
 
+The displayed temperature advances every 15 minutes, showing the sample for the quarter hour that has just elapsed. Only some of Open-Meteo's weather models publish native 15-minute data; elsewhere, including at the default coordinates, these values are interpolated from the hourly forecast. The value for the current hour is shown only when no 15-minute sample is available, such as from weather data cached before an upgrade, until the next refresh.
+
 If weather data cannot be retrieved, the weather slot on the frame shows a temperature glyph with a warning glyph rather than going blank, so an unavailable plugin is distinguishable from a disabled one. The indicator clears when the page next reloads.
 
 ## Tasks

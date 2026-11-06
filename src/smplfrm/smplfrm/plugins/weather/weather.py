@@ -105,6 +105,9 @@ class WeatherPlugin(BasePlugin):
                     DailyParameters.TEMPERATURE_2M_MAX,
                     DailyParameters.TEMPERATURE_2M_MIN,
                 ],
+                minutely_15=[
+                    HourlyParameters.TEMPERATURE_2M,
+                ],
                 hourly=[
                     HourlyParameters.TEMPERATURE_2M,
                     HourlyParameters.RELATIVE_HUMIDITY_2M,
@@ -162,13 +165,19 @@ class WeatherPlugin(BasePlugin):
             logger.error("Failed to read weather data")
             return weather_data
 
-        current_temp_index = self._get_current_temp_index(raw_data, now)
-        logger.debug(f"Current Temp Index: {current_temp_index}")
+        current_temp_value = self._get_minutely_15_temp(raw_data, now)
 
-        if current_temp_index is not None:
-            current_temp_value = self._get_current_temp(raw_data, current_temp_index)
-            if current_temp_value is not None and current_temp_value != "N/A":
-                weather_data["temperature"] = str(current_temp_value)
+        if current_temp_value is None:
+            current_temp_index = self._get_current_temp_index(raw_data, now)
+            logger.debug(f"Current Temp Index: {current_temp_index}")
+
+            if current_temp_index is not None:
+                current_temp_value = self._get_current_temp(
+                    raw_data, current_temp_index
+                )
+
+        if current_temp_value is not None and current_temp_value != "N/A":
+            weather_data["temperature"] = str(current_temp_value)
 
         daily_index = self._get_current_daily_index(raw_data, now)
 
@@ -188,6 +197,45 @@ class WeatherPlugin(BasePlugin):
                 logger.error(f"Failed to get high temp: {e}")
 
         return weather_data
+
+    def _get_minutely_15_temp(self, raw_data: Any, now: datetime) -> Any:
+        """Get the 15-minute temperature for the quarter hour containing now.
+
+        `now` is floored to the quarter hour, so the selected sample is always
+        at or before now and is at most 15 minutes old. Timestamps are matched
+        component-wise because the cached forecast carries naive UTC values
+        while `now` is aware UTC.
+
+        Returns None when the cached forecast carries no 15-minute series, the
+        series does not cover now, or the sample is null. Each of those is a
+        supported fallback to the hourly series rather than a failure, so none
+        of them logs an error.
+        """
+        try:
+            time = raw_data.minutely_15.time
+            temps = raw_data.minutely_15.temperature_2m
+        except Exception as e:
+            logger.debug(f"No 15-minute series in cached weather data: {e}")
+            return None
+
+        if not time or not temps:
+            logger.debug("Cached weather data has an empty 15-minute series")
+            return None
+
+        quarter_hour_minute = now.minute - (now.minute % 15)
+        for i in range(min(len(time), len(temps))):
+            if (
+                time[i].year == now.year
+                and time[i].month == now.month
+                and time[i].day == now.day
+                and time[i].hour == now.hour
+                and time[i].minute == quarter_hour_minute
+            ):
+                logger.debug(f"Current 15-Minute Temp Index: {i}")
+                return temps[i]
+
+        logger.debug("15-minute series does not cover the current quarter hour")
+        return None
 
     def _get_current_temp(self, raw_data: Any, index: int) -> Any:
         try:
