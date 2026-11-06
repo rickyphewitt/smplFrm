@@ -1,20 +1,28 @@
 name: CI
 
+# Least privilege: no job here writes to the repository or calls the API.
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ "**" ]
 
 jobs:
+  # The runner image is pinned instead of `ubuntu-latest` so a GitHub image
+  # rollover cannot change the toolchain under an unrelated commit. Bump it
+  # deliberately once the next LTS image is generally available, and move all
+  # workflows together: docker.yml, lint-python.yml, lint-javascript.yml and
+  # wiki.yml use the same label. Dependabot does not update `runs-on`.
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         python-version: [3.14]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       # Pinned by SHA (v10.2.0). Keep `version` in sync with
       # docker/images/Dockerfile and lint-python.yml; it must be >= pyproject.toml
       # ([tool.uv] required-version).
@@ -25,22 +33,58 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: uv.lock
+      # Node.js and node_modules are needed by the Python suite, not only the
+      # JavaScript one: the vendored-asset contract tests in
+      # smplfrm/smplfrm/tests/static/ compare committed assets against the
+      # pinned npm packages and skip themselves when node_modules is absent.
+      # Keep this step and `npm ci` here even though `npm test` runs in the
+      # test-javascript job. Node version comes from .nvmrc.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
       - name: Install JavaScript dependencies
         run: npm ci
-      - name: Run JavaScript tests
-        run: npm test
       - name: Setup Docker Deps
         run: make docker-services
       - name: Install dependencies
         run: make packages
       - name: Run tests
         run: make test
+      # Uploads on failure as well, since a failing suite is when the JUnit
+      # report is worth reading. Cancelled runs are skipped so no partial
+      # report is published.
       - name: Report test results
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
         with:
-          name: test-results
+          name: python-test-results
+          path: tests/test-reports/
+
+  # Same runner image as the test job above.
+  test-javascript:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      # Node version comes from .nvmrc, shared with the test job and
+      # lint-javascript.yml.
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci
+      # `test:ci` adds the JUnit reporter on top of the default one; plain
+      # `npm test` stays quiet and writes no files.
+      - name: Run JavaScript tests
+        run: npm run test:ci
+      # Same rationale as the test job: a failing suite is when the report is
+      # worth reading, and cancelled runs publish nothing.
+      - name: Report JavaScript test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: javascript-test-results
           path: tests/test-reports/

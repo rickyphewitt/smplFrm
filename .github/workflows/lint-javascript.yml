@@ -1,22 +1,30 @@
 name: Lint JavaScript
 
+# Least privilege: this workflow only reads the repository.
+permissions:
+  contents: read
+
 # Mirrors the ESLint and Prettier hooks in .pre-commit-config.yaml, in check-only
 # mode. Tool versions come from package-lock.json; the file scope comes from the
 # package.json `lint` and `format:check` scripts.
 # Triggers have no path filters so the `lint-javascript` check reports on every
 # PR, which keeps it usable as a required status check.
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   lint-javascript:
-    runs-on: ubuntu-latest
+    # Runner image pinned to match ci.yml; see the comment there before bumping.
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      # Same Node.js version as ci.yml.
+      - uses: actions/checkout@v5
+      # Node version comes from .nvmrc, shared with ci.yml.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: npm
       - name: Install JavaScript dependencies
         run: npm ci

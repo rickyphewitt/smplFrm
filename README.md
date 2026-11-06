@@ -74,6 +74,23 @@ Repo: https://hub.docker.com/r/dke39vsh3gghs/smplfrm
   * This is the most recent code on `main`. Useful for development and testing.
 * `<commit-hash>`
   * For each commit merged into `main` an image is created with the corresponding git hash. Useful for pinning to a specific version outside the release cycle. 
+* `pr-<pr-number>`
+  * Each PR builds an image as well to aid in development and testing.
+
+### Verifying Image Provenance
+Every image pushed to Docker Hub carries a [build provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations) signed by the publish workflow. It binds the image digest to the commit, workflow, and run that built it, so you can confirm an image came from this repository rather than from someone holding registry credentials.
+
+Verify a tag with the [GitHub CLI](https://cli.github.com/):
+```bash
+gh attestation verify oci://dke39vsh3gghs/smplfrm:v1.2.3 \
+  --owner rickyphewitt \
+  --signer-workflow rickyphewitt/smplFrm/.github/workflows/docker.yml
+```
+Add `--bundle-from-oci` to read the attestation from Docker Hub instead of the GitHub API.
+
+* Verification applies to the digest a tag currently resolves to, not to the tag itself. If a tag is moved, re-run the command to check whether the new image is attested.
+* `--signer-workflow` is what makes the result meaningful. Without it you only prove that something in the organization signed the image.
+* Pull request builds (`pr-<number>` tags) are attested as well. An attestation records where an image came from, not that it was intended for release.
 
 ### Environment variables
 For a full list of environment variables see the [Environment Variable wiki page](https://github.com/rickyphewitt/smplFrm/wiki/Environment-Variables)

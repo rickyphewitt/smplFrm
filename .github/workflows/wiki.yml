@@ -9,13 +9,16 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # Runner image pinned to match ci.yml; see the comment there before bumping.
+    # This workflow runs only on pushes to main that touch docs/**, so the label
+    # is not exercised by pull request checks.
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout main repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Checkout wiki
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ github.repository }}.wiki
           path: wiki
