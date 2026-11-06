@@ -1,15 +1,23 @@
 name: Lint Python
 
+# Least privilege: this workflow only reads the repository.
+permissions:
+  contents: read
+
 # Mirrors the Ruff hooks in .pre-commit-config.yaml (and `make lint`).
 # Triggers have no path filters so the `lint-python` check reports on every PR,
 # which keeps it usable as a required status check.
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   lint-python:
-    runs-on: ubuntu-latest
+    # Runner image pinned to match ci.yml; see the comment there before bumping.
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Pinned by SHA (v10.2.0); same pin and uv version as ci.yml.
       # Python comes from .python-version; Ruff's version comes from uv.lock.
       - name: Set up uv

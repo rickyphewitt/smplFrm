@@ -76,8 +76,11 @@ migrations: check-uv
 makemigrations: check-uv
 	cd ./src/smplfrm; $(UV_RUN) python manage.py makemigrations
 
+# `--junitxml` is absolute: $(CURDIR) is make's invocation directory (the repo
+# root), so the report lands in tests/test-reports/ no matter what the recipe
+# `cd`s into. .github/workflows/ci.yml uploads that directory; it is gitignored.
 test: check-uv
-	cd ./src/smplfrm; $(UV_RUN) pytest
+	cd ./src/smplfrm; $(UV_RUN) pytest --junitxml="$(CURDIR)/tests/test-reports/junit.xml"
 
 test-js:
 	$(NPM) test
