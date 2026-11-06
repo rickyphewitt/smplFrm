@@ -67,6 +67,10 @@ class TestCollectWeatherApiContract(TestCase):
                 HourlyParameters.RELATIVE_HUMIDITY_2M,
             },
         )
+        self.assertEqual(
+            set(kwargs.get("minutely_15", [])),
+            {HourlyParameters.TEMPERATURE_2M},
+        )
 
     @patch("smplfrm.plugins.weather.weather.OpenMeteo")
     def test_collect_weather_persists_forecast(self, mock_open_meteo_class):

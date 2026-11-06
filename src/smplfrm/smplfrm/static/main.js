@@ -20,13 +20,15 @@ import {
 const IMAGE_ID_ATTR = 'image-id';
 const CLOCK_REFRESH_MS = 1000;
 const SPOTIFY_REFRESH_MS = 5000;
-// Weather cadence. The backend refreshes on a 1800s beat and get_for_display()
-// selects the sample for the current hour, so 5 minutes bounds hour-boundary
-// lag, backend-refresh lag, and recovery from the degraded indicator to five
-// minutes each. That is 12 attempts per hour per frame: one request each, or up
-// to four while the endpoint is rate limited and resilientFetch retries
-// internally. Doubles as the abort deadline for a single attempt, which is far
-// longer than any retry chain a healthy backend produces.
+// Weather cadence. get_for_display() selects the 15-minute sample for the
+// quarter hour that has just elapsed, so the API serves a reading under 15
+// minutes old and keeps serving one from the cached series between the
+// backend's 1800s refresh beats. A 5-minute poll adds at most five minutes of
+// screen lag on top of that and bounds recovery from the degraded indicator to
+// the same five minutes. That is 12 attempts per hour per frame: one request
+// each, or up to four while the endpoint is rate limited and resilientFetch
+// retries internally. Doubles as the abort deadline for a single attempt,
+// which is far longer than any retry chain a healthy backend produces.
 export const WEATHER_REFRESH_MS = 300000;
 const IMAGE_QUEUE_LOW_WATER = 2;
 
