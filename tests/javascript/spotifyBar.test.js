@@ -241,4 +241,67 @@ describe('spotify bar visibility', () => {
     const bar = document.getElementById('spotify-bar');
     expect(bar.style.display).toBe('flex');
   });
+
+  // Rendering injection hardening: markup in the artist or song title must
+  // render as literal text and must not parse into elements that could run
+  // handlers. The Spotify Web API returns these values unescaped, so a
+  // hostile track title would otherwise execute on the next poll.
+  it('renders markup in track metadata as literal text, not as elements', async () => {
+    setupDOM();
+    const hostileArtist = '<img src=x onerror="window.pwned=1">';
+    const hostileSong = '</span><script>window.pwned=1</script>';
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            createStatusResponse(
+              true,
+              hostileArtist,
+              hostileSong,
+              'spotify:track:evil',
+            ),
+          ),
+      }),
+    );
+    const module = await import('../../src/smplfrm/smplfrm/static/main.js');
+    getNowPlaying = module.getNowPlaying;
+
+    await getNowPlaying();
+
+    const container = document.getElementById('spotify-now-playing');
+    // Exactly one element: the Spotify icon. Hostile markup created no DOM.
+    const nested = container.querySelectorAll('*');
+    expect(nested.length).toBe(1);
+    expect(nested[0].tagName).toBe('I');
+    expect(nested[0].className).toContain('iconoir-spotify');
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    // The hostile source text is still present as a text node.
+    expect(container.textContent).toContain(hostileArtist);
+    expect(container.textContent).toContain(hostileSong);
+    expect(global.window.pwned).toBeUndefined();
+  });
+
+  it('renders icon-only states with exactly one Spotify glyph and no text', async () => {
+    setupDOM();
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(createStatusResponse(false, null, null, null)),
+      }),
+    );
+    const module = await import('../../src/smplfrm/smplfrm/static/main.js');
+    getNowPlaying = module.getNowPlaying;
+
+    await getNowPlaying();
+
+    const container = document.getElementById('spotify-now-playing');
+    const children = container.querySelectorAll('*');
+    expect(children.length).toBe(1);
+    expect(children[0].tagName).toBe('I');
+    expect(children[0].className).toBe('iconoir-spotify spotify-icon');
+    expect(container.textContent.trim()).toBe('');
+  });
 });

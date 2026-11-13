@@ -627,9 +627,12 @@ export function refreshWeather() {
   });
 }
 
-function showSpotifyBar(content) {
-  const spotifyDiv = document.getElementById('spotify-now-playing');
-  spotifyDiv.innerHTML = content;
+function showSpotifyBar(text) {
+  setIconText(
+    document.getElementById('spotify-now-playing'),
+    'iconoir-spotify spotify-icon',
+    text,
+  );
   const bar = document.getElementById('spotify-bar');
   bar.style.display = 'flex';
   bar.classList.add('bar-fade-in');
@@ -677,7 +680,7 @@ async function showSpotifyAuthorization(reason) {
     const resource = unwrapResource(response);
 
     if (!resource || !resource.attributes.auth_url) {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      showSpotifyBar();
       return;
     }
 
@@ -691,7 +694,7 @@ async function showSpotifyAuthorization(reason) {
       channel: 'indicator',
       fallback: 'Spotify authorization is unavailable.',
     });
-    showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+    showSpotifyBar();
   } finally {
     spotifyAuthRequestInFlight = false;
   }
@@ -706,13 +709,13 @@ export async function getNowPlaying() {
 
     // Check if plugin is configured
     if (!resource || !resource.attributes.configured) {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      showSpotifyBar();
       return;
     }
 
     // Check if anything is playing
     if (!resource.attributes.is_playing) {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      showSpotifyBar();
       return;
     }
 
@@ -723,11 +726,9 @@ export async function getNowPlaying() {
     );
 
     if (track) {
-      showSpotifyBar(
-        `<i class="iconoir-spotify spotify-icon"></i> ${track.attributes.artist} - ${track.attributes.song}`,
-      );
+      showSpotifyBar(`${track.attributes.artist} - ${track.attributes.song}`);
     } else {
-      showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+      showSpotifyBar();
     }
   } catch (error) {
     if (error instanceof JsonApiError) {
@@ -745,7 +746,7 @@ export async function getNowPlaying() {
       // On 429 or other errors: show icon only
       if (error.status === 429) {
         if (!spotifyAuthLinkActive) {
-          showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+          showSpotifyBar();
         }
         return;
       }
@@ -756,7 +757,7 @@ export async function getNowPlaying() {
       fallback: 'Spotify is unavailable.',
       onDegrade: () => {
         if (!spotifyAuthLinkActive) {
-          showSpotifyBar(`<i class="iconoir-spotify spotify-icon"></i>`);
+          showSpotifyBar();
         }
       },
     });
@@ -1333,38 +1334,15 @@ export async function loadPlugins(page = 1) {
     const doc = await fetchJsonApi(buildApiUrl(`plugins?page[number]=${page}`));
     const { resources, meta, links } = unwrapResourceList(doc);
 
-    body.innerHTML = resources
-      .map((r) => {
-        const p = { id: r.id, ...r.attributes };
-        const isEnabled = enabledPlugins.includes(p.name);
-        const checked = isEnabled ? 'checked' : '';
-        return `<tr>
-                <td>${p.name}</td>
-                <td>${p.description || ''}</td>
-                <td><button class="btn btn-secondary btn-sm plugin-configure-btn" data-id="${p.id}">Configure</button></td>
-                <td><label class="toggle-switch plugin-toggle-wrap"><input type="checkbox" class="plugin-toggle" data-name="${p.name}" ${checked}><span class="slider"></span></label></td>
-            </tr>`;
-      })
-      .join('');
-
-    // Toggles only update local state — Save button does the PUT
-    body.querySelectorAll('.plugin-toggle').forEach((toggle) => {
-      toggle.addEventListener('change', () => {
-        const name = toggle.dataset.name;
-        if (toggle.checked) {
-          if (!enabledPlugins.includes(name)) enabledPlugins.push(name);
-        } else {
-          const idx = enabledPlugins.indexOf(name);
-          if (idx > -1) enabledPlugins.splice(idx, 1);
-        }
-        modal.dataset.configPlugins = JSON.stringify(enabledPlugins);
-      });
-    });
-
-    // Configure button opens detail view
-    body.querySelectorAll('.plugin-configure-btn').forEach((btn) => {
-      btn.addEventListener('click', () => openPluginDetail(btn.dataset.id));
-    });
+    // Build each row with DOM APIs so plugin name and description reach the
+    // table as text, not as parsed markup, and the toggle's data-name carries
+    // characters like `"` without breaking the attribute. Listeners are wired
+    // on the elements as they are created, rather than by re-querying the
+    // table after an innerHTML assignment.
+    const rows = resources.map((r) =>
+      buildPluginRow({ id: r.id, ...r.attributes }, enabledPlugins, modal),
+    );
+    body.replaceChildren(...rows);
 
     const count = meta.pagination?.count || resources.length;
     const pageSize = meta.pagination?.page_size || 5;
@@ -1380,6 +1358,62 @@ export async function loadPlugins(page = 1) {
       colspan: 4,
     });
   }
+}
+
+/**
+ * Builds a single plugin-list row using DOM APIs, with the toggle and
+ * Configure listeners attached to the new elements.
+ *
+ * @param {{id: string, name: string, description?: string}} plugin
+ * @param {string[]} enabledPlugins - Shared array of currently enabled plugin names (mutated by the toggle).
+ * @param {HTMLElement} modal - The settings modal element carrying data-config-plugins.
+ * @returns {HTMLTableRowElement}
+ */
+function buildPluginRow(plugin, enabledPlugins, modal) {
+  const row = document.createElement('tr');
+
+  const nameCell = document.createElement('td');
+  nameCell.textContent = plugin.name;
+
+  const descCell = document.createElement('td');
+  descCell.textContent = plugin.description || '';
+
+  const configureCell = document.createElement('td');
+  const configureBtn = document.createElement('button');
+  configureBtn.type = 'button';
+  configureBtn.className = 'btn btn-secondary btn-sm plugin-configure-btn';
+  configureBtn.dataset.id = plugin.id;
+  configureBtn.textContent = 'Configure';
+  configureBtn.addEventListener('click', () => openPluginDetail(plugin.id));
+  configureCell.append(configureBtn);
+
+  const toggleCell = document.createElement('td');
+  const toggleLabel = document.createElement('label');
+  toggleLabel.className = 'toggle-switch plugin-toggle-wrap';
+  const toggleInput = document.createElement('input');
+  toggleInput.type = 'checkbox';
+  toggleInput.className = 'plugin-toggle';
+  toggleInput.dataset.name = plugin.name;
+  toggleInput.checked = enabledPlugins.includes(plugin.name);
+  const toggleSlider = document.createElement('span');
+  toggleSlider.className = 'slider';
+  toggleLabel.append(toggleInput, toggleSlider);
+  toggleCell.append(toggleLabel);
+
+  // Toggles only update local state — Save button does the PUT.
+  toggleInput.addEventListener('change', () => {
+    const name = toggleInput.dataset.name;
+    if (toggleInput.checked) {
+      if (!enabledPlugins.includes(name)) enabledPlugins.push(name);
+    } else {
+      const idx = enabledPlugins.indexOf(name);
+      if (idx > -1) enabledPlugins.splice(idx, 1);
+    }
+    modal.dataset.configPlugins = JSON.stringify(enabledPlugins);
+  });
+
+  row.append(nameCell, descCell, configureCell, toggleCell);
+  return row;
 }
 
 export function validateCoordinates(value) {
