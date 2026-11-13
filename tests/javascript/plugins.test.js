@@ -240,6 +240,55 @@ describe('Plugins Tab', () => {
     expect(btn.dataset.id).toBe('p1');
   });
 
+  // Rendering injection hardening: plugin name and description render as
+  // literal text, and plugin names containing a double quote reach
+  // dataset.name exactly as the API returned them.
+  it('should render markup in plugin name and description as literal text', async () => {
+    const hostileName = '<img src=x onerror="window.pluginsPwned=1">';
+    const hostileDescription = '</td><script>window.pluginsPwned=1</script>';
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: hostileName, description: hostileDescription },
+    ]);
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockData),
+    });
+
+    const { loadPlugins } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
+    await loadPlugins();
+
+    const body = document.getElementById('plugin-list-body');
+    const rows = body.querySelectorAll('tr');
+    expect(rows.length).toBe(1);
+    // No extra elements got parsed out of the hostile strings.
+    expect(body.querySelector('img')).toBeNull();
+    expect(body.querySelector('script')).toBeNull();
+    const cells = rows[0].querySelectorAll('td');
+    expect(cells[0].textContent).toBe(hostileName);
+    expect(cells[1].textContent).toBe(hostileDescription);
+    expect(global.window.pluginsPwned).toBeUndefined();
+  });
+
+  it('should preserve a plugin name containing a double quote on the toggle dataset', async () => {
+    const quotedName = 'weird"name';
+    const mockData = makeJsonApiListResponse([
+      { id: 'p1', name: quotedName, description: 'ok' },
+    ]);
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockData),
+    });
+
+    const { loadPlugins } =
+      await import('../../src/smplfrm/smplfrm/static/main.js');
+    await loadPlugins();
+
+    const toggle = document.querySelector('.plugin-toggle');
+    expect(toggle).not.toBeNull();
+    expect(toggle.dataset.name).toBe(quotedName);
+  });
+
   it('should show error row when fetch fails', async () => {
     global.fetch.mockRejectedValueOnce(new Error('Network error'));
 
