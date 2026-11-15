@@ -21,8 +21,8 @@ class TestThemeRegistry(TestCase):
     def test_registry_contains_classic(self):
         self.assertIn(ClassicTheme, THEME_REGISTRY)
 
-    def test_default_theme_id_is_classic(self):
-        self.assertEqual(DEFAULT_THEME_ID, "classic")
+    def test_default_theme_id_is_gallery(self):
+        self.assertEqual(DEFAULT_THEME_ID, "gallery")
 
 
 class TestGetAllThemes(TestCase):

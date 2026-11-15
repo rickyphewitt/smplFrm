@@ -36,8 +36,8 @@ Available themes:
 
 | Theme | Status | Settings icon | Description |
 |-------|--------|---------------|-------------|
-| Classic | Default | Top-left | Translucent rounded bars over the photo, centered settings dialog. |
-| Gallery | Beta | Bottom-right, faint until hovered or focused | A wall label in the bottom-left corner over a soft shadow at the bottom of the photo, and a settings panel docked to the left edge. |
+| Gallery | Default | Bottom-right, faint until hovered or focused | A wall label in the bottom-left corner over a soft shadow at the bottom of the photo, and a settings panel docked to the left edge. |
+| Classic | Deprecated | Top-left | Translucent rounded bars over the photo, centered settings dialog. |
 
 ## Images
 

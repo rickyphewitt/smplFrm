@@ -11,7 +11,7 @@ class GalleryTheme(Theme):
     def __init__(self):
         super().__init__(
             id="gallery",
-            label="Gallery (beta)",
+            label="Gallery",
             description="A quiet wall label beside the photo",
             stylesheet="css/theme-gallery.css",
             preload_fonts=(
