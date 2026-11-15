@@ -19,7 +19,7 @@ THEME_REGISTRY = [ClassicTheme, GalleryTheme]
 
 # Single source of truth for both the model field default and the resolve()
 # fallback.
-DEFAULT_THEME_ID = "classic"
+DEFAULT_THEME_ID = "gallery"
 
 
 def get_all_themes():

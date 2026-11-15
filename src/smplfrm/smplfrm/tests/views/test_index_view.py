@@ -6,6 +6,7 @@ import smplfrm.themes as themes
 from smplfrm.models import Config
 from smplfrm.themes.base import Theme
 from smplfrm.themes.classic import ClassicTheme
+from smplfrm.themes.gallery import GalleryTheme
 
 
 class _PreloadingTheme(Theme):
@@ -225,7 +226,7 @@ class TestIndexViewThemeResolution(TestCase):
             theme="not-a-real-theme",
         )
         response = self.client.get("/")
-        self.assertEqual(response.context["theme_stylesheet"], "css/theme-classic.css")
+        self.assertEqual(response.context["theme_stylesheet"], "css/theme-gallery.css")
 
     def test_page_never_renders_empty_stylesheet_href(self):
         """The rendered page never contains an empty or unresolved stylesheet href."""
@@ -285,8 +286,12 @@ class TestIndexViewThemePreloadFonts(TestCase):
             content.index('rel="preload"'), content.index('rel="stylesheet"')
         )
 
-    @patch.object(themes, "THEME_REGISTRY", [ClassicTheme, _PreloadingTheme])
+    @patch.object(
+        themes, "THEME_REGISTRY", [ClassicTheme, GalleryTheme, _PreloadingTheme]
+    )
     def test_unknown_theme_falls_back_to_default_preloads(self):
         Config.objects.create(name="smplFrm Default", is_active=True, theme="gone")
         response = self.client.get("/")
-        self.assertEqual(response.context["theme_preload_fonts"], ())
+        self.assertEqual(
+            response.context["theme_preload_fonts"], GalleryTheme().preload_fonts
+        )
