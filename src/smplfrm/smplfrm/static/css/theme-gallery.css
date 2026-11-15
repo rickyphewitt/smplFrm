@@ -82,13 +82,16 @@
     --track: #2c2c31;           /* toggle track when off; the knob holds 12.1:1 */
 
     /* One accent hue as exactly two tokens. --accent is the only accent
-     * allowed as text or as a line on --bg (7.4:1). --accent-fill is the
-     * only accent allowed as a fill behind a white label (4.9:1). */
-    --accent: #9b92f7;
-    --accent-fill: #6a5cea;
+     * allowed as text or as a line on --bg (8.13:1). --accent-fill is the
+     * only accent allowed as a fill behind a white label (4.94:1). Brass,
+     * chosen once the application mark moved to a theme-independent bone
+     * silhouette; the violet pair the theme first shipped with no longer
+     * had a brand hue to track and was retired. */
+    --accent: #c7a15a;
+    --accent-fill: #8e6a2c;
     --on-fill: #ffffff;         /* labels on --accent-fill */
 
-    --warn: #e8b53f;            /* expiry and degraded-plugin indicators */
+    --warn: #d46a3a;            /* expiry and degraded-plugin indicators, burnt orange keeps hue separation from the warm accent (DeltaE76 ~ 35 on CIELAB) */
     --bad: #d4625a;             /* error and failed states, 5.3:1 */
     --bad-wash: rgb(212 98 90 / 0.08);
 
