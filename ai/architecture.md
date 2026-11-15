@@ -59,6 +59,7 @@ Core code (`celery.py`, `tasks/`) never directly imports plugin internals. The r
 
 ## Theme System
 - A theme is a named stylesheet selected per config; themes have no database row and no migration
+- Application identity (brand mark, favicon set, apple-touch-icon, android-chrome icons, web manifest, wordmark lockup) is application-level and out of a theme's reach: themes own CSS tokens, stylesheet, fonts, and their small Python surface, and `Theme` has no `mark_src`, `favicon_src`, `wordmark_src`, or equivalent attribute
 - `smplfrm/themes/__init__.py` holds the registry: `THEME_REGISTRY`, `DEFAULT_THEME_ID`, `get_all_themes()`, `get_theme_map()`, `resolve(theme_id)`, mirroring the shape of `PLUGIN_REGISTRY`
 - `resolve(theme_id)` is the single resolution point: it returns the default theme and logs a warning for any unknown, empty, or null id, which is what lets a theme be deleted later without a data migration or a broken page
 - `Config.theme` is a plain `CharField`, validated in `ConfigSerializer` against the registry rather than via model-level `choices`, so adding a theme never requires a migration
