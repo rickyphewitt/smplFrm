@@ -95,6 +95,21 @@ class ImageMetadataService(BaseService):
 
         image_meta_to_destroy.delete()
 
+    def visible_queryset(self) -> QuerySet[ImageMetadata]:
+        """Return live metadata rows whose image may be served.
+
+        Visibility comes from ImageService.visible_queryset(), so metadata
+        for an image outside the active library filter is never returned.
+
+        Returns:
+            QuerySet of ImageMetadata instances
+        """
+        from smplfrm.services.image_service import ImageService
+
+        return ImageMetadata.objects.filter(
+            deleted=False, image__in=ImageService().visible_queryset()
+        )
+
     def read_by_image_id(self, image_ext_id: str) -> ImageMetadata:
         """Retrieve image metadata by associated image external ID.
 

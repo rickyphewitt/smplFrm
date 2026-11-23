@@ -1,4 +1,6 @@
 import logging
+import operator
+from functools import reduce
 from typing import Any, Dict, Optional
 from django.db.models import QuerySet
 
@@ -35,17 +37,32 @@ class ImageService(BaseService, TaskReportingService):
         """
         return Image.objects.create(**data)
 
-    def read(self, ext_id: str, deleted: bool = False) -> Image:
+    def read(
+        self,
+        ext_id: str,
+        deleted: bool = False,
+        *,
+        enforce_visibility: bool = True,
+    ) -> Image:
         """Retrieve an image by external ID.
 
         Args:
             ext_id: External identifier
-            deleted: Whether to include soft-deleted records
+            deleted: Whether to look up a soft-deleted record instead of a live one
+            enforce_visibility: Hide images outside the active library filter.
+                Pass False only for library maintenance, never for serving.
 
         Returns:
             Image instance
+
+        Raises:
+            Image.DoesNotExist: no matching image, or it is hidden by the filter
         """
-        return Image.objects.get(external_id=ext_id, deleted=deleted)
+        if enforce_visibility:
+            queryset = self.visible_queryset(include_deleted=deleted)
+        else:
+            queryset = Image.objects.all()
+        return queryset.get(external_id=ext_id, deleted=deleted)
 
     def list(self, **kwargs) -> QuerySet[Image]:
         """List images with optional filtering.
@@ -99,6 +116,62 @@ class ImageService(BaseService, TaskReportingService):
 
         image_to_destroy.delete()
 
+    def visible_queryset(self, include_deleted: bool = False) -> QuerySet[Image]:
+        """Return the images that may be served, per the library filter.
+
+        This is the single place that decides which images are displayable.
+        Every path that serves images (API, frame, cache, preload) reads
+        through it.
+
+        - Filtering off: every image (live images only unless include_deleted).
+        - Filtering on, no active filter, or no usable rules: no images.
+        - Filtering on with an active filter: images matching any of its
+          rules. Each rule type's handler supplies the predicate.
+
+        Runs two queries (the settings row and the active rules) before the
+        returned queryset is evaluated.
+
+        Args:
+            include_deleted: Also return soft-deleted images
+
+        Returns:
+            QuerySet of Image instances
+        """
+        from smplfrm.services.library_filter import (
+            LibraryFilterService,
+            LibraryFilterSettingsService,
+        )
+        from smplfrm.services.library_filter.rule_handlers import RULE_TYPE_HANDLERS
+
+        base = (
+            Image.objects.all()
+            if include_deleted
+            else Image.objects.filter(deleted=False)
+        )
+        if not LibraryFilterSettingsService().get().enabled:
+            return base
+
+        predicates = []
+        for rule in LibraryFilterService().active_rules():
+            handler = RULE_TYPE_HANDLERS.get(rule.rule_type)
+            if handler is None:
+                # Fail closed: a rule that cannot be applied must not widen
+                # the set of displayed images.
+                logger.warning(
+                    "Library filter rule %s has unknown type; hiding all images",
+                    rule.external_id,
+                )
+                return base.none()
+            predicates.append(handler.to_q(rule))
+
+        if not predicates:
+            return base.none()
+
+        # A subquery rather than a join keeps one row per image even when an
+        # image matches several rules, without needing distinct().
+        matching = Image.objects.filter(reduce(operator.or_, predicates)).values("pk")
+        return base.filter(pk__in=matching)
+
     def read_by_file_name_and_file_path(
         self, file_name: str, file_path: str
     ) -> Optional[Image]:
@@ -133,11 +206,7 @@ class ImageService(BaseService, TaskReportingService):
             or None if an error occurs
         """
         try:
-            return (
-                Image.objects.all()
-                .filter(deleted=False)
-                .order_by("view_count", "-created")
-            )
+            return self.visible_queryset().order_by("view_count", "-created")
         except Exception as e:
             logger.error(f"Failed to load next image: {e}")
             return None
@@ -149,20 +218,20 @@ class ImageService(BaseService, TaskReportingService):
             sort_profile: Curated profile key, or None for default order
 
         Returns:
-            QuerySet of non-deleted Image instances in requested order
+            QuerySet of visible Image instances in requested order
 
         Raises:
             ValueError: If sort_profile is not in SORT_PROFILES
         """
         if sort_profile is None:
             # Default behavior: newest first
-            return Image.objects.filter(deleted=False).order_by("-created")
+            return self.visible_queryset().order_by("-created")
 
         if sort_profile not in SORT_PROFILES:
             raise ValueError(f"Unknown sort profile: {sort_profile}")
 
         ordering = SORT_PROFILES[sort_profile]
-        return Image.objects.filter(deleted=False).order_by(*ordering)
+        return self.visible_queryset().order_by(*ordering)
 
     def reset_all_view_count(self, task_id=None) -> None:
         """Reset view count for all images."""

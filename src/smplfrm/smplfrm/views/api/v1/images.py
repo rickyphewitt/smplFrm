@@ -44,7 +44,6 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
     - file_path is never exposed in responses
     """
 
-    queryset = Image.objects.filter(deleted=False).order_by("-created")
     serializer_class = ImageSerializer
     lookup_field = "external_id"
     resource_name = "images"
@@ -75,7 +74,7 @@ class Images(StrictQueryMixin, viewsets.ModelViewSet):
             # This should be caught by StrictQueryMixin validation,
             # but handle defensively
             logger.error(f"Invalid sort profile: {e}")
-            return Image.objects.filter(deleted=False).order_by("-created")
+            return self.service.get_ordered_images(None)
 
     def get_object(self):
         """Return 403 instead of 404 to prevent resource enumeration."""
