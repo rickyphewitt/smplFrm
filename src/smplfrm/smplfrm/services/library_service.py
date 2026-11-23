@@ -18,11 +18,18 @@ class LibraryService(TaskReportingService):
     """Service for scanning and managing image library."""
 
     def __init__(self) -> None:
-        from smplfrm.services import ImageMetadataService, ImageService
+        from smplfrm.services import (
+            ImageMetadataService,
+            ImageService,
+            ImageTagService,
+        )
+        from smplfrm.services.library.tag_extractor import TagExtractor
 
         super().__init__(task_type=TaskType.RESCAN_LIBRARY)
         self.image_service = ImageService()
         self.image_metadata_service = ImageMetadataService()
+        self.image_tag_service = ImageTagService()
+        self.tag_extractor = TagExtractor()
 
     def scan(self, task_id=None) -> None:
         """Scan configured library directories for images and update database."""
@@ -129,7 +136,7 @@ class LibraryService(TaskReportingService):
             image.save()
 
     def save_image_meta(self, image: Any) -> None:
-        """Extract and save image metadata.
+        """Extract and save image metadata, then the image's embedded tags.
 
         Args:
             image: Image instance to extract metadata for
@@ -146,10 +153,22 @@ class LibraryService(TaskReportingService):
             existing_meta = image.meta
         except ImageMetadata.DoesNotExist:
             self.image_metadata_service.create(image_meta)
-            return
+        else:
+            existing_meta.exif = image_meta["exif"]
+            self.image_metadata_service.update(existing_meta)
 
-        existing_meta.exif = image_meta["exif"]
-        self.image_metadata_service.update(existing_meta)
+        self.save_image_tags(image)
+
+    def save_image_tags(self, image: Any) -> None:
+        """Read the image's embedded tags and store them.
+
+        TagExtractor never raises for unreadable metadata, so a file with
+        broken tags is still ingested.
+
+        Args:
+            image: Image instance to extract tags for
+        """
+        self.image_tag_service.sync(image, self.tag_extractor.extract(image.file_path))
 
     def _extract_metadata(self, image_path: str) -> Dict[str, Any]:
         """Extract EXIF metadata from an image file.

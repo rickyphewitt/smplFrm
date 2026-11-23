@@ -1,9 +1,14 @@
 import os
+import tempfile
+from unittest import mock
 
 from django.test import TestCase
 from django.test.utils import override_settings
+from smplfrm.models import ImageTag, Tag
 from smplfrm.models.task import Task, TaskType
 from smplfrm.services import ImageService, LibraryService, TaskService
+from smplfrm.services.library.tag_extractor import TagExtractor
+from smplfrm.tests.tag_image_fixtures import write_tagged_image, xmp_packet
 
 test_library = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "library"))
@@ -295,3 +300,79 @@ class TestLibraryScanProgress(TestCase):
         self.assertNotIn("smplfrm_image", task.error)
         self.assertNotIn("database.py", task.error)
         self.assertNotIn("line 42", task.error)
+
+
+class TestLibraryScanTags(TestCase):
+    """The scan stores the keywords embedded in each image."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.library_dir = self._tmp.name
+
+    def write(self, name, **metadata):
+        return write_tagged_image(os.path.join(self.library_dir, name), **metadata)
+
+    def scan(self):
+        with override_settings(SMPL_FRM_LIBRARY_DIRS=[self.library_dir]):
+            LibraryService().scan()
+
+    def linked_values(self, file_name):
+        return set(
+            ImageTag.objects.filter(image__file_name=file_name).values_list(
+                "tag__value", flat=True
+            )
+        )
+
+    def test_scan_stores_embedded_tags(self):
+        self.write(
+            "tagged.jpg",
+            xp_keywords=["Frame"],
+            xmp=xmp_packet(subjects=["Beach"]),
+        )
+
+        self.scan()
+
+        self.assertEqual(self.linked_values("tagged.jpg"), {"frame", "beach"})
+
+    def test_rescan_drops_removed_tags(self):
+        self.write("tagged.jpg", xp_keywords=["Frame", "Beach"])
+        self.scan()
+
+        self.write("tagged.jpg", xp_keywords=["Beach"])
+        self.scan()
+
+        self.assertEqual(self.linked_values("tagged.jpg"), {"beach"})
+        self.assertTrue(Tag.objects.filter(value="frame").exists())
+
+    def test_scan_is_idempotent_for_tags(self):
+        self.write("tagged.jpg", xp_keywords=["Frame"])
+        self.scan()
+        self.scan()
+
+        self.assertEqual(Tag.objects.count(), 1)
+        self.assertEqual(ImageTag.objects.count(), 1)
+
+    def test_broken_tag_source_does_not_stop_ingest(self):
+        self.write("tagged.jpg", xp_keywords=["Frame"], iptc_keywords=[b"Beach"])
+
+        with mock.patch.object(
+            TagExtractor, "_read_exif", side_effect=ValueError("bad exif")
+        ):
+            self.scan()
+
+        self.assertTrue(
+            self.image_exists("tagged.jpg"), "Image should still be ingested"
+        )
+        self.assertEqual(self.linked_values("tagged.jpg"), {"beach"})
+
+    def test_untagged_image_is_ingested_without_tags(self):
+        self.write("plain.jpg")
+
+        self.scan()
+
+        self.assertTrue(self.image_exists("plain.jpg"))
+        self.assertEqual(self.linked_values("plain.jpg"), set())
+
+    def image_exists(self, file_name):
+        return ImageService().list(file_name=file_name, deleted=False).exists()
