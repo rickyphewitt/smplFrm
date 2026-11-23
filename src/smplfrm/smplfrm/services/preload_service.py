@@ -9,9 +9,10 @@ import logging
 from typing import List, Optional
 
 from smplfrm.celery import app
-from smplfrm.models import Image, Task
+from smplfrm.models import Task
 from smplfrm.models.task import TaskType, Status
 from smplfrm.services.cache_service import CacheService
+from smplfrm.services.image_service import ImageService
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +59,22 @@ class PreloadService:
         Raises:
             PreloadConflict: If work is already in-flight or capacity exceeded
         """
-        # Filter to valid images only (skip nonexistent IDs)
+        # Keep only images that exist, are live, and are allowed by the
+        # library filter. Hidden ids are dropped, never cached.
         valid_images = list(
-            Image.objects.filter(external_id__in=image_ids, deleted=False).values_list(
-                "external_id", flat=True
-            )
+            ImageService()
+            .visible_queryset()
+            .filter(external_id__in=image_ids)
+            .values_list("external_id", flat=True)
         )
+
+        skipped = len(set(image_ids)) - len(valid_images)
+        if skipped:
+            logger.debug(
+                "Preload skipping %d image(s) that are unknown, deleted, or hidden "
+                "by the library filter",
+                skipped,
+            )
 
         if not valid_images:
             return None

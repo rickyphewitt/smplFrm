@@ -489,6 +489,7 @@ GET /api/v1/images/aBcDeFgHiJkLmNoP/display?width=1920&height=1080
 - `file_path` is intentionally excluded from responses for security
 - View count is incremented each time `/display` is called
 - The `/next` endpoint triggers background caching of upcoming images
+- When [library filtering](#library-filter-settings) is enabled, only images matching the active filter are listed, returned, displayed, cached, or preloaded. Any other image id returns `403`, the same as an unknown id
 
 
 
@@ -602,6 +603,7 @@ Accept: application/vnd.api+json
 #### Notes
 
 - Image metadata is **read-only** — `POST`, `PUT`, `PATCH`, `DELETE` return `405 Method Not Allowed`
+- When [library filtering](#library-filter-settings) is enabled, only metadata for images matching the active filter is returned; other ids return `403`
 
 
 
@@ -945,7 +947,7 @@ Returns a single resource with the same shape as a list item.
 
 ### Library Filters
 
-A library filter is a named set of rules. At most one filter is active at a time. Filters are managed here; their rules are managed through [Library Filter Rules](#library-filter-rules).
+A library filter is a named set of rules. At most one filter is active at a time. Filters are managed here; their rules are managed through [Library Filter Rules](#library-filter-rules). The active filter only takes effect while [Library Filter Settings](#library-filter-settings) has `enabled: true`.
 
 **Endpoint:** `/api/v1/library_filters`
 
@@ -1052,11 +1054,11 @@ Content-Type: application/vnd.api+json
 
 ### Library Filter Rules
 
-A rule is one condition of a library filter. Rules are polymorphic: the JSON:API `type` names the rule type and cannot change after creation.
+A rule is one condition of a library filter. Rules are polymorphic: the JSON:API `type` names the rule type and cannot change after creation. An image matches a filter when it matches at least one of the filter's rules.
 
-| Type | References |
-|------|------------|
-| `tag_library_filter_rules` | One tag, by id |
+| Type | Matches an image when |
+|------|------------------------|
+| `tag_library_filter_rules` | The image carries the referenced tag (exact canonical value) |
 
 **Endpoint:** `/api/v1/library_filter_rules`
 
@@ -1134,7 +1136,15 @@ Returns live rules in creation order. Approved query parameters: `page[number]`,
 
 ### Library Filter Settings
 
-A single settings row holds the library filtering switch, `enabled`. It is created on install with `enabled: false` and addressed by its own id.
+A single settings row turns library filtering on or off. It is created on install with `enabled: false` and addressed by its own id.
+
+| `enabled` | Active filter | Images served |
+|-----------|---------------|---------------|
+| `false` | any | All images |
+| `true` | none | None |
+| `true` | set | Images matching any of its rules |
+
+"Served" covers `/api/v1/images` (list, detail, display), `/api/v1/images_metadata`, image caching, and preloading. The library scan always ingests every image and its tags, whatever the setting. A change takes effect on the next request; no rescan is needed.
 
 **Endpoint:** `/api/v1/library_filter_settings`
 

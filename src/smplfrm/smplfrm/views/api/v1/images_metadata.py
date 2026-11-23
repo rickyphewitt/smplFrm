@@ -12,7 +12,6 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 
 from smplfrm.jsonapi import jsonapi_exception_handler
-from smplfrm.models import ImageMetadata
 from smplfrm.services.image_metadata_service import ImageMetadataService
 from smplfrm.views.serializers.v1.image_metadata_serializer import (
     ImageMetadataSerializer,
@@ -40,11 +39,6 @@ class ImagesMetadata(viewsets.ModelViewSet):
     - exif data is never exposed in responses
     """
 
-    queryset = (
-        ImageMetadata.objects.filter(deleted=False)
-        .select_related("image")
-        .order_by("-created")
-    )
     serializer_class = ImageMetadataSerializer
     lookup_field = "external_id"
     resource_name = "image_metadata"
@@ -57,11 +51,14 @@ class ImagesMetadata(viewsets.ModelViewSet):
         return jsonapi_exception_handler
 
     def get_queryset(self):
-        """Filter by image external_id if filter[image] provided.
+        """Return visible metadata, filtered by image if filter[image] is given.
 
-        Annotates image_external_id to avoid fetching full image objects.
+        Only metadata for images the library filter allows is returned.
+        Selects the related image to avoid one query per row.
         """
-        queryset = super().get_queryset()
+        queryset = (
+            self.service.visible_queryset().select_related("image").order_by("-created")
+        )
 
         image_external_id = self.request.query_params.get("filter[image]")
         if image_external_id is not None:

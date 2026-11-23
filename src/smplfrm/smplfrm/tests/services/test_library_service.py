@@ -8,6 +8,7 @@ from smplfrm.models import ImageTag, Tag
 from smplfrm.models.task import Task, TaskType
 from smplfrm.services import ImageService, LibraryService, TaskService
 from smplfrm.services.library.tag_extractor import TagExtractor
+from smplfrm.tests.library_filter_fixtures import activate_filter, set_filtering
 from smplfrm.tests.tag_image_fixtures import write_tagged_image, xmp_packet
 
 test_library = [
@@ -376,3 +377,40 @@ class TestLibraryScanTags(TestCase):
 
     def image_exists(self, file_name):
         return ImageService().list(file_name=file_name, deleted=False).exists()
+
+
+class TestLibraryScanIgnoresFiltering(TestCase):
+    """Filtering hides images when serving them; the scan still ingests all."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        write_tagged_image(
+            os.path.join(self._tmp.name, "framed.jpg"), xp_keywords=["Frame"]
+        )
+        write_tagged_image(
+            os.path.join(self._tmp.name, "beach.jpg"), xp_keywords=["Beach"]
+        )
+        write_tagged_image(os.path.join(self._tmp.name, "plain.jpg"))
+
+    def scan_counts(self):
+        with override_settings(SMPL_FRM_LIBRARY_DIRS=[self._tmp.name]):
+            LibraryService().scan()
+        return (
+            ImageService().list(deleted=False).count(),
+            Tag.objects.count(),
+            ImageTag.objects.count(),
+        )
+
+    def test_scan_results_do_not_depend_on_filter_state(self):
+        off = self.scan_counts()
+
+        set_filtering(True)
+        on_without_filter = self.scan_counts()
+
+        activate_filter("frame")
+        on_with_filter = self.scan_counts()
+
+        self.assertEqual(off, (3, 2, 2))
+        self.assertEqual(on_without_filter, off)
+        self.assertEqual(on_with_filter, off)

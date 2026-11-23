@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, QuerySet
@@ -201,6 +201,22 @@ class LibraryFilterService(BaseService):
         return LibraryFilterRule.objects.filter(
             library_filter=library_filter, deleted=False
         ).exists()
+
+    def active_rules(self) -> List[LibraryFilterRule]:
+        """Return the live rules of the live active filter, in one query.
+
+        Rule relations are loaded with the rules, so callers can read them
+        without further queries. Empty when no filter is active.
+        """
+        return list(
+            LibraryFilterRule.objects.filter(
+                deleted=False,
+                library_filter__is_active=True,
+                library_filter__deleted=False,
+            )
+            .select_related("tag")
+            .order_by("id")
+        )
 
     @staticmethod
     def _deactivate_others(library_filter: LibraryFilter) -> None:

@@ -56,7 +56,16 @@ def cache_images(images_ext_ids: list, height: str, width: str):
     image_manipulation = ImageManipulationService()
     image_service = ImageService()
 
-    images = image_service.list(external_id__in=images_ext_ids)
+    images = image_service.visible_queryset().filter(external_id__in=images_ext_ids)
+
+    hidden = set(images_ext_ids) - set(images.values_list("external_id", flat=True))
+    if hidden:
+        logger.debug(
+            "cache_images skipping %d image(s) that are deleted or hidden by the "
+            "library filter: %s",
+            len(hidden),
+            sorted(hidden),
+        )
 
     for image in images:
         cache_key = cache_service.get_image_cache_key(image.external_id, height, width)
