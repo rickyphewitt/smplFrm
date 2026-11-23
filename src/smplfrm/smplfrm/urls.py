@@ -29,6 +29,9 @@ from smplfrm.views.api.v1 import (
     plugins,
     themes,
     tags,
+    library_filters,
+    library_filter_rules,
+    library_filter_settings,
 )
 from smplfrm.views.index_view import IndexView
 from smplfrm.plugins import get_plugin_router
@@ -45,6 +48,19 @@ api_v1_router.register(r"tasks", tasks.TaskViewSet, basename="tasks")
 api_v1_router.register(r"plugins", plugins.PluginViewSet, basename="plugins")
 api_v1_router.register(r"themes", themes.ThemeViewSet, basename="themes")
 api_v1_router.register(r"tags", tags.TagViewSet, basename="tags")
+api_v1_router.register(
+    r"library_filters", library_filters.LibraryFilterViewSet, basename="library_filters"
+)
+api_v1_router.register(
+    r"library_filter_rules",
+    library_filter_rules.LibraryFilterRuleViewSet,
+    basename="library_filter_rules",
+)
+api_v1_router.register(
+    r"library_filter_settings",
+    library_filter_settings.LibraryFilterSettingsViewSet,
+    basename="library_filter_settings",
+)
 
 api_v1_plugins_router = get_plugin_router()
 

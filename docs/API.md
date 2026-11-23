@@ -943,6 +943,253 @@ Returns a single resource with the same shape as a list item.
 - A tag stays listed after the last image using it loses the keyword; its `usage_count` drops to `0`
 
 
+### Library Filters
+
+A library filter is a named set of rules. At most one filter is active at a time. Filters are managed here; their rules are managed through [Library Filter Rules](#library-filter-rules).
+
+**Endpoint:** `/api/v1/library_filters`
+
+#### Get Library Filter (GET)
+
+```http
+GET /api/v1/library_filters/aB3dE5fG7hJ9kL1m
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "type": "library_filters",
+    "id": "aB3dE5fG7hJ9kL1m",
+    "attributes": {
+      "name": "Frame",
+      "description": "Photos for the frame",
+      "is_active": true,
+      "created": "2026-11-22T15:00:00Z",
+      "updated": "2026-11-22T15:00:00Z"
+    },
+    "relationships": {
+      "rules": {
+        "meta": { "count": 1 },
+        "data": [
+          { "type": "tag_library_filter_rules", "id": "Zx9Yw8Vu7Ts6Rq5P" }
+        ]
+      }
+    }
+  }
+}
+```
+
+`GET /api/v1/library_filters` returns a paginated list of the same resources, ordered by `name`.
+
+#### Create Library Filter (POST)
+
+```http
+POST /api/v1/library_filters
+Content-Type: application/vnd.api+json
+
+{
+  "data": {
+    "type": "library_filters",
+    "attributes": { "name": "Frame", "description": "Photos for the frame" }
+  }
+}
+```
+
+Returns `201 Created` with the new resource. A new filter has no rules, so it cannot be created active.
+
+#### Update Library Filter (PUT)
+
+Full replacement: `name` is required, an omitted `description` becomes `""`, and an omitted `is_active` becomes `false`. Setting `is_active` to `true` deactivates any other active filter in the same request.
+
+```http
+PUT /api/v1/library_filters/aB3dE5fG7hJ9kL1m
+Content-Type: application/vnd.api+json
+
+{
+  "data": {
+    "type": "library_filters",
+    "id": "aB3dE5fG7hJ9kL1m",
+    "attributes": { "name": "Frame", "is_active": true }
+  }
+}
+```
+
+#### Delete Library Filter (DELETE)
+
+`DELETE /api/v1/library_filters/{id}` returns `204 No Content`. The filter and its rules are soft-deleted; an active filter is deactivated first.
+
+#### Library Filter Attributes
+
+| Attribute | Type | Description |
+|-----------|------|--------------|
+| `name` | string | Required, max 100 characters, unique among filters that are not deleted |
+| `description` | string | Optional, max 200 characters |
+| `is_active` | boolean | Whether this is the active filter |
+| `created` | datetime | Creation time |
+| `updated` | datetime | Last change |
+
+#### Relationships
+
+- `rules` — read-only list of the filter's live rule identifiers. Each identifier carries the rule's own type (for example `tag_library_filter_rules`). A `rules` value sent on `POST` or `PUT` is ignored.
+
+#### Errors
+
+| Status | Code | When |
+|--------|------|------|
+| `400` | `validation_error` | `name` missing or too long, or a field has the wrong type |
+| `400` | `unique_name` | Another filter that is not deleted already uses the name |
+| `400` | `rule_required` | `is_active: true` on a filter with no live rules |
+| `403` | `forbidden` | Unknown or deleted filter id |
+| `405` | `method_not_allowed` | `PATCH` |
+
+#### Notes
+
+- Approved query parameters: `page[number]`, `filter[is_active]` (`true` or `false`). Anything else returns `400 invalid_query_parameter`
+- Changing filters never starts a background task
+
+
+### Library Filter Rules
+
+A rule is one condition of a library filter. Rules are polymorphic: the JSON:API `type` names the rule type and cannot change after creation.
+
+| Type | References |
+|------|------------|
+| `tag_library_filter_rules` | One tag, by id |
+
+**Endpoint:** `/api/v1/library_filter_rules`
+
+#### Create Tag Rule (POST)
+
+```http
+POST /api/v1/library_filter_rules
+Content-Type: application/vnd.api+json
+
+{
+  "data": {
+    "type": "tag_library_filter_rules",
+    "relationships": {
+      "library_filter": { "data": { "type": "library_filters", "id": "aB3dE5fG7hJ9kL1m" } },
+      "tag": { "data": { "type": "tags", "id": "Mn4Op3Qr2St1Uv0W" } }
+    }
+  }
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "data": {
+    "type": "tag_library_filter_rules",
+    "id": "Zx9Yw8Vu7Ts6Rq5P",
+    "attributes": {
+      "created": "2026-11-22T15:00:00Z",
+      "updated": "2026-11-22T15:00:00Z"
+    },
+    "relationships": {
+      "library_filter": { "data": { "type": "library_filters", "id": "aB3dE5fG7hJ9kL1m" } },
+      "tag": { "data": { "type": "tags", "id": "Mn4Op3Qr2St1Uv0W" } }
+    }
+  }
+}
+```
+
+#### Update Rule (PUT)
+
+Full replacement with the same body shape plus `data.id`. Both relationships are required. The `tag` may change; `library_filter` must stay the same.
+
+#### Delete Rule (DELETE)
+
+`DELETE /api/v1/library_filter_rules/{id}` returns `204 No Content` and soft-deletes the rule. Deleting the last live rule of the active filter deactivates that filter.
+
+#### List Rules (GET)
+
+```http
+GET /api/v1/library_filter_rules?filter[library_filter]=aB3dE5fG7hJ9kL1m
+```
+
+Returns live rules in creation order. Approved query parameters: `page[number]`, `filter[library_filter]` (filter id), `filter[rule_type]` (for example `tag`).
+
+#### Errors
+
+| Status | Code | When |
+|--------|------|------|
+| `400` | `unknown_rule_type` | `POST` with a `type` that is not a known rule type |
+| `400` | `type_mismatch` | `PUT` with a `type` different from the rule's type |
+| `400` | `library_filter_required` | `relationships.library_filter` missing |
+| `400` | `library_filter_immutable` | `PUT` with a different `library_filter` |
+| `400` | `tag_required` | Tag rule without `relationships.tag` |
+| `400` | `tag_not_found` | Referenced tag is unknown or deleted |
+| `400` | `duplicate_rule` | The filter already has a live rule for that tag |
+| `403` | `forbidden` | Unknown or deleted rule id, or unknown or deleted parent filter |
+| `405` | `method_not_allowed` | `PATCH` |
+
+#### Notes
+
+- Rules expose no attributes besides timestamps; the tag text is reached through the `tag` relationship
+- `include` is not supported
+- Changing rules never starts a background task
+
+
+### Library Filter Settings
+
+A single settings row holds the library filtering switch, `enabled`. It is created on install with `enabled: false` and addressed by its own id.
+
+**Endpoint:** `/api/v1/library_filter_settings`
+
+#### Get Settings (GET)
+
+```http
+GET /api/v1/library_filter_settings
+Accept: application/vnd.api+json
+```
+
+Returns a paginated list containing exactly one resource:
+
+```json
+{
+  "data": [
+    {
+      "type": "library_filter_settings",
+      "id": "U8aqql6jkMmU7qoS",
+      "attributes": {
+        "enabled": false,
+        "created": "2026-11-22T15:00:00Z",
+        "updated": "2026-11-22T15:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+`GET /api/v1/library_filter_settings/{id}` returns the same resource.
+
+#### Update Settings (PUT)
+
+```http
+PUT /api/v1/library_filter_settings/U8aqql6jkMmU7qoS
+Content-Type: application/vnd.api+json
+
+{
+  "data": {
+    "type": "library_filter_settings",
+    "id": "U8aqql6jkMmU7qoS",
+    "attributes": { "enabled": true }
+  }
+}
+```
+
+`enabled` is required and must be a boolean; it is the only writable attribute.
+
+#### Notes
+
+- `POST`, `PATCH`, and `DELETE` return `405 Method Not Allowed`
+- Unknown ids return `403 Forbidden`
+- Approved query parameters: `page[number]` only
+- Changing the setting never starts a background task
+
+
 
 ### Spotify OAuth Callback (Protocol Exempt)
 

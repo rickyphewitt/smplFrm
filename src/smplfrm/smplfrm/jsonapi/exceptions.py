@@ -51,6 +51,14 @@ class InvalidQueryParameterError(JsonApiError):
         super().__init__(detail=detail)
 
 
+class BadRequestError(JsonApiError):
+    """A 400 with a caller-supplied stable code, for domain validation errors."""
+
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_code = "bad_request"
+    default_detail = "The request is invalid"
+
+
 class InternalError(JsonApiError):
     """Generic internal error for unexpected failures."""
 

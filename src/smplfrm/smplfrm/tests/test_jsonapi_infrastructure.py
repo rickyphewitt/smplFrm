@@ -51,8 +51,39 @@ class TestJsonApiParser(TestCase):
         parser = JsonApiParser()
         self.assertEqual(parser.media_type, "application/vnd.api+json")
 
+    def _parse_post(self, view, resource_type):
+        import io
+        import json
 
-class TestJsonApiExceptions(TestCase):
+        request = MagicMock(method="POST")
+        document = {"data": {"type": resource_type, "attributes": {}}}
+        return JsonApiParser().parse(
+            io.BytesIO(json.dumps(document).encode("utf-8")),
+            media_type="application/vnd.api+json",
+            parser_context={"view": view, "request": request, "kwargs": {}},
+        )
+
+    def test_unexpected_type_conflicts_by_default(self):
+        """A type that is not the view's resource name is rejected with 409."""
+        from rest_framework_json_api.exceptions import Conflict
+
+        view = MagicMock(spec=["resource_name"], resource_name="widgets")
+
+        with self.assertRaises(Conflict):
+            self._parse_post(view, "gadgets")
+
+    def test_view_can_defer_type_validation(self):
+        """A view that validates type itself receives any type unchanged."""
+        view = MagicMock(
+            spec=["resource_name", "defer_type_validation"],
+            resource_name="widgets",
+            defer_type_validation=True,
+        )
+
+        result = self._parse_post(view, "gadgets")
+
+        self.assertEqual(result["type"], "gadgets")
+
     """Test custom JSON:API exception classes."""
 
     def test_weather_unavailable_error_defaults(self):

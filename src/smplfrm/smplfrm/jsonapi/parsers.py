@@ -52,7 +52,10 @@ class JsonApiParser(JsonApiPackageParser):
             accepted_types = self._get_accepted_types(view, resource_name)
 
             data_type = data.get("type")
-            if isinstance(accepted_types, str):
+            if accepted_types is None:
+                # The view validates the type itself (see _get_accepted_types).
+                pass
+            elif isinstance(accepted_types, str):
                 if data_type != accepted_types:
                     raise exceptions.Conflict(
                         f"The resource object's type ({data_type}) is not the type "
@@ -96,9 +99,18 @@ class JsonApiParser(JsonApiPackageParser):
         return parsed_data
 
     def _get_accepted_types(self, view, default_resource_name):
-        """Get accepted types from view's serializer or return default."""
+        """Get accepted types from view's serializer or return default.
+
+        Returns None when the view sets ``defer_type_validation = True``.
+        Such a view checks ``data.type`` itself so it can answer an unknown
+        or changed type with its own stable 400 error code instead of the
+        generic 409 Conflict raised here.
+        """
         if not view:
             return default_resource_name
+
+        if getattr(view, "defer_type_validation", False):
+            return None
 
         try:
             serializer_class = view.get_serializer_class()

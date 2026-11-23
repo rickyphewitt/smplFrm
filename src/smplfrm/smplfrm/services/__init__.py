@@ -7,6 +7,11 @@ from .task_service import TaskService
 from .task_reporting_service import TaskReportingService
 from .tag_service import TagService
 from .image_tag_service import ImageTagService
+from .library_filter import (
+    LibraryFilterRuleService,
+    LibraryFilterService,
+    LibraryFilterSettingsService,
+)
 
 __all__ = [
     "LibraryService",
@@ -18,4 +23,7 @@ __all__ = [
     "TaskReportingService",
     "TagService",
     "ImageTagService",
+    "LibraryFilterService",
+    "LibraryFilterRuleService",
+    "LibraryFilterSettingsService",
 ]
