@@ -862,6 +862,87 @@ Accept: application/vnd.api+json
 - The active theme for the frame itself is resolved server-side and arrives with the rendered page; the frame never calls this endpoint
 
 
+### Tags
+
+Tags are the keywords embedded in library images. They are read on every library scan from EXIF `XPKeywords`, IPTC `Keywords`, XMP `dc:subject`, and XMP `lr:hierarchicalSubject`, and stored once per canonical value.
+
+**Endpoint:** `/api/v1/tags`
+
+#### List Tags (GET)
+
+```http
+GET /api/v1/tags?page[number]=1
+Accept: application/vnd.api+json
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "type": "tags",
+      "id": "Mn4Op3Qr2St1Uv0W",
+      "attributes": {
+        "value": "family",
+        "display_value": "Family",
+        "usage_count": 12,
+        "created": "2026-11-22T15:00:00Z",
+        "updated": "2026-11-22T15:00:00Z"
+      }
+    }
+  ],
+  "links": {
+    "first": "/api/v1/tags?page[number]=1",
+    "last": "/api/v1/tags?page[number]=1",
+    "next": null,
+    "prev": null
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "pages": 1,
+      "count": 1
+    }
+  }
+}
+```
+
+#### Filter by Value
+
+```http
+GET /api/v1/tags?filter[value]=Family
+```
+
+The value is canonicalized before matching, so `Family`, `FAMILY`, and ` family ` all match the tag `family`. Matching is exact; there is no substring or prefix search.
+
+#### Get Tag (GET)
+
+```http
+GET /api/v1/tags/Mn4Op3Qr2St1Uv0W
+Accept: application/vnd.api+json
+```
+
+Returns a single resource with the same shape as a list item.
+
+#### Tag Attributes
+
+| Attribute | Type | Description |
+|-----------|------|--------------|
+| `value` | string | Canonical form: control characters removed, Unicode NFC, casefolded, whitespace collapsed (max 200 characters) |
+| `display_value` | string | First-seen form with its original casing |
+| `usage_count` | integer | Number of non-deleted images that carry this tag |
+| `created` | datetime | When the tag was first found |
+| `updated` | datetime | Last change to the tag row |
+
+#### Notes
+
+- Tags are **read-only** and system-managed by the library scan. `POST`, `PUT`, `PATCH`, and `DELETE` return `405 Method Not Allowed`
+- Resources are ordered by `value`
+- Unknown or deleted tag ids return `403 Forbidden`
+- Approved query parameters: `page[number]`, `filter[value]`. `sort`, `include`, `fields[tags]`, other `filter[...]` fields, and unknown parameters return `400 Bad Request`
+- A tag stays listed after the last image using it loses the keyword; its `usage_count` drops to `0`
+
+
 
 ### Spotify OAuth Callback (Protocol Exempt)
 

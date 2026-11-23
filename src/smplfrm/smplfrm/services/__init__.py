@@ -5,6 +5,8 @@ from .cache_service import CacheService
 from .image_manipulation_service import ImageManipulationService
 from .task_service import TaskService
 from .task_reporting_service import TaskReportingService
+from .tag_service import TagService
+from .image_tag_service import ImageTagService
 
 __all__ = [
     "LibraryService",
@@ -14,4 +16,6 @@ __all__ = [
     "ImageManipulationService",
     "TaskService",
     "TaskReportingService",
+    "TagService",
+    "ImageTagService",
 ]
