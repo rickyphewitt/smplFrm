@@ -1,6 +1,6 @@
 # Settings
 
-The settings modal is opened by clicking the SmplFrm icon on the display, or by pressing Tab to focus it and then Enter. Where the icon sits depends on the active theme (see [Available themes](#display)): top-left in Classic, bottom-right in Gallery, where it is faint until you hover over or focus it. The modal contains tabs for Display, Images, Library, Presets, Plugins, Tasks, and About.
+The settings modal is opened by clicking the SmplFrm icon on the display, or by pressing Tab to focus it and then Enter. Where the icon sits depends on the active theme (see [Available themes](#display)): top-left in Classic, bottom-right in Gallery, where it is faint until you hover over or focus it. The modal contains tabs for Display, Images, Library, Filters, Presets, Plugins, Tasks, and About.
 
 The mouse cursor hides after 30 seconds without movement and comes back as soon as the mouse moves or clicks. It always stays visible while the settings modal is open.
 
@@ -81,6 +81,49 @@ These actions run asynchronously in the background. A progress toast appears in 
 | Reset Image Count | Resets the view count for all images back to zero. This causes the display rotation to start fresh. |
 | Clear Cache | Clears all cached processed images. Images will be re-processed on next display. |
 | Rescan Library | Re-scans the configured library directories for new, removed, or restored images. |
+
+## Filters
+
+The Filters tab chooses which photos the frame shows, using the keyword tags embedded in your photos. Tags are read from each photo's EXIF, IPTC, and XMP metadata (for example, keywords set in Lightroom, Apple Photos, digiKam, or Windows Explorer) every time the library is scanned.
+
+![Filters Settings](images/settings/filterSettings.png)
+
+| Control | Description |
+|---------|-------------|
+| Filtering | Turns filtering on or off. Off (the default) shows every photo. On shows only photos matching the active filter; with no active filter, no photos are shown. Takes effect immediately. |
+| Name | The filter name. |
+| Description | An optional description. |
+| Rules | How many rules the filter has. |
+| Status | "Active" badge for the active filter, or an "Activate" button. Activate is disabled until the filter has at least one rule. |
+| Actions | Edit opens the filter. Delete (×) removes it; the active filter shows a lock icon instead. |
+
+Use **+ New Filter** to create one. Paginated with 5 per page.
+
+### Editing a filter
+
+![Filter Detail](images/settings/filterDetail.png)
+
+| Setting | Description |
+|---------|-------------|
+| Name | Required. Must be different from every other filter's name. |
+| Description | Optional. |
+| Active | Makes this the active filter, replacing the previous one. Disabled until the filter has a rule. |
+
+The Rules table lists the tags in the filter. A photo matches when it has **any** of them. Use Edit to change a rule's tag, × to remove it, and **+ Add Rule** to add one. Deleting the last rule of the active filter turns the filter off.
+
+Click **Save** to save the name, description, and Active setting, and **Back** to return to the list. A new filter must be saved before rules can be added.
+
+### Adding a rule
+
+![Filter Rule Editor](images/settings/filterRuleEditor.png)
+
+Pick a tag and click **Save**. The Photos column shows how many photos carry each tag. Only tags found by a library scan are listed; if the list is empty, run **Rescan Library** on the Library tab first.
+
+### Behavior
+
+- Tag matching ignores case and spacing: `Family`, `FAMILY`, and ` family ` are the same tag.
+- Filters only change which photos are shown. The library scan still reads every photo, so new tags appear without changing any filter.
+- After any filter change, closing settings reloads the frame so the new selection takes effect.
 
 ## Presets
 

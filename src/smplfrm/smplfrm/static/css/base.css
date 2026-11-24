@@ -702,3 +702,30 @@ input:checked + .slider:before {
 .about-link {
     text-decoration: none;
 }
+
+/* Filters tab: row action groups, the "+ New" controls under each table,
+ * spacing between the filter form and its rules, and the tag-picker rows. */
+.filter-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-list-actions {
+    margin-top: 12px;
+}
+
+#filter-rules-section {
+    margin-top: 24px;
+}
+
+.filter-tag-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.filter-empty {
+    margin: 12px 0;
+}

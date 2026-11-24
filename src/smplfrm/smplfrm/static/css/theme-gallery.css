@@ -745,6 +745,17 @@ input:checked + .slider:before {
     color: var(--faint);
 }
 
+/* Filters tab: the tag-picker radios take the accent, and the no-tags
+ * message uses the muted text colour. */
+.filter-tag-radio {
+    accent-color: var(--accent);
+}
+
+.filter-empty {
+    font-size: 13px;
+    color: var(--faint);
+}
+
 /* ----- Toasts ----- */
 
 .task-toast,

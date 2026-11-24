@@ -39,6 +39,7 @@ describe('settings modal tooltips', () => {
       'Clear Cache',
       'Rescan Library',
     ],
+    'tab-filters': ['Filtering', 'Name', 'Description', 'Active'],
   };
 
   Object.entries(tabs).forEach(([tabId, labels]) => {
@@ -61,6 +62,15 @@ describe('settings modal tooltips', () => {
   });
 
   const tableHeaders = {
+    'tab-filters': [
+      'Name',
+      'Description',
+      'Rules',
+      'Status',
+      'Actions',
+      'Tag',
+      'Photos',
+    ],
     'tab-presets': ['Name', 'Description', 'Status', 'Delete'],
     'tab-plugins': ['Name', 'Description', 'Enabled'],
     'tab-tasks': ['Type', 'Status', 'Progress', 'Created', 'Delete'],

@@ -139,9 +139,11 @@ export function unwrapErrors(document) {
  * @param {string} type - Resource type (e.g., "plugins")
  * @param {string} [id] - Resource id (required for update, omit for create)
  * @param {Object} attributes - Resource attributes
+ * @param {Object} [relationships] - Relationship objects keyed by name, each
+ *   `{ data: { type, id } }`; omitted from the document when not given
  * @returns {Object} - JSON:API document with data.type, data.id, data.attributes
  */
-export function buildResourceDocument(type, id, attributes) {
+export function buildResourceDocument(type, id, attributes, relationships) {
   const doc = {
     data: {
       type,
@@ -150,6 +152,9 @@ export function buildResourceDocument(type, id, attributes) {
   };
   if (id) {
     doc.data.id = id;
+  }
+  if (relationships) {
+    doc.data.relationships = relationships;
   }
   return doc;
 }

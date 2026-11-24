@@ -60,6 +60,7 @@
             <button class="tab-btn active" data-tab="display">Display</button>
             <button class="tab-btn" data-tab="images">Images</button>
             <button class="tab-btn" data-tab="library">Library</button>
+            <button class="tab-btn" data-tab="filters">Filters</button>
             <button class="tab-btn" data-tab="presets">Presets</button>
             <button class="tab-btn" data-tab="plugins">Plugins</button>
             <button class="tab-btn" data-tab="tasks">Tasks</button>
@@ -184,6 +185,99 @@
             </div>
         </div>
         
+        <div class="tab-content" id="tab-filters">
+            <div class="settings-section" id="filter-list-view">
+                <h3>Library Filters</h3>
+                <div class="setting-item" id="filter-switch-item">
+                    <label for="filter-enabled-toggle" title="Show only photos that match the active filter. When off, every photo is shown">Filtering</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="filter-enabled-toggle" disabled>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <table class="task-table">
+                    <thead>
+                        <tr>
+                            <th title="Filter name">Name</th>
+                            <th title="Filter description">Description</th>
+                            <th title="Number of rules in this filter">Rules</th>
+                            <th title="Whether this is the active filter">Status</th>
+                            <th title="Edit or delete this filter">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filter-list-body"></tbody>
+                </table>
+                <div class="task-pagination">
+                    <button class="btn btn-secondary btn-sm" id="filter-page-prev" disabled>&laquo; Prev</button>
+                    <span id="filter-page-info"></span>
+                    <button class="btn btn-secondary btn-sm" id="filter-page-next" disabled>Next &raquo;</button>
+                </div>
+                <div class="filter-list-actions">
+                    <button class="btn btn-secondary btn-sm" id="filter-new">+ New Filter</button>
+                </div>
+            </div>
+            <div class="settings-section" id="filter-detail-view" style="display: none;">
+                <h3 id="filter-detail-title"></h3>
+                <div id="filter-detail-form">
+                    <div class="setting-item">
+                        <label for="filter-name" title="Name of this filter; must be unique">Name</label>
+                        <input type="text" id="filter-name" class="select-input" maxlength="100">
+                    </div>
+                    <div class="setting-item">
+                        <label for="filter-description" title="Optional description of this filter">Description</label>
+                        <input type="text" id="filter-description" class="select-input" maxlength="200">
+                    </div>
+                    <div class="setting-item">
+                        <label for="filter-active" title="Make this the active filter. A filter needs at least one rule to be active">Active</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="filter-active">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div id="filter-rules-section">
+                    <h3>Rules</h3>
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th title="Photos with this tag match the filter">Tag</th>
+                                <th title="Edit or delete this rule">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filter-rule-list-body"></tbody>
+                    </table>
+                    <div class="task-pagination">
+                        <button class="btn btn-secondary btn-sm" id="filter-rule-page-prev" disabled>&laquo; Prev</button>
+                        <span id="filter-rule-page-info"></span>
+                        <button class="btn btn-secondary btn-sm" id="filter-rule-page-next" disabled>Next &raquo;</button>
+                    </div>
+                    <div class="filter-list-actions">
+                        <button class="btn btn-secondary btn-sm" id="filter-rule-add">+ Add Rule</button>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section" id="filter-rule-view" style="display: none;">
+                <h3 id="filter-rule-title"></h3>
+                <p class="filter-empty" id="filter-tag-empty" style="display: none;">No tags yet. Run Rescan Library.</p>
+                <div id="filter-tag-table">
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th title="Tags found in your photos by the last library scan">Tag</th>
+                                <th title="Number of photos with this tag">Photos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filter-tag-list-body"></tbody>
+                    </table>
+                    <div class="task-pagination">
+                        <button class="btn btn-secondary btn-sm" id="filter-tag-page-prev" disabled>&laquo; Prev</button>
+                        <span id="filter-tag-page-info"></span>
+                        <button class="btn btn-secondary btn-sm" id="filter-tag-page-next" disabled>Next &raquo;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="tab-content" id="tab-presets">
             <div class="settings-section">
                 <h3>Config Presets</h3>
@@ -235,6 +329,11 @@
         <div class="modal-actions" id="plugin-detail-actions" style="display: none;">
             <button class="btn btn-primary" id="plugin-detail-save">Save Changes</button>
             <button class="btn btn-secondary" id="plugin-detail-back">Back</button>
+        </div>
+
+        <div class="modal-actions" id="filter-detail-actions" style="display: none;">
+            <button class="btn btn-primary" id="filter-detail-save">Save</button>
+            <button class="btn btn-secondary" id="filter-detail-back">Back</button>
         </div>
         
         <div class="tab-content" id="tab-tasks">
