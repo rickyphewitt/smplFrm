@@ -12,6 +12,7 @@ import {
   formatWeatherTemp,
 } from './jsonApiClient.js';
 import {
+  clearViewPlaceholder,
   ERROR_PLACEHOLDER_CLASS,
   installGlobalRejectionHandler,
   reportError,
@@ -1899,6 +1900,634 @@ export async function loadTasks(page = 1) {
   }
 }
 
+/*
+ * Filters tab.
+ *
+ * Three views share the tab and swap like the Plugins list and detail views:
+ * the filter list (with the filtering switch), one filter's detail, and the
+ * rule editor. The detail and rule views share one Save/Back bar,
+ * #filter-detail-actions, which is rebound whenever a view is shown.
+ */
+
+const FILTER_RULE_TYPE = 'tag_library_filter_rules';
+const FILTER_NO_RULE_REASON = 'Add a rule before activating this filter';
+
+let filterPage = 1;
+let filterRulePage = 1;
+let filterTagPage = 1;
+let filterSettingsId = null;
+// The filter open in the detail view, or null in create mode.
+let filterDetail = null;
+// The rule open in the rule editor ({ id, tagId }), or null when adding.
+let filterRuleEdit = null;
+let filterSelectedTagId = null;
+
+/**
+ * Shows one Filters view and the action bar that belongs to it.
+ *
+ * @param {'list'|'detail'|'rule'} view
+ */
+export function showFilterView(view) {
+  const show = (id, visible) => {
+    document.getElementById(id).style.display = visible ? '' : 'none';
+  };
+  show('filter-list-view', view === 'list');
+  show('filter-detail-view', view === 'detail');
+  show('filter-rule-view', view === 'rule');
+  show('main-actions', view === 'list');
+  show('filter-detail-actions', view !== 'list');
+}
+
+/** Marks settings as changed so closing the modal reloads the frame. */
+function markFilterChangesSaved() {
+  const modal = document.getElementById('settings-modal');
+  modal.dataset.changesSaved = 'true';
+  const cancelBtn = document.getElementById('cancel-settings');
+  cancelBtn.textContent = 'Reload Now';
+  cancelBtn.classList.remove('btn-secondary');
+  cancelBtn.classList.add('btn-primary');
+}
+
+/**
+ * Rebinds the shared Save/Back bar. Replacing the buttons drops the
+ * listeners of the previous view, as the plugin detail view does.
+ *
+ * @param {(saveBtn: HTMLButtonElement) => void} onSave
+ * @param {() => void} onBack
+ * @returns {HTMLButtonElement} The new Save button
+ */
+function bindFilterActions(onSave, onBack) {
+  const saveBtn = document.getElementById('filter-detail-save');
+  const backBtn = document.getElementById('filter-detail-back');
+  const newSave = saveBtn.cloneNode(true);
+  const newBack = backBtn.cloneNode(true);
+  saveBtn.parentNode.replaceChild(newSave, saveBtn);
+  backBtn.parentNode.replaceChild(newBack, backBtn);
+  newSave.addEventListener('click', () => onSave(newSave));
+  newBack.addEventListener('click', onBack);
+  newSave.disabled = false;
+  newSave.textContent = 'Save';
+  return newSave;
+}
+
+/** Display text for a tag resource: its first-seen form, else its value. */
+function filterTagLabel(tag) {
+  return tag?.attributes?.display_value || tag?.attributes?.value || '';
+}
+
+/** Loads the filtering switch state from the settings singleton. */
+export async function loadFilterSettings() {
+  const toggleInput = document.getElementById('filter-enabled-toggle');
+  const item = document.getElementById('filter-switch-item');
+  toggleInput.disabled = true;
+
+  try {
+    const doc = await fetchJsonApi(buildApiUrl('library_filter_settings'));
+    const [settings] = unwrapResourceList(doc).resources;
+    if (!settings) throw new Error('Library filter settings missing');
+    filterSettingsId = settings.id;
+    toggleInput.checked = !!settings.attributes.enabled;
+    toggleInput.disabled = false;
+    clearViewPlaceholder(item);
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load the filtering setting',
+      target: item,
+    });
+  }
+}
+
+/** Saves the filtering switch as soon as it changes; reverts on failure. */
+async function saveFilteringSwitch(toggleInput) {
+  const enabled = toggleInput.checked;
+  toggleInput.disabled = true;
+  try {
+    await fetchJsonApi(
+      buildApiUrl(`library_filter_settings/${filterSettingsId}`),
+      {
+        method: 'PUT',
+        body: JSON.stringify(
+          buildResourceDocument('library_filter_settings', filterSettingsId, {
+            enabled,
+          }),
+        ),
+      },
+    );
+    markFilterChangesSaved();
+  } catch (error) {
+    toggleInput.checked = !enabled;
+    reportError(error, {
+      channel: 'action',
+      fallback: 'Failed to change filtering.',
+    });
+  } finally {
+    toggleInput.disabled = false;
+  }
+}
+
+/** Builds the Status cell: Active badge, or an Activate button. */
+function buildFilterStatusCell(filter) {
+  const cell = document.createElement('td');
+  if (filter.is_active) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-active';
+    badge.textContent = 'Active';
+    cell.appendChild(badge);
+    return cell;
+  }
+
+  const activate = document.createElement('button');
+  activate.type = 'button';
+  activate.className = 'btn btn-secondary btn-sm filter-activate-btn';
+  activate.textContent = 'Activate';
+  activate.setAttribute('aria-label', `Activate filter ${filter.name}`);
+  if (filter.ruleCount === 0) {
+    activate.disabled = true;
+    activate.title = FILTER_NO_RULE_REASON;
+  }
+  activate.addEventListener('click', async () => {
+    activate.disabled = true;
+    activate.innerHTML = '<span class="spinner-inline"></span>';
+    try {
+      await fetchJsonApi(buildApiUrl(`library_filters/${filter.id}`), {
+        method: 'PUT',
+        body: JSON.stringify(
+          buildResourceDocument('library_filters', filter.id, {
+            name: filter.name,
+            description: filter.description || '',
+            is_active: true,
+          }),
+        ),
+      });
+    } catch (error) {
+      activate.disabled = false;
+      activate.textContent = 'Activate';
+      reportError(error, {
+        channel: 'action',
+        fallback: 'Failed to activate the filter.',
+      });
+      return;
+    }
+    markFilterChangesSaved();
+    loadFilters(filterPage);
+  });
+  cell.appendChild(activate);
+  return cell;
+}
+
+/** Builds the Actions cell: Edit, plus Delete or a lock on the active filter. */
+function buildFilterActionsCell(filter) {
+  const cell = document.createElement('td');
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-row-actions';
+
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'btn btn-secondary btn-sm filter-edit-btn';
+  edit.textContent = 'Edit';
+  edit.setAttribute('aria-label', `Edit filter ${filter.name}`);
+  edit.addEventListener('click', () => openFilterDetail(filter.id));
+  wrap.appendChild(edit);
+
+  if (filter.is_active) {
+    const locked = document.createElement('span');
+    locked.className = 'delete-disabled';
+    locked.title = 'Active filter cannot be deleted';
+    const icon = document.createElement('i');
+    icon.className = 'iconoir-lock';
+    locked.appendChild(icon);
+    wrap.appendChild(locked);
+  } else {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className =
+      'btn btn-secondary btn-sm task-delete-btn filter-delete-btn';
+    remove.textContent = '\u00d7';
+    remove.setAttribute('aria-label', `Delete filter ${filter.name}`);
+    remove.addEventListener('click', async () => {
+      try {
+        await fetchJsonApi(buildApiUrl(`library_filters/${filter.id}`), {
+          method: 'DELETE',
+        });
+      } catch (error) {
+        // No reload on failure: the redrawn row would look like a delete
+        // that did not happen, as with presets and tasks.
+        reportError(error, {
+          channel: 'action',
+          fallback: 'Failed to delete the filter.',
+        });
+        return;
+      }
+      markFilterChangesSaved();
+      loadFilters(filterPage);
+    });
+    wrap.appendChild(remove);
+  }
+
+  cell.appendChild(wrap);
+  return cell;
+}
+
+/** Builds one filter-list row. Text goes in through textContent only. */
+function buildFilterRow(filter) {
+  const row = document.createElement('tr');
+  const name = document.createElement('td');
+  name.textContent = filter.name;
+  const description = document.createElement('td');
+  description.textContent = filter.description || '';
+  const rules = document.createElement('td');
+  rules.textContent = String(filter.ruleCount);
+  row.append(
+    name,
+    description,
+    rules,
+    buildFilterStatusCell(filter),
+    buildFilterActionsCell(filter),
+  );
+  return row;
+}
+
+/** Loads one page of the filter list and shows the list view. */
+export async function loadFilters(page = 1) {
+  filterPage = page;
+  showFilterView('list');
+  const body = document.getElementById('filter-list-body');
+  const prev = document.getElementById('filter-page-prev');
+  const next = document.getElementById('filter-page-next');
+  const info = document.getElementById('filter-page-info');
+
+  try {
+    const doc = await fetchJsonApi(
+      buildApiUrl(`library_filters?page[number]=${page}`),
+    );
+    const { resources, meta, links } = unwrapResourceList(doc);
+    body.replaceChildren(
+      ...resources.map((r) =>
+        buildFilterRow({
+          id: r.id,
+          ...r.attributes,
+          ruleCount: r.relationships?.rules?.data?.length || 0,
+        }),
+      ),
+    );
+    const totalPages = meta.pagination?.pages || 1;
+    info.textContent = `Page ${page} of ${totalPages}`;
+    prev.disabled = !links.prev;
+    next.disabled = !links.next;
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load filters',
+      target: body,
+      colspan: 5,
+    });
+  }
+}
+
+/**
+ * Enables the Active toggle only while the filter has rules. With no rules
+ * it is also unchecked: the server deactivates a filter that loses its last
+ * rule, and rejects activating one that has none.
+ */
+function setFilterActiveAvailability(ruleCount) {
+  const active = document.getElementById('filter-active');
+  active.disabled = ruleCount === 0;
+  if (ruleCount === 0) active.checked = false;
+}
+
+/** Fills the detail view from a library_filters resource. */
+function applyFilterDetail(resource) {
+  filterDetail = {
+    id: resource.id,
+    ...resource.attributes,
+    ruleCount: resource.relationships?.rules?.data?.length || 0,
+  };
+  document.getElementById('filter-detail-title').textContent =
+    filterDetail.name;
+  document.getElementById('filter-name').value = filterDetail.name;
+  document.getElementById('filter-description').value =
+    filterDetail.description || '';
+  document.getElementById('filter-active').checked = !!filterDetail.is_active;
+  setFilterActiveAvailability(filterDetail.ruleCount);
+  document.getElementById('filter-detail-form').style.display = '';
+  document.getElementById('filter-rules-section').style.display = '';
+}
+
+/** Binds the shared bar for the detail view and shows the detail view. */
+function showFilterDetailView() {
+  bindFilterActions(saveFilter, () => loadFilters(filterPage));
+  showFilterView('detail');
+}
+
+/**
+ * Opens the detail view for a filter, or in create mode for null.
+ *
+ * @param {string|null} filterId
+ */
+export async function openFilterDetail(filterId = null) {
+  const detailView = document.getElementById('filter-detail-view');
+  const form = document.getElementById('filter-detail-form');
+  const rulesSection = document.getElementById('filter-rules-section');
+  clearViewPlaceholder(detailView);
+  showFilterDetailView();
+
+  if (filterId === null) {
+    filterDetail = null;
+    document.getElementById('filter-detail-title').textContent = 'New Filter';
+    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-description').value = '';
+    document.getElementById('filter-active').checked = false;
+    setFilterActiveAvailability(0);
+    form.style.display = '';
+    rulesSection.style.display = 'none';
+    return;
+  }
+
+  let resource;
+  try {
+    const doc = await fetchJsonApi(buildApiUrl(`library_filters/${filterId}`));
+    resource = unwrapResource(doc);
+    if (!resource) throw new Error('Library filter not found');
+  } catch (error) {
+    filterDetail = null;
+    document.getElementById('filter-detail-title').textContent = '';
+    form.style.display = 'none';
+    rulesSection.style.display = 'none';
+    // Nothing to save without the filter; Back still works.
+    document.getElementById('filter-detail-save').disabled = true;
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load the filter.',
+      target: detailView,
+    });
+    return;
+  }
+
+  applyFilterDetail(resource);
+  await loadFilterRules(1);
+}
+
+/** Saves the detail view: POST in create mode, full PUT otherwise. */
+async function saveFilter(saveBtn) {
+  const creating = filterDetail === null;
+  const attributes = {
+    name: document.getElementById('filter-name').value.trim(),
+    description: document.getElementById('filter-description').value.trim(),
+    is_active: document.getElementById('filter-active').checked,
+  };
+  const path = creating
+    ? 'library_filters'
+    : `library_filters/${filterDetail.id}`;
+
+  let resource;
+  try {
+    const doc = await fetchJsonApi(buildApiUrl(path), {
+      method: creating ? 'POST' : 'PUT',
+      body: JSON.stringify(
+        buildResourceDocument(
+          'library_filters',
+          creating ? null : filterDetail.id,
+          attributes,
+        ),
+      ),
+    });
+    resource = unwrapResource(doc);
+  } catch (error) {
+    reportError(error, {
+      channel: 'form',
+      fallback: 'Failed to save the filter.',
+      disable: saveBtn,
+    });
+    return;
+  }
+
+  markFilterChangesSaved();
+  applyFilterDetail(resource);
+  saveBtn.textContent = 'Saved!';
+  setTimeout(() => {
+    saveBtn.textContent = 'Save';
+  }, 1500);
+  if (creating) {
+    await loadFilterRules(1);
+  }
+}
+
+/** Builds one rule row with Edit and Delete controls. */
+function buildFilterRuleRow(rule) {
+  const row = document.createElement('tr');
+  const tag = document.createElement('td');
+  tag.textContent = rule.tagName;
+
+  const actions = document.createElement('td');
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-row-actions';
+
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'btn btn-secondary btn-sm filter-rule-edit-btn';
+  edit.textContent = 'Edit';
+  edit.setAttribute('aria-label', `Edit rule ${rule.tagName}`);
+  edit.addEventListener('click', () => openRuleEditor(rule));
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className =
+    'btn btn-secondary btn-sm task-delete-btn filter-rule-delete-btn';
+  remove.textContent = '\u00d7';
+  remove.setAttribute('aria-label', `Delete rule ${rule.tagName}`);
+  remove.addEventListener('click', async () => {
+    try {
+      await fetchJsonApi(buildApiUrl(`library_filter_rules/${rule.id}`), {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      reportError(error, {
+        channel: 'action',
+        fallback: 'Failed to delete the rule.',
+      });
+      return;
+    }
+    markFilterChangesSaved();
+    loadFilterRules(filterRulePage);
+  });
+
+  wrap.append(edit, remove);
+  actions.appendChild(wrap);
+  row.append(tag, actions);
+  return row;
+}
+
+/**
+ * Loads one page of the open filter's rules, with each rule's tag name.
+ * The rule count from the response keeps the Active toggle in step.
+ */
+async function loadFilterRules(page = 1) {
+  filterRulePage = page;
+  const body = document.getElementById('filter-rule-list-body');
+  const prev = document.getElementById('filter-rule-page-prev');
+  const next = document.getElementById('filter-rule-page-next');
+  const info = document.getElementById('filter-rule-page-info');
+
+  try {
+    const doc = await fetchJsonApi(
+      buildApiUrl(
+        `library_filter_rules?filter[library_filter]=${filterDetail.id}&page[number]=${page}`,
+      ),
+    );
+    const { resources, meta, links } = unwrapResourceList(doc);
+    const rules = await Promise.all(
+      resources.map(async (r) => {
+        const tagId = r.relationships?.tag?.data?.id;
+        const tagDoc = await fetchJsonApi(buildApiUrl(`tags/${tagId}`));
+        return {
+          id: r.id,
+          tagId,
+          tagName: filterTagLabel(unwrapResource(tagDoc)),
+        };
+      }),
+    );
+    body.replaceChildren(...rules.map(buildFilterRuleRow));
+
+    const count = meta.pagination?.count ?? rules.length;
+    filterDetail.ruleCount = count;
+    setFilterActiveAvailability(count);
+    info.textContent = `Page ${page} of ${meta.pagination?.pages || 1}`;
+    prev.disabled = !links.prev;
+    next.disabled = !links.next;
+  } catch (error) {
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load rules',
+      target: body,
+      colspan: 2,
+    });
+  }
+}
+
+/** Builds one tag-picker row: a radio with the tag name, and its photo count. */
+function buildFilterTagRow(tag) {
+  const row = document.createElement('tr');
+
+  const nameCell = document.createElement('td');
+  const option = document.createElement('label');
+  option.className = 'filter-tag-option';
+  const radio = document.createElement('input');
+  radio.type = 'radio';
+  radio.name = 'filter-tag';
+  radio.className = 'filter-tag-radio';
+  radio.value = tag.id;
+  radio.checked = tag.id === filterSelectedTagId;
+  radio.addEventListener('change', () => {
+    filterSelectedTagId = tag.id;
+    document.getElementById('filter-detail-save').disabled = false;
+  });
+  const text = document.createElement('span');
+  text.textContent = filterTagLabel(tag);
+  option.append(radio, text);
+  nameCell.appendChild(option);
+
+  const usage = document.createElement('td');
+  usage.textContent = String(tag.attributes.usage_count ?? 0);
+
+  row.append(nameCell, usage);
+  return row;
+}
+
+/** Loads one page of tags into the picker. */
+async function loadTagPage(page = 1) {
+  filterTagPage = page;
+  const view = document.getElementById('filter-rule-view');
+  const body = document.getElementById('filter-tag-list-body');
+  const empty = document.getElementById('filter-tag-empty');
+  const table = document.getElementById('filter-tag-table');
+  const prev = document.getElementById('filter-tag-page-prev');
+  const next = document.getElementById('filter-tag-page-next');
+  const info = document.getElementById('filter-tag-page-info');
+  view.setAttribute('aria-busy', 'true');
+
+  try {
+    const doc = await fetchJsonApi(buildApiUrl(`tags?page[number]=${page}`));
+    const { resources, meta, links } = unwrapResourceList(doc);
+    const noTags = (meta.pagination?.count ?? resources.length) === 0;
+    empty.style.display = noTags ? '' : 'none';
+    table.style.display = noTags ? 'none' : '';
+    if (noTags) {
+      document.getElementById('filter-detail-save').disabled = true;
+    }
+    body.replaceChildren(...resources.map(buildFilterTagRow));
+    info.textContent = `Page ${page} of ${meta.pagination?.pages || 1}`;
+    prev.disabled = !links.prev;
+    next.disabled = !links.next;
+  } catch (error) {
+    empty.style.display = 'none';
+    table.style.display = '';
+    document.getElementById('filter-detail-save').disabled = true;
+    reportError(error, {
+      channel: 'view',
+      fallback: 'Failed to load tags',
+      target: body,
+      colspan: 2,
+    });
+  } finally {
+    view.removeAttribute('aria-busy');
+  }
+}
+
+/**
+ * Opens the rule editor to add a rule (null) or change an existing rule's tag.
+ *
+ * @param {{id: string, tagId: string}|null} rule
+ */
+export async function openRuleEditor(rule = null) {
+  filterRuleEdit = rule;
+  filterSelectedTagId = rule ? rule.tagId : null;
+  document.getElementById('filter-rule-title').textContent = rule
+    ? 'Edit Rule'
+    : 'Add Rule';
+  const saveBtn = bindFilterActions(saveRule, showFilterDetailView);
+  saveBtn.disabled = filterSelectedTagId === null;
+  showFilterView('rule');
+  await loadTagPage(1);
+}
+
+/** Saves the rule editor: POST to add, full PUT to change the tag. */
+async function saveRule(saveBtn) {
+  const editing = filterRuleEdit !== null;
+  const relationships = {
+    library_filter: { data: { type: 'library_filters', id: filterDetail.id } },
+    tag: { data: { type: 'tags', id: filterSelectedTagId } },
+  };
+  const path = editing
+    ? `library_filter_rules/${filterRuleEdit.id}`
+    : 'library_filter_rules';
+
+  try {
+    await fetchJsonApi(buildApiUrl(path), {
+      method: editing ? 'PUT' : 'POST',
+      body: JSON.stringify(
+        buildResourceDocument(
+          FILTER_RULE_TYPE,
+          editing ? filterRuleEdit.id : null,
+          {},
+          relationships,
+        ),
+      ),
+    });
+  } catch (error) {
+    reportError(error, {
+      channel: 'form',
+      fallback: 'Failed to save the rule.',
+      disable: saveBtn,
+    });
+    return;
+  }
+
+  markFilterChangesSaved();
+  showFilterDetailView();
+  await loadFilterRules(filterRulePage);
+}
+
 /**
  * Returns the focusable elements inside a container, in DOM order.
  *
@@ -1981,6 +2610,7 @@ function initSettingsModal() {
     document.getElementById('plugin-detail-view').style.display = 'none';
     document.getElementById('plugin-list-view').style.display = '';
     document.getElementById('main-actions').style.display = '';
+    showFilterView('list');
 
     const activeTab = document.querySelector('.tab-content.active');
     const sections = activeTab.querySelectorAll('.settings-section');
@@ -2001,6 +2631,8 @@ function initSettingsModal() {
     // Ensure plugin detail stays hidden after section restore
     document.getElementById('plugin-detail-view').style.display = 'none';
     document.getElementById('plugin-detail-actions').style.display = 'none';
+    // The section restore above also revealed every Filters view.
+    showFilterView('list');
   });
 
   const closeModal = () => {
@@ -2069,6 +2701,17 @@ function initSettingsModal() {
       document.getElementById('main-actions').style.display = '';
       document.getElementById('plugin-detail-actions').style.display = 'none';
       document.getElementById('plugin-detail-view').style.display = 'none';
+      showFilterView('list');
+
+      if (tabName === 'filters') {
+        const filtersTab = document.getElementById('tab-filters');
+        document.getElementById('filter-list-view').style.display = 'none';
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner';
+        filtersTab.appendChild(spinner);
+        await Promise.all([loadFilterSettings(), loadFilters()]);
+        spinner.remove();
+      }
 
       if (tabName === 'tasks') {
         const taskTab = document.getElementById('tab-tasks');
@@ -2139,6 +2782,35 @@ function initSettingsModal() {
   document
     .getElementById('plugin-page-next')
     .addEventListener('click', () => loadPlugins(pluginPage + 1));
+
+  // Filters tab controls
+  document
+    .getElementById('filter-enabled-toggle')
+    .addEventListener('change', (e) => saveFilteringSwitch(e.target));
+  document
+    .getElementById('filter-new')
+    .addEventListener('click', () => openFilterDetail(null));
+  document
+    .getElementById('filter-rule-add')
+    .addEventListener('click', () => openRuleEditor(null));
+  document
+    .getElementById('filter-page-prev')
+    .addEventListener('click', () => loadFilters(filterPage - 1));
+  document
+    .getElementById('filter-page-next')
+    .addEventListener('click', () => loadFilters(filterPage + 1));
+  document
+    .getElementById('filter-rule-page-prev')
+    .addEventListener('click', () => loadFilterRules(filterRulePage - 1));
+  document
+    .getElementById('filter-rule-page-next')
+    .addEventListener('click', () => loadFilterRules(filterRulePage + 1));
+  document
+    .getElementById('filter-tag-page-prev')
+    .addEventListener('click', () => loadTagPage(filterTagPage - 1));
+  document
+    .getElementById('filter-tag-page-next')
+    .addEventListener('click', () => loadTagPage(filterTagPage + 1));
 
   // Library maintenance buttons
   document.getElementById('task-reset-count').addEventListener('click', () => {

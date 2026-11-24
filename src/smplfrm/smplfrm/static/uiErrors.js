@@ -35,7 +35,7 @@
  *
  * ## Call-site enumeration
  *
- * All 19 logical fetch call sites in `main.js` (22 raw `fetchJsonApi` /
+ * All 30 logical fetch call sites in `main.js` (34 raw `fetchJsonApi` /
  * `resilientFetch` / `taskPollFetch` invocations). This table is the channel
  * assignment of record for every one of them, including any that do not yet
  * route through this module. A new call site is unassigned until it appears
@@ -47,14 +47,25 @@
  * | preset delete               | `action`    |
  * | task delete                 | `action`    |
  * | `startTask`                 | `action`    |
+ * | filtering switch change     | `action`    |
+ * | filter activate             | `action`    |
+ * | filter delete               | `action`    |
+ * | filter rule delete          | `action`    |
  * | `saveConfig`                | `form`      |
  * | plugin settings save        | `form`      |
  * | preset inline field edit    | `form`      |
+ * | `saveFilter`                | `form`      |
+ * | `saveRule`                  | `form`      |
  * | `loadConfig`                | `view`      |
  * | `loadPlugins`               | `view`      |
  * | `openPluginDetail`          | `view`      |
  * | `loadPresets`               | `view`      |
  * | `loadTasks`                 | `view`      |
+ * | `loadFilterSettings`        | `view`      |
+ * | `loadFilters`               | `view`      |
+ * | `openFilterDetail`          | `view`      |
+ * | `loadFilterRules`           | `view`      |
+ * | `loadTagPage`               | `view`      |
  * | `refillQueue`               | `silent`    |
  * | `requestPreload`            | `silent`    |
  * | `displayMetadata`           | `silent`    |
